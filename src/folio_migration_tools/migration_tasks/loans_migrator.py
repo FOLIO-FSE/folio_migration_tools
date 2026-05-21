@@ -166,12 +166,17 @@ class LoansMigrator(MigrationTaskBase):
         other_circulation_settings_endpoint = (
             "/configurations/entries?query=(module==CHECKOUT%20and%20configName==other_settings)"
         )
+        default_patron_identifiers = {"prefPatronIdentifier": json.dumps(["barcode"])}
         try:
+            other_circulation_settings = (
+                self.folio_client.folio_get_single_object(other_circulation_settings_endpoint)
+                or {}
+            )
             self.patron_identifiers = (
                 json.loads(
-                    self.folio_client.folio_get_single_object(other_circulation_settings_endpoint)[
-                        "configs"
-                    ][0]["value"]
+                    other_circulation_settings.get(
+                        "configs", [{"value": json.dumps(default_patron_identifiers)}]
+                    )[0]["value"]
                 )
                 .get("prefPatronIdentifier", "")
                 .split(",")
@@ -181,7 +186,7 @@ class LoansMigrator(MigrationTaskBase):
                 ", ".join(self.patron_identifiers),
             )
         except folioclient.FolioClientError as e:
-            logger.error("Error retrieving circulation settings: %s", e.response.text)
+            logger.exception("Error retrieving circulation settings: %s", e.response.text)
             self.patron_identifiers = []
         for file_def in task_configuration.open_loans_files:
             loans_file_path = self.folder_structure.legacy_records_folder / file_def.file_name
@@ -219,15 +224,14 @@ class LoansMigrator(MigrationTaskBase):
 
     def check_smtp_config(self):
         try:
-            smtp_config = self.folio_client.folio_get_single_object("/smtp-configuration")[
-                "smtpConfigurations"
-            ][0]
+            smtp_config = self.folio_client.folio_get_single_object("/smtp-configuration") or {}
+            smtp_config = smtp_config.get("smtpConfigurations", [])[0]
             smtp_config_disabled = "disabled" in smtp_config["host"].lower()
         except IndexError:
             smtp_config_disabled = True
         print_smtp_warning()
         if not smtp_config_disabled:
-            logging.warn("SMTP connection not disabled...")
+            logger.warning("SMTP connection not disabled...")
             for i in range(10, 0, -1):
                 sys.stdout.write("Pausing for {:02d} seconds. Press Ctrl+C to exit...\r".format(i))
                 time.sleep(1)
@@ -272,7 +276,7 @@ class LoansMigrator(MigrationTaskBase):
                 try:
                     self.checkout_single_loan(legacy_loan)
                 except TransformationRecordFailedError as ee:
-                    logger.error(
+                    logger.exception(
                         f"Transformation failed in row {num_loans}  "
                         f"Item barcode: {legacy_loan.item_barcode} "
                         f"Patron barcode: {legacy_loan.patron_barcode}"
@@ -421,11 +425,13 @@ class LoansMigrator(MigrationTaskBase):
                     )
                 except Exception as e:
                     if hasattr(e, "response"):
-                        logger.error(
+                        logger.exception(
                             "Error fetching patron for barcode %s: %s", barcode, e.response.text
                         )
                     else:
-                        logger.error("Error fetching patron for barcode %s: %s", barcode, str(e))
+                        logger.exception(
+                            "Error fetching patron for barcode %s: %s", barcode, str(e)
+                        )
                     fetch_patron = []
                 counter += 1
             if not fetch_patron:
@@ -507,7 +513,7 @@ class LoansMigrator(MigrationTaskBase):
                 )
                 fetch_items.extend(response.get("items", []))
             except folioclient.FolioClientError as e:
-                logger.error(
+                logger.exception(
                     "Error fetching items batch %s: %s", i // batch_size + 1, e.response.text
                 )
             logger.info(
@@ -742,8 +748,8 @@ class LoansMigrator(MigrationTaskBase):
 
         else:
             logger.debug(
-                'Setting item %{item_barcode} to status "Available"',
-                item_barcode=legacy_loan.item_barcode,
+                'Setting item %s to status "Available"',
+                legacy_loan.item_barcode,
             )
             legacy_loan.next_item_status = "Available"
             self.set_item_status(legacy_loan)
@@ -775,8 +781,8 @@ class LoansMigrator(MigrationTaskBase):
             )
         else:
             logger.debug(
-                'Setting item %{item_barcode} to status "Available"',
-                item_barcode=legacy_loan.item_barcode,
+                'Setting item %s to status "Available"',
+                legacy_loan.item_barcode,
             )
             legacy_loan.next_item_status = "Available"
             self.set_item_status(legacy_loan)
@@ -821,12 +827,12 @@ class LoansMigrator(MigrationTaskBase):
             logger.debug("Updating open loan was successful")
             return True
         except HTTPError as exception:
-            logger.error(
+            logger.exception(
                 f"{req.status_code} PUT FAILED Extend loan to {loan_to_put['dueDate']}"
                 f"\t {url}\t{json.dumps(loan_to_put)}"
             )
             traceback.print_exc()
-            logger.error(exception)
+            logger.exception(exception)
             return False
 
     def handle_previously_failed_loans(self, loan):
@@ -899,7 +905,7 @@ class LoansMigrator(MigrationTaskBase):
             else:
                 if legacy_loan.item_barcode not in self.failed:
                     self.failed[legacy_loan.item_barcode] = legacy_loan
-                logger.error(
+                logger.exception(
                     f"Error when setting item with barcode "
                     f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
                 )
@@ -911,7 +917,7 @@ class LoansMigrator(MigrationTaskBase):
                     ),
                 )
         except Exception as ee:
-            logger.error(
+            logger.exception(
                 f"{resp.status_code} when trying to set item with barcode "
                 f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status} {ee}"
             )
@@ -991,7 +997,7 @@ class LoansMigrator(MigrationTaskBase):
                 resp.raise_for_status()
             return True
         except HTTPError as exception:
-            logger.error(f"{resp.status_code}. {verb} FAILED for {url}")
+            logger.exception(f"{resp.status_code}. {verb} FAILED for {url}")
             traceback.print_exc()
             logger.info(exception)
             return False

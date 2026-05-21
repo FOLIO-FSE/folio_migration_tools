@@ -130,7 +130,7 @@ class ReservesMigrator(MigrationTaskBase):
             else:
                 self.migration_report.add_general_statistics(i18n_t("Failure to post reserve"))
         except Exception as ee:
-            logger.error(ee)
+            logger.exception(ee)
 
     async def wrap_up(self):
         self.extradata_writer.flush()
@@ -257,7 +257,7 @@ class ReservesMigrator(MigrationTaskBase):
                 resp.raise_for_status()
             return True
         except HTTPError as exception:
-            logger.error(f"{resp.status_code}. {verb} FAILED for {url}")
+            logger.exception(f"{resp.status_code}. {verb} FAILED for {url}")
             traceback.print_exc()
             logger.info(exception)
             return False

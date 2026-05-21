@@ -331,10 +331,10 @@ class MARCImportTask(MigrationTaskBase):
             # the job summary by folio_data_import and logged via log_job_summary().
             # We don't have direct access to those stats as they're logged, not returned.
         except FileNotFoundError as e:
-            logger.error("File not found: %s", e)
+            logger.exception("File not found: %s", e)
             raise
         except Exception as e:
-            logger.error("Error during MARC import: %s", e)
+            logger.exception("Error during MARC import: %s", e)
             raise
 
         logger.info("MARCImportTask work complete")

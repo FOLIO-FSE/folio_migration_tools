@@ -217,7 +217,7 @@ class UserMapper(MappingFileMapperBase):
             return format_date.isoformat()
         except Exception as ee:
             v = mapped_value
-            logger.error(f"{folio_prop_name} {v} could not be parsed: {ee}")
+            logger.exception(f"{folio_prop_name} {v} could not be parsed: {ee}")
             fmt_string = i18n.t(
                 "Parsing error! %{prop_name}: %{value}. The empty string was returned",
                 prop_name=folio_prop_name,

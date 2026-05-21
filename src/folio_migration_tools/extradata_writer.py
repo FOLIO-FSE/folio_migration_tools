@@ -50,7 +50,7 @@ class ExtradataWriter:
                     logger.debug("Extradata writer flushing the cache")
         except Exception as ee:
             error_message = "Something went wrong in extradata Writer"
-            logger.error(error_message)
+            logger.exception(error_message)
             raise TransformationProcessError("", error_message, record_type) from ee
 
     def flush(self):

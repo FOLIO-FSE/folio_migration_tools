@@ -400,7 +400,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return object_schema
 
         except HTTPError as he:
-            logger.error(he)
+            logger.exception(he)
 
     @staticmethod
     def inject_schema_by_ref(submodule_path, github_headers, property: dict):
@@ -419,7 +419,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             req.raise_for_status()
             return dict(property, **json.loads(req.text))
         except Exception as ee:
-            logger.error(ee)
+            logger.exception(ee)
             return {}
 
     @staticmethod
@@ -433,7 +433,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             req.raise_for_status()
             return dict(property["items"], **json.loads(req.text))
         except Exception as ee:
-            logger.error(ee)
+            logger.exception(ee)
             return {}
 
     def perform_additional_mapping(self, index_or_id, composite_order):

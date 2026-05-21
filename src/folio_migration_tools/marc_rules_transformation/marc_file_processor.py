@@ -100,9 +100,7 @@ class MarcFileProcessor:
                     filtered_legacy_ids = self.get_valid_folio_record_ids(
                         legacy_ids, self.legacy_ids, self.mapper.migration_report
                     )
-                    ids_added_to_map = self.add_legacy_ids_to_map(
-                        folio_rec, filtered_legacy_ids
-                    )
+                    ids_added_to_map = self.add_legacy_ids_to_map(folio_rec, filtered_legacy_ids)
 
                     if file_def.create_source_records and self.mapper.create_source_records:
                         self.save_srs_record(
@@ -132,11 +130,11 @@ class MarcFileProcessor:
         except Exception as inst:
             success = False
             traceback.print_exc()
-            logger.error(type(inst))
-            logger.error(inst.args)
-            logger.error(inst)
-            logger.error(marc_record)
-            logger.error(folio_recs)
+            logger.exception(type(inst))
+            logger.exception(inst.args)
+            logger.exception(inst)
+            logger.exception(marc_record)
+            logger.exception(folio_recs)
             raise TransformationProcessError("", inst.args, "") from inst
         finally:
             if not success:
@@ -300,9 +298,7 @@ class MarcFileProcessor:
         logger.info("Transformation report written to %s", report_file.name)
         logger.info("Processor is done.")
 
-    def add_legacy_ids_to_map(
-        self, folio_rec: Dict, filtered_legacy_ids: List[str]
-    ) -> List[str]:
+    def add_legacy_ids_to_map(self, folio_rec: Dict, filtered_legacy_ids: List[str]) -> List[str]:
         """Add legacy IDs to the mapper's ID map.
 
         Args:

@@ -422,7 +422,7 @@ class OrganizationMapper(MappingFileMapperBase):
             return object_schema
 
         except httpx.HTTPError as he:
-            logger.error(he)
+            logger.exception(he)
 
     @staticmethod
     def resolve_uuid_refs(schema):

@@ -245,23 +245,23 @@ class UserTransformer(MigrationTaskBase):
                                 i18n_t("Records failed")
                             )
                             Helper.log_data_issue(tre.index_or_id, tre.message, tre.data_value)
-                            logger.error(tre)
+                            logger.exception(tre)
                         except TransformationProcessError as tpe:
                             logger.critical(tpe)
                             print(f"\n{tpe.message}: {tpe.data_value}")
                             print("\nHalting")
                             sys.exit(1)
                         except ValueError as ve:
-                            logger.error(ve)
+                            logger.exception(ve)
                             raise ve
                         except Exception as ee:
-                            logger.error(ee)
-                            logger.error(num_users)
-                            logger.error(json.dumps(legacy_user))
+                            logger.exception(ee)
+                            logger.exception(num_users)
+                            logger.exception(json.dumps(legacy_user))
                             self.mapper.migration_report.add_general_statistics(
                                 i18n_t("Failed user transformations")
                             )
-                            logger.error(ee, exc_info=True)
+                            logger.exception(ee, exc_info=True)
 
                         self.total_records = num_users
         except FileNotFoundError as fn:

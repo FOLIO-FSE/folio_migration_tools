@@ -257,10 +257,10 @@ class UserImportTask(MigrationTaskBase):
             finally:
                 await importer.close()
         except FileNotFoundError as e:
-            logger.error("File not found: %s", e)
+            logger.exception("File not found: %s", e)
             raise
         except Exception as e:
-            logger.error("Error during user import: %s", e)
+            logger.exception("Error during user import: %s", e)
             raise
 
         logger.info("UserImportTask work complete")
