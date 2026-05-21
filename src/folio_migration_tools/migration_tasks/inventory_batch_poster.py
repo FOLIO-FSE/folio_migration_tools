@@ -309,10 +309,10 @@ class InventoryBatchPoster(MigrationTaskBase):
                     # Update stats after rerun
                     self.stats = poster.get_stats()
         except FileNotFoundError as e:
-            logger.error("File not found: %s", e)
+            logger.exception("File not found: %s", e)
             raise
         except Exception as e:
-            logger.error("Error during batch posting: %s", e)
+            logger.exception("Error during batch posting: %s", e)
             raise
 
         logger.info("InventoryBatchPoster work complete")

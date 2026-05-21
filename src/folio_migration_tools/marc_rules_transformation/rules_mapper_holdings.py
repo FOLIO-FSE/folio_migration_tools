@@ -425,7 +425,7 @@ class RulesMapperHoldings(RulesMapperBase):
         try:
             holdings_note_type_id = holdings_note_type_tuple[0]
         except Exception as ee:
-            logger.error(ee)
+            logger.exception(ee)
             raise TransformationRecordFailedError(
                 legacy_ids,
                 f"Holdings note type mapping error.\tNote type name: "
@@ -480,7 +480,7 @@ class RulesMapperHoldings(RulesMapperBase):
             try:
                 holdings_note_type_id = holdings_note_type_tuple[0]
             except Exception as ee:
-                logger.error(ee)
+                logger.exception(ee)
                 raise TransformationRecordFailedError(
                     legacy_ids,
                     f"Holdings note type mapping error.\tNote type name: "
@@ -537,7 +537,7 @@ class RulesMapperHoldings(RulesMapperBase):
             try:
                 holdings_note_type_id = holdings_note_type_tuple[0]
             except Exception as ee:
-                logger.error(ee)
+                logger.exception(ee)
                 raise TransformationRecordFailedError(
                     legacy_ids,
                     f"Holdings note type mapping error.\tNote type name: "

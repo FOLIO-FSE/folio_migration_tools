@@ -324,7 +324,7 @@ class BatchPoster(MigrationTaskBase):
                                     )
                                     batch = []
                                 except (FileNotFoundError, PermissionError) as ose:
-                                    logger.error("Error reading file: %s", ose)
+                                    logger.exception("Error reading file: %s", ose)
 
             except Exception as ee:
                 if "idx" in locals() and self.task_configuration.files[idx:]:
@@ -336,7 +336,7 @@ class BatchPoster(MigrationTaskBase):
                                 failed_recs_file.write(failed_file.read())
                                 self.processed = 0
                         except (FileNotFoundError, PermissionError) as ose:
-                            logger.error("Error reading file: %s", ose)
+                            logger.exception("Error reading file: %s", ose)
                 raise ee
             finally:
                 if self.task_configuration.object_type != "Extradata" and any(batch):
@@ -544,7 +544,7 @@ class BatchPoster(MigrationTaskBase):
                     )
                     await asyncio.sleep(wait_time)
                 else:
-                    logger.error(f"Connection failed after {retries} attempts: {e}")
+                    logger.exception(f"Connection failed after {retries} attempts: {e}")
                     raise
 
             except folioclient.FolioHTTPError as e:
@@ -563,11 +563,11 @@ class BatchPoster(MigrationTaskBase):
                 else:
                     # Either not retryable or out of attempts
                     if should_retry:
-                        logger.error(
+                        logger.exception(
                             f"HTTP {status_code} error persisted after {retries} attempts: {e}"
                         )
                     else:
-                        logger.error(f"HTTP {status_code} error (not retryable): {e}")
+                        logger.exception(f"HTTP {status_code} error (not retryable): {e}")
                     raise
 
     async def post_record_batch(self, batch, failed_recs_file, row):
@@ -593,7 +593,7 @@ class BatchPoster(MigrationTaskBase):
             if fhe.response.status_code == 422:
                 self.num_failures += 1
                 error_msg = json.loads(fhe.response.text)["errors"][0]["message"]
-                logger.error(
+                logger.exception(
                     "Row %s\tHTTP %s\t %s", num_records, fhe.response.status_code, error_msg
                 )
                 if (
@@ -603,7 +603,7 @@ class BatchPoster(MigrationTaskBase):
                     failed_recs_file.write(row)
             else:
                 self.num_failures += 1
-                logger.error(
+                logger.exception(
                     "Row %s\tHTTP %s\t%s", num_records, fhe.response.status_code, fhe.response.text
                 )
                 failed_recs_file.write(row)
@@ -654,7 +654,7 @@ class BatchPoster(MigrationTaskBase):
             if fhe.response.status_code == 422:
                 self.num_failures += 1
                 error_msg = json.loads(fhe.response.text)["errors"][0]["message"]
-                logger.error(
+                logger.exception(
                     "Row %s\tHTTP %s\t %s", num_records, fhe.response.status_code, error_msg
                 )
                 if (
@@ -664,7 +664,7 @@ class BatchPoster(MigrationTaskBase):
                     failed_recs_file.write(row)
             else:
                 self.num_failures += 1
-                logger.error(
+                logger.exception(
                     "Row %s\tHTTP %s\t%s",
                     num_records,
                     fhe.response.status_code,
@@ -679,9 +679,9 @@ class BatchPoster(MigrationTaskBase):
                 )
 
     def handle_generic_exception(self, exception, last_row, batch, num_records, failed_recs_file):
-        logger.error("%s", exception)
+        logger.exception("%s", exception)
         self.migration_report.add("Details", i18n_t("Generic exceptions (see log for details)"))
-        # logger.error("Failed row: %s", last_row)
+        # logger.exception("Failed row: %s", last_row)
         self.failed_batches += 1
         self.num_failures += len(batch)
         write_failed_batch_to_file(batch, failed_recs_file)
@@ -828,12 +828,12 @@ class BatchPoster(MigrationTaskBase):
                 res = self.folio_client.folio_get(url, query_params=query_params)
                 return res["totalRecords"]
             except folioclient.FolioHTTPError as fhe:
-                logger.error(
+                logger.exception(
                     "Failed to get current record count. HTTP %s", fhe.response.status_code
                 )
                 return 0
             except KeyError:
-                logger.error(
+                logger.exception(
                     "Failed to get current record count. "
                     f"No 'totalRecords' in response: {json.dumps(res, indent=2)}"
                 )
@@ -1049,10 +1049,10 @@ def get_api_info(object_type: str, use_safe: bool = True):
         return choices[object_type]
     except KeyError:
         key_string = ", ".join(choices.keys())
-        logger.error(
+        logger.exception(
             f"Wrong type. Only one of {key_string} are allowed, received {object_type=} instead"
         )
-        logger.error("Halting")
+        logger.exception("Halting")
         sys.exit(1)
 
 

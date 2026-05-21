@@ -100,7 +100,7 @@ class MigrationTaskBase:
                 self.central_folder_structure.setup_migration_file_structure()
             # Initiate Worker
         except FileNotFoundError as fne:
-            logger.error(fne)
+            logger.exception(fne)
         except TransformationProcessError as process_error:
             logger.critical(process_error)
             logger.critical("Halting...")

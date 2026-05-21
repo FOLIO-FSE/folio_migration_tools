@@ -101,7 +101,7 @@ class LegacyLoan(object):
                 )
                 self.report("Hour and minute not specified for due date")
         except (ParserError, OverflowError) as ee:
-            logger.error(ee)
+            logger.exception(ee)
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
             # Keep ordering consistent: assume end of day on current date.
             temp_date_due = datetime.now(ZoneInfo("UTC")).replace(

@@ -429,7 +429,7 @@ class Conditions:
             self.mapper.migration_report.add("MappedNoteTypes", t[1])
             return t[0]
         except Exception as ee:
-            logger.error(ee)
+            logger.exception(ee)
             raise TransformationRecordFailedError(
                 legacy_id,
                 f"Holdings note type mapping error.\tParameter: {parameter.get('name', '')}\t"

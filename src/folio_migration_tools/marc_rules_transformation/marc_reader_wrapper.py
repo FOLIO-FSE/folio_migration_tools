@@ -88,7 +88,7 @@ class MARCReaderWrapper:
                     i18n.t("Records that failed transformation. Check log for details"),
                 )
             except ValueError as error:
-                logger.error(error)
+                logger.exception(error)
         logger.info("Done reading %s records from file", idx + 1)
 
     @staticmethod

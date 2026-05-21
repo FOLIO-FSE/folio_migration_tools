@@ -363,7 +363,7 @@ class MappingFileMapperBase(MapperBase):
                     logger.info("Edge case %s", schema_property_name)
 
             except KeyError as schema_anomaly:
-                logger.error(
+                logger.exception(
                     "Cannot create property '%s'. Unsupported schema format: %s",
                     schema_property_name,
                     schema_anomaly,
@@ -752,7 +752,7 @@ class MappingFileMapperBase(MapperBase):
         try:
             yield from reader
         except Exception as exception:
-            logger.error("%s at row %s", exception, reader.line_num)
+            logger.exception("%s at row %s", exception, reader.line_num)
             raise exception from exception
 
     def has_property(self, legacy_object, folio_prop_name: str):

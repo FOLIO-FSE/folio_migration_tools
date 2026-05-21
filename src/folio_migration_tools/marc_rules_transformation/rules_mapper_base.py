@@ -309,7 +309,7 @@ class RulesMapperBase(MapperBase):
                 if any(m.get("ignoreSubsequentFields", False) for m in mappings):
                     ignored_subsequent_fields.add(marc_field.tag)
             except Exception as ee:
-                logger.error(
+                logger.exception(
                     "map_field_according_to_mapping %s %s %s",
                     marc_field.tag,
                     marc_field.format_field(),

@@ -97,7 +97,7 @@ class MapperBase:
                 if prop not in self.mapped_folio_fields:
                     self.mapped_folio_fields[prop] = [0]
         except Exception as ee:
-            logger.error(ee, stack_info=True)
+            logger.exception(ee, stack_info=True)
             raise ee from ee
 
     def report_legacy_mapping_no_schema(self, legacy_object):
@@ -281,7 +281,7 @@ class MapperBase:
                 ),
                 self.num_criticalerrors,
             )
-            logger.error(
+            logger.exception(
                 "Errors: %s\terrors/records: %s",
                 self.num_criticalerrors,
                 (self.num_criticalerrors / (records_processed + 1)),
@@ -306,7 +306,7 @@ class MapperBase:
             f"Row {idx:,} failed with the following unhandled Exception: {exception}  "
             f"of type {type(exception).__name__}"
         )
-        logger.error(exception, exc_info=True)
+        logger.exception(exception, exc_info=True)
         if self.num_exceptions > self.library_configuration.generic_exception_threshold:
             logging.fatal(
                 "Stopping. More than %s unhandled exceptions. Code needs fixing",

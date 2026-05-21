@@ -67,7 +67,7 @@ class HoldingsHelper:
                 )
             return "-".join(values)
         except Exception as exception:
-            logger.error(json.dumps(holdings_record, indent=4))
+            logger.exception(json.dumps(holdings_record, indent=4))
             raise exception from exception
 
     @staticmethod

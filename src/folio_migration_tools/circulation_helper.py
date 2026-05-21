@@ -67,7 +67,7 @@ class CirculationHelper:
             self.missing_patron_barcodes.add(user_barcode)
             return {}
         except Exception as ee:
-            logger.error(f"{ee} {user_path}")
+            logger.exception(f"{ee} {user_path}")
             return {}
 
     def get_item_by_barcode(self, item_barcode):
@@ -85,7 +85,7 @@ class CirculationHelper:
             self.missing_item_barcodes.add(item_barcode)
             return {}
         except Exception as ee:
-            logger.error(f"{ee} {item_path}")
+            logger.exception(f"{ee} {item_path}")
             return {}
 
     def is_checked_out(self, legacy_loan: LegacyLoan) -> bool:
@@ -119,7 +119,7 @@ class CirculationHelper:
             loans = self.folio_client.folio_get(loan_path, "loans")
             return next((loan for loan in loans if loan["status"]["name"] == "Open"), {})
         except Exception as ee:
-            logger.error(f"{ee} {loan_path}")
+            logger.exception(f"{ee} {loan_path}")
             return {}
 
     def get_holding_by_uuid(self, holdings_uuid):
@@ -127,7 +127,7 @@ class CirculationHelper:
         try:
             return self.folio_client.folio_get_single_object(holdings_path)
         except Exception as ee:
-            logger.error(f"{ee} {holdings_path}")
+            logger.exception(f"{ee} {holdings_path}")
             return {}
 
     def check_out_by_barcode(self, legacy_loan: LegacyLoan) -> TransactionResult:
@@ -297,7 +297,7 @@ class CirculationHelper:
             return True
         except FolioValidationError as fve:
             message = folio_client.handle_json_response(fve.response)["errors"][0]["message"]
-            logger.error(message)
+            logger.exception(message)
             migration_report.add_general_statistics(message)
             return False
         except (FolioConnectionError, FolioClientError) as fce:
@@ -306,14 +306,14 @@ class CirculationHelper:
                     f"HTTP {client_response.status_code} Error creating request: "
                     f"{client_response.text}"
                 )
-                logger.error(message)
+                logger.exception(message)
                 migration_report.add_general_statistics(message)
             else:
-                logger.error(f"Connection error creating request: {fce}")
+                logger.exception(f"Connection error creating request: {fce}")
                 migration_report.add_general_statistics("Connection error creating request")
             return False
         except Exception as exception:
-            logger.error(exception, exc_info=True)
+            logger.exception(exception, exc_info=True)
             migration_report.add("Details", exception)
             Helper.log_data_issue(
                 legacy_request.item_barcode,

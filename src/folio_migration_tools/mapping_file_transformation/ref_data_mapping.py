@@ -101,7 +101,7 @@ class RefDataMapping(object):
                 raise transformation_process_error from transformation_process_error
             except Exception as ee:
                 logger.info(json.dumps(self.map, indent=4))
-                logger.error(ee)
+                logger.exception(ee)
                 raise TransformationProcessError(
                     "",
                     f'"{mapping[f"folio_{self.key_type}"]}" could not be found in FOLIO',
