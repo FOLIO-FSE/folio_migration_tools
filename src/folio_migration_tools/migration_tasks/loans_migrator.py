@@ -13,6 +13,7 @@ import sys
 import time
 import traceback
 from datetime import datetime, timedelta
+from collections.abc import AsyncGenerator
 from typing import Annotated, List, Literal, Optional
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
@@ -242,7 +243,9 @@ class LoansMigrator(MigrationTaskBase):
                 "Performing barcode pre-validation for %s legacy loans...",
                 len(self.semi_valid_legacy_loans),
             )
-            self.valid_legacy_loans = [loan async for loan in self.check_barcodes()]
+            self.valid_legacy_loans = []
+            async for loan in self.check_barcodes():
+                self.valid_legacy_loans.append(loan)
             logger.info(
                 "Loaded and validated %s loans against barcodes",
                 len(self.valid_legacy_loans),
@@ -492,14 +495,17 @@ class LoansMigrator(MigrationTaskBase):
         for i in range(0, len(barcode_list), batch_size):
             batch = barcode_list[i : i + batch_size]
             try:
-                batch_items = self.folio_client.folio_post(
-                    "/item-storage/items/retrieve",
-                    {
-                        "query": " OR ".join([f'barcode=="{barcode}"' for barcode in batch]),
-                        "limit": len(batch),
-                    },
-                ).get("items", [])
-                fetch_items.extend(batch_items)
+                response = (
+                    self.folio_client.folio_post(  # type: ignore[misc]
+                        "/item-storage/items/retrieve",
+                        {
+                            "query": " OR ".join([f'barcode=="{barcode}"' for barcode in batch]),
+                            "limit": len(batch),
+                        },
+                    )
+                    or {}
+                )
+                fetch_items.extend(response.get("items", []))
             except folioclient.FolioClientError as e:
                 logger.error(
                     "Error fetching items batch %s: %s", i // batch_size + 1, e.response.text
@@ -521,7 +527,7 @@ class LoansMigrator(MigrationTaskBase):
                 f"Barcode: {barcode}",
             )
 
-    async def check_barcodes(self):
+    async def check_barcodes(self) -> AsyncGenerator[LegacyLoan, None]:
         self.pre_validate_item_barcodes()
         await self.pre_validate_patron_barcodes_async()
         for loan in self.semi_valid_legacy_loans:
