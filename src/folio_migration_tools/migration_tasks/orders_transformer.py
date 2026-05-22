@@ -10,7 +10,7 @@ import json
 import logging
 import sys
 import time
-from typing import Annotated, List, Optional
+from typing import Annotated, List
 
 import i18n
 from deepdiff import DeepDiff
@@ -91,42 +91,42 @@ class OrdersTransformer(MigrationTaskBase):
             ),
         ]
         payment_status_map_file_name: Annotated[
-            Optional[str],
+            str,
             Field(
                 title="Payment Status Map File Name",
                 description=("File name for payment status mapping. By default is empty string."),
             ),
         ] = ""
         receipt_status_map_file_name: Annotated[
-            Optional[str],
+            str,
             Field(
                 title="Receipt Status Map File Name",
                 description=("File name for receipt status mapping. By default is empty string."),
             ),
         ] = ""
         workflow_status_map_file_name: Annotated[
-            Optional[str],
+            str,
             Field(
                 title="Workflow Status Map File Name",
                 description=("File name for workflow status mapping. By default is empty string."),
             ),
         ] = ""
         location_map_file_name: Annotated[
-            Optional[str],
+            str,
             Field(
                 title="Location Map File Name",
                 description=("File name for location mapping. By default is empty string."),
             ),
         ] = ""
         funds_map_file_name: Annotated[
-            Optional[str],
+            str,
             Field(
                 title="Funds Map File Name",
                 description=("File name for funds mapping. By default is empty string."),
             ),
         ] = ""
         funds_expense_class_map_file_name: Annotated[
-            Optional[str],
+            str,
             Field(
                 title="Funds Expense Class Map File Name",
                 description=(
@@ -248,10 +248,7 @@ class OrdersTransformer(MigrationTaskBase):
         return files
 
     def process_single_file(self, filename):
-        with (
-            open(filename, encoding="utf-8-sig") as records_file,
-            open(self.folder_structure.created_objects_path, "w+") as results_file,
-        ):
+        with open(filename, encoding="utf-8-sig") as records_file:
             self.mapper.migration_report.add_general_statistics(
                 i18n_t("Number of files processed")
             )
@@ -282,7 +279,7 @@ class OrdersTransformer(MigrationTaskBase):
                         FOLIONamespaces.orders,
                     )
 
-                    self.merge_into_orders_with_embedded_pols(folio_rec, results_file)
+                    self.merge_into_orders_with_embedded_pols(folio_rec)
 
                 except TransformationProcessError as process_error:
                     self.mapper.handle_transformation_process_error(idx, process_error)
@@ -299,33 +296,36 @@ class OrdersTransformer(MigrationTaskBase):
                         f"{idx:,} records processed. Recs/sec: {elapsed_formatted} "
                     )
 
-            self.total_records = records_processed
+            self.total_records += records_processed
 
             logger.info(  # pylint: disable=logging-fstring-interpolation
-                f"Done processing {filename} containing {self.total_records:,} records. "
+                f"Done processing {filename} containing {records_processed:,} records. "
                 f"Total records processed: {self.total_records:,}"
             )
             logger.info("Storing last record to disk")
-            Helper.write_to_file(results_file, self.current_folio_record)
+            Helper.write_to_file(self.results_file, self.current_folio_record)
             self.mapper.migration_report.add_general_statistics(
                 i18n.t("TOTAL Purchase Orders created")
             )
+            self.current_folio_record = {}
 
     async def do_work(self):
         logger.info("Getting started!")
-        for file in self.files:
-            logger.info("Processing %s", file)
-            try:
-                print(file)
-                self.process_single_file(file)
-            except Exception as ee:
-                error_str = (
-                    f"Processing of {file} failed:\n{ee}."
-                    "Check source files for empty lines or missing reference data"
-                )
-                logger.exception(error_str)
-                self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
-                sys.exit()
+        with open(self.folder_structure.created_objects_path, "w+") as results_file:
+            self.results_file = results_file
+            for file in self.files:
+                logger.info("Processing %s", file)
+                try:
+                    print(file)
+                    self.process_single_file(file)
+                except Exception as ee:
+                    error_str = (
+                        f"Processing of {file} failed:\n{ee}."
+                        "Check source files for empty lines or missing reference data"
+                    )
+                    logger.exception(error_str)
+                    self.mapper.migration_report.add("FailedFiles", f"{file} - {ee}")
+                    sys.exit()
 
     async def wrap_up(self):
         logger.info("Done. Wrapping up...")
@@ -350,13 +350,13 @@ class OrdersTransformer(MigrationTaskBase):
             self.mapper.migration_report.write_json_report(raw_report_file)
         logger.info("All done!")
 
-    def merge_into_orders_with_embedded_pols(self, folio_rec, results_file):
+    def merge_into_orders_with_embedded_pols(self, folio_rec):
         # Handle merging and storage
         if not self.current_folio_record:
             self.current_folio_record = folio_rec
         if folio_rec["id"] != self.current_folio_record["id"]:
             # Writes record to file
-            Helper.write_to_file(results_file, self.current_folio_record)
+            Helper.write_to_file(self.results_file, self.current_folio_record)
             self.mapper.migration_report.add_general_statistics(
                 i18n.t("TOTAL Purchase Orders created")
             )

@@ -175,10 +175,8 @@ def test_validate_required_properties_sub_pro_missing_uri(
         "link_2": "",
         "id": "32",
     }
-    folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
-    assert len(folio_rec["electronicAccess"]) == 1
-    assert folio_id == "32"
-    assert folio_rec["id"] == "132a9af6-7093-5df6-a8f0-ad0203fe3509"
+    with pytest.raises(TransformationRecordFailedError, match="Required properties missing"):
+        mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
 
 
 def test_validate_required_properties_sub_pro_missing_uri_and_more(
@@ -321,8 +319,8 @@ def test_validate_required_properties_sub_pro_missing_uri_and_more(
         "third_1": "",
     }
     # tfm = MappingFileMapperBase(mocked_folio_client, schema, fake_holdings_map, None, FOLIONamespaces.items, mocked_classes.get_mocked_library_config(), mocked_file_mapper.task_configuration)
-    folio_rec, folio_id = mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
-    assert len(folio_rec["electronicAccess"]) == 1
+    with pytest.raises(TransformationRecordFailedError, match="Required properties missing"):
+        mocked_file_mapper.do_map(record, record["id"], FOLIONamespaces.items)
 
 
 def test_validate_required_properties_item_notes(
@@ -916,9 +914,8 @@ def test_validate_required_properties_array_object_with_object_and_strings(
         mocked_classes.get_mocked_library_config(),
         mocked_file_mapper.task_configuration,
     )
-    folio_rec, folio_id = contact.do_map(record, record["id"], FOLIONamespaces.organizations)
-
-    assert "contacts" not in folio_rec
+    with pytest.raises(TransformationRecordFailedError, match="Required properties missing"):
+        contact.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
 def test_validate_required_properties_item_notes_split_on_delimiter_notes(
@@ -1135,15 +1132,15 @@ def test_validate_remove_and_report_incomplete_object_property(
         mocked_classes.get_mocked_library_config(),
         mocked_file_mapper.task_configuration,
     )
-    folio_rec, folio_id = mapper.do_map(record1, record1["id"], FOLIONamespaces.organizations)
-    assert len(folio_rec["interfaces"]) == 1
+    with pytest.raises(TransformationRecordFailedError, match="Required properties missing"):
+        mapper.do_map(record1, record1["id"], FOLIONamespaces.organizations)
 
     folio_rec, folio_id = mapper.do_map(record2, record2["id"], FOLIONamespaces.organizations)
     assert "name" in folio_rec["interfaces"][0]
     assert "uri" not in folio_rec["interfaces"][0]
 
-    folio_rec, folio_id = mapper.do_map(record3, record3["id"], FOLIONamespaces.organizations)
-    assert "interfaces" not in folio_rec
+    with pytest.raises(TransformationRecordFailedError, match="Required properties missing"):
+        mapper.do_map(record3, record3["id"], FOLIONamespaces.organizations)
 
 
 def test_validate_required_properites_in_array_objects_with_sub_objects(
@@ -1309,8 +1306,8 @@ def test_validate_required_properites_in_array_objects_with_sub_objects(
         mocked_classes.get_mocked_library_config(),
         mocked_file_mapper.task_configuration,
     )
-    org, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
-    assert len(org["contacts"]) == 1
+    with pytest.raises(TransformationRecordFailedError, match="Required properties missing"):
+        mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
 
 
 def test_multiple_repeated_split_on_delimiter_electronic_access(
@@ -5600,3 +5597,388 @@ def test_get_objects_exception_logging(mocked_file_mapper, tmp_path, caplog):
             objects = list(mocked_file_mapper.get_objects(source_file, test_file))
 
     assert len(objects) == 1
+
+
+def test_validate_array_item_missing_required_field_raises_error(
+    mocked_folio_client, mocked_file_mapper
+):
+    """Test that an array item with content but missing a required field raises
+    TransformationRecordFailedError instead of being silently dropped."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A composite purchase order",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "orderType": {"type": "string"},
+            "poLines": {
+                "description": "PO lines",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "titleOrPackage": {"type": "string"},
+                        "orderFormat": {"type": "string"},
+                        "source": {"type": "string"},
+                    },
+                    "required": ["titleOrPackage", "orderFormat", "source"],
+                },
+            },
+        },
+        "required": ["orderType"],
+    }
+    # Map titleOrPackage and source but NOT orderFormat (a required field)
+    record = {"id": "order1", "title": "My Book", "source": "API", "order_type": "One-Time"}
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "orderType", "legacy_field": "order_type", "value": "", "description": ""},
+            {"folio_field": "poLines[0].titleOrPackage", "legacy_field": "title", "value": "", "description": ""},
+            {"folio_field": "poLines[0].source", "legacy_field": "source", "value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.orders,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationRecordFailedError) as exc_info:
+        mapper.do_map(record, record["id"], FOLIONamespaces.orders)
+    error = exc_info.value
+    assert error.index_or_id == "order1"
+    assert "Required properties missing in poLines item" in error.message
+    assert "orderFormat" in error.data_value
+
+
+def test_validate_array_item_all_required_fields_present_succeeds(
+    mocked_folio_client, mocked_file_mapper
+):
+    """Test that an array item with all required fields present maps successfully."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A composite purchase order",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "orderType": {"type": "string"},
+            "poLines": {
+                "description": "PO lines",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "titleOrPackage": {"type": "string"},
+                        "orderFormat": {"type": "string"},
+                        "source": {"type": "string"},
+                    },
+                    "required": ["titleOrPackage", "orderFormat", "source"],
+                },
+            },
+        },
+        "required": ["orderType"],
+    }
+    record = {
+        "id": "order1",
+        "title": "My Book",
+        "source": "API",
+        "order_type": "One-Time",
+        "format": "Physical Resource",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "orderType", "legacy_field": "order_type", "value": "", "description": ""},
+            {"folio_field": "poLines[0].titleOrPackage", "legacy_field": "title", "value": "", "description": ""},
+            {"folio_field": "poLines[0].source", "legacy_field": "source", "value": "", "description": ""},
+            {"folio_field": "poLines[0].orderFormat", "legacy_field": "format", "value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.orders,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.orders)
+    assert len(folio_rec["poLines"]) == 1
+    assert folio_rec["poLines"][0]["titleOrPackage"] == "My Book"
+    assert folio_rec["poLines"][0]["source"] == "API"
+    assert folio_rec["poLines"][0]["orderFormat"] == "Physical Resource"
+
+
+def test_validate_array_item_empty_item_silently_dropped(
+    mocked_folio_client, mocked_file_mapper
+):
+    """Test that a truly empty array item (no content) is silently dropped
+    without raising an error."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A record with array",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "items": {
+                "description": "Sub-items",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "code": {"type": "string"},
+                    },
+                    "required": ["name", "code"],
+                },
+            },
+        },
+        "required": [],
+    }
+    # Map both fields for index 0 but with empty legacy values
+    record = {"id": "rec1", "name_field": "", "code_field": ""}
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "items[0].name", "legacy_field": "name_field", "value": "", "description": ""},
+            {"folio_field": "items[0].code", "legacy_field": "code_field", "value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.items)
+    # Empty item should be silently dropped, no error raised
+    assert "items" not in folio_rec
+
+
+def test_validate_array_item_missing_required_with_multi_field_delimiter(
+    mocked_folio_client, mocked_file_mapper
+):
+    """Test that multi_field_delimiter splitting still raises an error when a
+    required field is missing from one of the split items."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A record with array",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "electronicAccess": {
+                "description": "List of electronic access items",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "uri": {"type": "string"},
+                        "linkText": {"type": "string"},
+                    },
+                    "required": ["uri"],
+                },
+            },
+        },
+        "required": [],
+    }
+    # linkText has values but uri is empty — this means content exists but required field missing
+    record = {"id": "rec1", "link": "", "text": "Click here"}
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "electronicAccess[0].uri", "legacy_field": "link", "value": "", "description": ""},
+            {"folio_field": "electronicAccess[0].linkText", "legacy_field": "text", "value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationRecordFailedError) as exc_info:
+        mapper.do_map(record, record["id"], FOLIONamespaces.items)
+    error = exc_info.value
+    assert error.index_or_id == "rec1"
+    assert "Required properties missing in electronicAccess item" in error.message
+    assert "uri" in error.data_value
+
+
+def test_validate_array_item_multi_field_delimiter_all_required_present(
+    mocked_folio_client, mocked_file_mapper
+):
+    """Test that multi_field_delimiter splitting works correctly when all required
+    fields are present in each split item."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A record with array",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "electronicAccess": {
+                "description": "List of electronic access items",
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "uri": {"type": "string"},
+                        "linkText": {"type": "string"},
+                    },
+                    "required": ["uri"],
+                },
+            },
+        },
+        "required": [],
+    }
+    record = {
+        "id": "rec1",
+        "link": "http://example.com<delimiter>http://example.org",
+        "text": "Link 1<delimiter>Link 2",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "electronicAccess[0].uri", "legacy_field": "link", "value": "", "description": ""},
+            {"folio_field": "electronicAccess[0].linkText", "legacy_field": "text", "value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.items)
+    assert len(folio_rec["electronicAccess"]) == 2
+    assert folio_rec["electronicAccess"][0]["uri"] == "http://example.com"
+    assert folio_rec["electronicAccess"][0]["linkText"] == "Link 1"
+    assert folio_rec["electronicAccess"][1]["uri"] == "http://example.org"
+    assert folio_rec["electronicAccess"][1]["linkText"] == "Link 2"
+
+
+def test_validate_array_item_missing_required_error_includes_field_names(
+    mocked_folio_client, mocked_file_mapper
+):
+    """Test that the error message includes the names of the missing required fields."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "lines": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "format": {"type": "string"},
+                        "source": {"type": "string"},
+                    },
+                    "required": ["title", "format", "source"],
+                },
+            },
+        },
+        "required": [],
+    }
+    # Only map title, missing format and source
+    record = {"id": "rec1", "title_field": "A Title"}
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "lines[0].title", "legacy_field": "title_field", "value": "", "description": ""},
+            {"folio_field": "lines[0].format", "legacy_field": "format_field", "value": "", "description": ""},
+            {"folio_field": "lines[0].source", "legacy_field": "source_field", "value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationRecordFailedError) as exc_info:
+        mapper.do_map(record, record["id"], FOLIONamespaces.items)
+    error = exc_info.value
+    assert error.index_or_id == "rec1"
+    assert "Required properties missing in lines item" in error.message
+    # data_value should be a JSON list of the missing field names
+    assert "format" in error.data_value
+    assert "source" in error.data_value
+
+
+def test_validate_array_item_missing_required_log_it_output(
+    mocked_folio_client, mocked_file_mapper, caplog
+):
+    """Test that log_it() produces the expected RECORD FAILED log entry with
+    the record identifier, message, and missing field names."""
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "poLines": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "titleOrPackage": {"type": "string"},
+                        "orderFormat": {"type": "string"},
+                        "source": {"type": "string"},
+                    },
+                    "required": ["titleOrPackage", "orderFormat", "source"],
+                },
+            },
+        },
+        "required": [],
+    }
+    record = {"id": "PO-12345", "title": "Important Book"}
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "poLines[0].titleOrPackage", "legacy_field": "title", "value": "", "description": ""},
+            {"folio_field": "poLines[0].orderFormat", "legacy_field": "format", "value": "", "description": ""},
+            {"folio_field": "poLines[0].source", "legacy_field": "source", "value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.orders,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationRecordFailedError) as exc_info:
+        mapper.do_map(record, record["id"], FOLIONamespaces.orders)
+
+    error = exc_info.value
+    # Simulate what handle_transformation_record_failed_error does
+    caplog.clear()
+    with caplog.at_level(26):
+        error.log_it()
+
+    log_records = [r for r in caplog.records if r.levelno == 26]
+    assert len(log_records) == 1
+    log_record = log_records[0]
+    assert "RECORD FAILED" in log_record.message
+    assert "PO-12345" in log_record.message
+    assert "Required properties missing in poLines item" in log_record.message
+    assert "orderFormat" in log_record.message
+    assert "source" in log_record.message

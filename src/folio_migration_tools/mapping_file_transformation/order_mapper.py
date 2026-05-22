@@ -83,6 +83,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         # Detect PO lines property name from schema (compositePoLines or poLines)
+        logger.debug(
+            "Composite order schema:\n %s", json.dumps(self.composite_order_schema, indent=2)
+        )
         self.po_lines_key = next(
             (
                 p
@@ -114,6 +117,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         logger.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
         self.organizations_id_map = organizations_id_map
+        logger.debug("Organizations ID map: %s", json.dumps(self.organizations_id_map, indent=2))
         self.folio_organization_cache = {}
 
         self.acquisitions_methods_mapping = RefDataMapping(
@@ -359,6 +363,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
                     )
+                    logger.debug("Actual path for fetching object schema: %s", actual_path)
 
                     p1 = CompositeOrderMapper.inject_schema_by_ref(
                         actual_path, github_headers, property_level1
@@ -379,6 +384,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
                     )
+                    logger.debug("Actual path for fetching array items schema: %s", actual_path)
 
                     p1 = CompositeOrderMapper.inject_items_schema_by_ref(
                         actual_path, github_headers, property_level1
@@ -392,6 +398,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     actual_path = urllib.parse.urljoin(
                         f"{submodule_path}", object_schema.get("$ref", "")
                     )
+                    logger.debug("Actual path for fetching string schema: %s", actual_path)
                     p1 = CompositeOrderMapper.inject_schema_by_ref(
                         actual_path, github_headers, property_level1
                     )
@@ -417,6 +424,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 schema_url, headers=github_headers, follow_redirects=True, timeout=None
             )
             req.raise_for_status()
+            logger.debug(
+                "Fetched schema from submodule %s for property %s",
+                submodule_path,
+                property.get("description", ""),
+            )
             return dict(property, **json.loads(req.text))
         except Exception as ee:
             logger.exception(ee)
@@ -431,6 +443,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 schema_url, headers=github_headers, follow_redirects=True, timeout=None
             )
             req.raise_for_status()
+            logger.debug(
+                "Fetched schema from submodule %s for property %s",
+                submodule_path,
+                property.get("description", ""),
+            )
             return dict(property["items"], **json.loads(req.text))
         except Exception as ee:
             logger.exception(ee)
@@ -445,7 +462,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         # Replace legacy bib ID with instance UUID from map
-        bib_id = composite_order[self.po_lines_key][0].pop("instanceId", "")
+        logger.debug(
+            "Looking up instance UUID for order %s: %s",
+            index_or_id,
+            json.dumps(composite_order, indent=2),
+        )
+        bib_id = composite_order.get(self.po_lines_key, [{}])[0].pop("instanceId", "")
         if matching_instance := self.get_folio_instance_uuid(index_or_id, bib_id):
             composite_order[self.po_lines_key][0]["instanceId"] = matching_instance
 
@@ -493,27 +515,37 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     def get_folio_organization_uuid(self, index_or_id, org_code):
         if self.organizations_id_map:
-            self.migration_report.add(
-                "PurchaseOrderVendorLinking",
-                i18n.t("Organizations linked using organizations_id_map"),
-            )
-            if matching_org := self.organizations_id_map.get(org_code):
+            logger.debug(f"Looking up organization code {org_code} in organizations_id_map")
+            matching_org = self.organizations_id_map.get(org_code, None)
+            logger.debug(f"Mapped value for organization code {org_code}: {matching_org}")
+            if matching_org:
+                self.migration_report.add(
+                    "PurchaseOrderVendorLinking",
+                    i18n.t("Organizations linked using organizations_id_map"),
+                )
                 return matching_org[1]
 
-        if matching_org := self.get_matching_record_from_folio(
+        logger.debug(
+            f"Organization code {org_code} not found in organizations_id_map, looking up in FOLIO"
+        )
+        matching_org = self.get_matching_record_from_folio(
             index_or_id,
             self.folio_organization_cache,
             "/organizations-storage/organizations",
             "code",
             org_code,
             "organizations",
-        ):
+        )
+        logger.debug(
+            f"FOLIO lookup result for organization code {org_code}:"
+            f" {json.dumps(matching_org, indent=2)}"
+        )
+        if matching_org:
             self.migration_report.add(
                 "PurchaseOrderVendorLinking",
                 i18n.t("Organizations not in ID map, linked using FOLIO lookup"),
             )
             return matching_org["id"]
-
         else:
             self.migration_report.add(
                 "PurchaseOrderVendorLinking",
