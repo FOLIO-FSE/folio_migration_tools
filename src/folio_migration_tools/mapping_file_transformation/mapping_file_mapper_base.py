@@ -338,6 +338,7 @@ class MappingFileMapperBase(MapperBase):
                     1,
                 )
         elif schema_property.get("type", "") == "array":
+            logger.debug("Mapping array property: %s.", schema_property_name)
             try:
                 if schema_property["items"].get("type", "") == "object":
                     self.map_objects_array_props(
@@ -349,7 +350,7 @@ class MappingFileMapperBase(MapperBase):
                         schema_property["items"].get("required", []),
                     )
                     self.validate_object_items_in_array(
-                        folio_object, schema_property_name, schema_property
+                        folio_object, schema_property_name, schema_property, index_or_id
                     )
 
                 elif schema_property["items"].get("type", "") in ["string", "number", "integer"]:
@@ -490,9 +491,10 @@ class MappingFileMapperBase(MapperBase):
                     [],
                 )
                 self.validate_object_items_in_array(
-                    legacy_object,
+                    folio_object,
                     child_property_name,
-                    child_property["items"]["properties"],
+                    child_property,
+                    index_or_id,
                 )
 
             elif child_property.get("type", "") == "array" and child_property.get("items", {}).get(
@@ -872,15 +874,35 @@ class MappingFileMapperBase(MapperBase):
             return False
         return True
 
-    def validate_object_items_in_array(self, folio_object, schema_property_name, schema_property):
+    def validate_object_items_in_array(
+        self, folio_object, schema_property_name, schema_property, index_or_id=""
+    ):
         valid_array_objects = []
+        required = schema_property.get("items", {}).get("required", [])
+        logger.debug(
+            "Validating object items in array for property: %s. Objects being validated: %s",
+            schema_property_name,
+            json.dumps(folio_object.get(schema_property_name, []), indent=2),
+        )
         for item in folio_object.get(schema_property_name, []):
             if all(
                 item.get(r) or (isinstance(item.get(r), bool))
-                for r in schema_property["items"].get("required", [])
+                for r in required
             ):
                 valid_array_objects.append(item)
+            elif any(v for v in item.values() if v or isinstance(v, bool)):
+                # Item has real content but is missing required fields — hard fail
+                missing = [
+                    r for r in required
+                    if not (item.get(r) or isinstance(item.get(r), bool))
+                ]
+                raise TransformationRecordFailedError(
+                    index_or_id,
+                    f"Required properties missing in {schema_property_name} item",
+                    json.dumps(missing),
+                )
             else:
+                # Truly empty item — silently discard
                 self.migration_report.add(
                     "IncompleteSubPropertyRemoved",
                     f"{schema_property_name}",

@@ -9,6 +9,7 @@ must inherit from. It handles common functionality including:
 - Error tracking and reporting
 """
 
+from typing import Dict
 import csv
 import io
 import json
@@ -271,7 +272,7 @@ class MigrationTaskBase:
 
         logger.info("Logging set up")
 
-    def setup_records_map(self, mapping_file_path):
+    def setup_records_map(self, mapping_file_path) -> Dict:
         with open(mapping_file_path) as mapping_file:
             field_map = json.load(mapping_file)
             logger.info("%s fields present in record mapping file", len(field_map["data"]))

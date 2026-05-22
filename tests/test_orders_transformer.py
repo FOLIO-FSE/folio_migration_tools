@@ -81,8 +81,9 @@ def test_merge_into_orders_with_embedded_pols():
     # TODO don't write the file
     with io.StringIO() as results_file:
         for order in order_objects:
+            mocked_orders_transformer.results_file = results_file
             OrdersTransformer.merge_into_orders_with_embedded_pols(
-                mocked_orders_transformer, order, results_file
+                mocked_orders_transformer, order
             )
 
         assert len(mocked_orders_transformer.current_folio_record["compositePoLines"]) == 2

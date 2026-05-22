@@ -327,7 +327,10 @@ class MapperBase:
     def validate_required_properties(
         legacy_id, folio_object: dict, schema: dict, object_type: FOLIONamespaces
     ):
+        logger.debug("Validating required properties for %s with id %s", object_type, legacy_id)
+        logger.debug("Folio object before cleaning: %s", folio_object)
         cleaned_folio_object = MapperBase.clean_none_props(folio_object)
+        logger.debug("Folio object after cleaning: %s", cleaned_folio_object)
         required = []
         missing = []
         if object_type != FOLIONamespaces.note:
