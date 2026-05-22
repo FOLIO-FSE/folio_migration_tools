@@ -9,7 +9,6 @@ must inherit from. It handles common functionality including:
 - Error tracking and reporting
 """
 
-from typing import Dict
 import csv
 import io
 import json
@@ -21,7 +20,7 @@ from abc import abstractmethod
 from datetime import datetime, timezone
 from genericpath import isfile
 from pathlib import Path
-from typing import Annotated, List, Optional
+from typing import Annotated, Dict, List, Optional
 
 import folioclient
 from folio_uuid.folio_namespaces import FOLIONamespaces
