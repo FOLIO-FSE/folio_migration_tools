@@ -21,5 +21,10 @@ Logs are written inside the iteration you specify in `libraryInformation.iterati
 ## Third-party logs
 Handlers are attached at the root logger, so module-level loggers inside dependencies (e.g., `folio_data_import`) are captured automatically. Suppression for chatty libraries remains in place; adjust levels manually if you need more detail.
 
+## Data issue entries for array items
+- Missing required fields in object-array items are logged as data issues (level 26) when the item has legacy-sourced content.
+- The log format is `FIELD MAPPING FAILED\t<record_id>\t<message>\t<data>`.
+- Items that only contain static mapped values and miss required fields are discarded without a field mapping log entry.
+
 ## Tips for noisy environments
 - If you enable DEBUG and see too much from HTTP clients, you can lower them via env or a small shim before invoking the CLI (e.g., set `LOGGING_HTTPX_LEVEL=WARNING` in your wrapper). By default, they are already set to WARNING.
