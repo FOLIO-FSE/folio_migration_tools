@@ -263,6 +263,21 @@ This file contains per-record issues with columns for:
 
 Use this file to create targeted data cleaning task lists.
 
+### Array object required-field handling
+
+For mapping-file-based transformations, missing required fields inside object arrays are reported at item level:
+
+- Items with legacy-sourced content but missing required fields are logged as field mapping issues and removed from the resulting record.
+- Items containing only static mapped values (from `value`) and missing required fields are removed without creating a field mapping issue.
+
+Where to look in reports:
+
+- `FieldMappingErrors` section: item-level required-field problems with legacy content.
+- `IncompleteSubPropertyRemoved` section: discarded incomplete array items.
+- `Field Mapping Errors found` in `GeneralStatistics`: count of field mapping issues.
+
+This behavior allows a record to continue transforming even when individual array items are invalid.
+
 ### Mapping Reports
 
 Transformation tasks that use mapping files append a **mapping report** to the markdown report. This section shows:

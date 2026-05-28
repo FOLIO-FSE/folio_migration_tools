@@ -131,6 +131,37 @@ This would render the following results:
 }
 ```
 
+### Handling required fields in object arrays
+
+When mapping to object arrays (for example `contacts[0].firstName` or `electronicAccess[0].uri`), required-field validation is handled per array item.
+
+| Item state | Missing required fields | Outcome | Logged as field mapping issue |
+|-----------|--------------------------|---------|-------------------------------|
+| Item has all required fields | No | Item is kept | No |
+| Item has legacy-sourced content | Yes | Item is discarded | Yes |
+| Item has only static mapped values (from `value`) | Yes | Item is discarded | No |
+
+Example:
+
+```
+{
+    "folio_field": "electronicAccess[0].relationshipId",
+    "legacy_field": "",
+    "value": "23d1669c-a32d-5bd0-b232-ac40181a5c7e"
+},
+{
+    "folio_field": "electronicAccess[0].uri",
+    "legacy_field": "LINK",
+    "value": ""
+}
+```
+
+If `uri` is required and `LINK` is empty, the item only contains static content (`relationshipId`) and is discarded.
+
+If `LINK` has content, the item is treated as legacy-content, and missing required fields are logged as a field mapping issue before the item is discarded.
+
+See also: [Migration Reports](migration_reports.md) and [Logging](logging.md).
+
 ### The legacy_field property
 This field should contain the name of the column in the TSV source data file. 
 _Turn off mapping_   
