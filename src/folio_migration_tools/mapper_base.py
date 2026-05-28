@@ -250,7 +250,7 @@ class MapperBase:
 
     def handle_transformation_field_mapping_error(self, index_or_id, error):
         self.migration_report.add("FieldMappingErrors", error)
-        error.id = error.id or index_or_id
+        error.index_or_id = error.index_or_id or index_or_id
         error.log_it()
         self.migration_report.add_general_statistics(i18n_t("Field Mapping Errors found"))
 
@@ -493,7 +493,7 @@ class MapperBase:
 
     def setup_statistical_codes_map(self, statistical_codes_map):
         if statistical_codes_map:
-            self.statistical_codes_mapping = RefDataMapping(
+            self.statistical_codes_mapping: RefDataMapping | None = RefDataMapping(
                 self.folio_client,
                 "/statistical-codes",
                 "statisticalCodes",

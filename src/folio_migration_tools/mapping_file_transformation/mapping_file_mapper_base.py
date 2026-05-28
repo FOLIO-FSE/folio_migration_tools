@@ -341,7 +341,7 @@ class MappingFileMapperBase(MapperBase):
             logger.debug("Mapping array property: %s.", schema_property_name)
             try:
                 if schema_property["items"].get("type", "") == "object":
-                    self.map_objects_array_props(
+                    static_only_props = self.map_objects_array_props(
                         legacy_object,
                         schema_property_name,
                         schema_property["items"]["properties"],
@@ -350,7 +350,11 @@ class MappingFileMapperBase(MapperBase):
                         schema_property["items"].get("required", []),
                     )
                     self.validate_object_items_in_array(
-                        folio_object, schema_property_name, schema_property, index_or_id
+                        folio_object,
+                        schema_property_name,
+                        schema_property,
+                        index_or_id,
+                        static_only_props,
                     )
 
                 elif schema_property["items"].get("type", "") in ["string", "number", "integer"]:
@@ -482,7 +486,7 @@ class MappingFileMapperBase(MapperBase):
                 and child_property.get("items", {}).get("type", "") == "object"
                 and child_property.get("items", {}).get("properties", "")
             ):
-                self.map_objects_array_props(
+                static_only_props = self.map_objects_array_props(
                     legacy_object,
                     f"{schema_property_name}.{child_property_name}",
                     child_property["items"]["properties"],
@@ -495,6 +499,7 @@ class MappingFileMapperBase(MapperBase):
                     child_property_name,
                     child_property,
                     index_or_id,
+                    static_only_props,
                 )
 
             elif child_property.get("type", "") == "array" and child_property.get("items", {}).get(
@@ -531,6 +536,17 @@ class MappingFileMapperBase(MapperBase):
         required: list[str],
     ):
         resulting_array = []
+        static_props = set()
+        legacy_props = set()
+        for entry in self.record_map["data"]:
+            m = re.match(rf"{re.escape(prop_name)}\[\d+\]\.(.+)", entry["folio_field"])
+            if m:
+                sub_prop = m.group(1)
+                if entry.get("value") not in [None, ""] or isinstance(entry.get("value"), bool):
+                    static_props.add(sub_prop)
+                if entry["legacy_field"] not in empty_vals:
+                    legacy_props.add(sub_prop)
+        static_only_props = static_props - legacy_props
         i = 0
         while True:
             keys_to_map = {
@@ -640,6 +656,8 @@ class MappingFileMapperBase(MapperBase):
 
         if any(resulting_array):
             set_deep2(folio_object, prop_name, resulting_array)
+
+        return static_only_props
 
     @staticmethod
     def split_obj_by_delim(delimiter: str, folio_obj: dict, delimited_props: List[str]):
@@ -875,9 +893,15 @@ class MappingFileMapperBase(MapperBase):
         return True
 
     def validate_object_items_in_array(
-        self, folio_object, schema_property_name, schema_property, index_or_id=""
+        self,
+        folio_object,
+        schema_property_name,
+        schema_property,
+        index_or_id="",
+        static_only_props: set | None = None,
     ):
         valid_array_objects = []
+        static_only_props = static_only_props or set()
         required = schema_property.get("items", {}).get("required", [])
         logger.debug(
             "Validating object items in array for property: %s. Objects being validated: %s",
@@ -885,28 +909,32 @@ class MappingFileMapperBase(MapperBase):
             json.dumps(folio_object.get(schema_property_name, []), indent=2),
         )
         for item in folio_object.get(schema_property_name, []):
-            if all(
-                item.get(r) or (isinstance(item.get(r), bool))
-                for r in required
-            ):
-                valid_array_objects.append(item)
-            elif any(v for v in item.values() if v or isinstance(v, bool)):
-                # Item has real content but is missing required fields — hard fail
-                missing = [
-                    r for r in required
-                    if not (item.get(r) or isinstance(item.get(r), bool))
-                ]
-                raise TransformationRecordFailedError(
-                    index_or_id,
-                    f"Required properties missing in {schema_property_name} item",
-                    json.dumps(missing),
-                )
-            else:
-                # Truly empty item — silently discard
-                self.migration_report.add(
-                    "IncompleteSubPropertyRemoved",
-                    f"{schema_property_name}",
-                )
+            try:
+                if all(item.get(r) or (isinstance(item.get(r), bool)) for r in required):
+                    valid_array_objects.append(item)
+                elif any(
+                    (v or isinstance(v, bool))
+                    for k, v in item.items()
+                    if k not in static_only_props
+                ):
+                    # Item has real content but is missing required fields: log as data issue
+                    # and discard
+                    missing = [
+                        r for r in required if not (item.get(r) or isinstance(item.get(r), bool))
+                    ]
+                    raise TransformationFieldMappingError(
+                        index_or_id,
+                        f"Required properties missing in {schema_property_name} item",
+                        json.dumps(missing),
+                    )
+                else:
+                    # Truly empty item — silently discard
+                    self.migration_report.add(
+                        "IncompleteSubPropertyRemoved",
+                        f"{schema_property_name}",
+                    )
+            except TransformationFieldMappingError as data_error:
+                self.handle_transformation_field_mapping_error(index_or_id, data_error)
         if valid_array_objects:
             folio_object[schema_property_name] = valid_array_objects
         else:
