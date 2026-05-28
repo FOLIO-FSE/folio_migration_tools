@@ -187,17 +187,17 @@ def test_tags_object_array(mapper):
 
 
 def test_enforce_schema_required_properties_in_organization(mapper):
-    data["EMAIL2"] = ""
-    data["PHONE NUM"] = ""
-    data["code"] = "o4b"
+    local_data = data.copy()
+    local_data["EMAIL2"] = ""
+    local_data["PHONE NUM"] = ""
+    local_data["code"] = "o4b"
 
-    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-
-    # There should only be one email, as the other one is empty
-    assert len(organization["emails"]) == 1
-
-    # There should be no phone numbers, as the data is empty
-    assert not organization.get("phoneNumbers")
+    # phoneNumbers/emails items with missing required fields should be logged as
+    # field mapping issues and discarded; record mapping should continue.
+    organization, idx = mapper.do_map(local_data, local_data["code"], FOLIONamespaces.organizations)
+    assert "phoneNumbers" not in organization or len(organization.get("phoneNumbers", [])) == 0
+    # One valid email item can remain while incomplete email items are discarded.
+    assert len(organization.get("emails", [])) == 1
 
 
 @pytest.mark.skip(
@@ -247,12 +247,14 @@ def test_contacts_address_mapping(mapper):
 
 
 def test_contacts_required_properties(mapper):
-    data["code"] = "test_contacts_required_properties7"
-    data["contact_person_f"] = ""
+    local_data = data.copy()
+    local_data["code"] = "test_contacts_required_properties7"
+    local_data["contact_person_f"] = ""
 
-    organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
-
-    assert "contacts" not in organization
+    # contacts[0] has content (lastName, addresses) but is missing required firstName.
+    # Item should be discarded and mapping should continue.
+    organization, idx = mapper.do_map(local_data, local_data["code"], FOLIONamespaces.organizations)
+    assert "contacts" not in organization or len(organization.get("contacts", [])) == 0
 
 
 def test_contacts_category_refdata_mapping_single(mapper):
@@ -280,6 +282,13 @@ def test_contacts_categories_replacevalue_multiple(mapper):
         "phone_categories": "",
         "email1_categories": "",
         "email2_categories": "",
+        "EMAIL": "test@test.com",
+        "EMAIL2": "test2@test.com",
+        "PHONE NUM": "555-1234",
+        "account_number": "ac1",
+        "account_status": "Active",
+        "interface_1_name": "Interface 1",
+        "interface_2_name": "Interface 2",
     }
 
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
@@ -307,10 +316,18 @@ def test_interfaces_type_enum_invalid(mapper):
         "status": "Active",  # Enum, required
         "interface_1_type": "Whaaaat?",
         "interface_1_name": "Interface name",
+        "interface_2_name": "Interface 2",
         "address_categories": "rt",
         "phone_categories": "rt",
         "email1_categories": "rt",
         "email2_categories": "rt",
+        "EMAIL": "test@test.com",
+        "EMAIL2": "test2@test.com",
+        "PHONE NUM": "555-1234",
+        "contact_person_f": "Test",
+        "contact_person_l": "Test",
+        "account_number": "ac1",
+        "account_status": "Active",
     }
 
     organization, idx = mapper.do_map(
@@ -374,6 +391,13 @@ def test_empty_non_required_enum_in_sub_object_mapping(mapper):
         "phone_categories": "",
         "email1_categories": "",
         "email2_categories": "",
+        "EMAIL": "test@test.com",
+        "EMAIL2": "test2@test.com",
+        "PHONE NUM": "555-1234",
+        "contact_person_f": "Test",
+        "contact_person_l": "Test",
+        "interface_1_name": "Interface 1",
+        "interface_2_name": "Interface 2",
     }
 
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
@@ -387,12 +411,20 @@ def test_map_interface_credentials(mapper):
         "code": "test_interface_credentials",  # String, required
         "status": "Active",  # Enum, required
         "interface_1_name": "Interface name",
+        "interface_2_name": "Interface 2",
         "interface_1_username": "myUsername",
         "interface_1_password": "myPassword",  # noqa: S105
         "address_categories": "",
         "phone_categories": "",
         "email1_categories": "",
         "email2_categories": "",
+        "EMAIL": "test@test.com",
+        "EMAIL2": "test2@test.com",
+        "PHONE NUM": "555-1234",
+        "contact_person_f": "Test",
+        "contact_person_l": "Test",
+        "account_number": "ac1",
+        "account_status": "Active",
     }
 
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
@@ -415,7 +447,16 @@ def test_map_organization_notes(mapper):
         "address_categories": "",
         "phone_categories": "",
         "email1_categories": "",
+        "contact_person_l": "Test",
+        "interface_1_name": "Interface 1",
+        "interface_2_name": "Interface 2",
+        "account_number": "ac1",
+        "account_status": "Active",
         "email2_categories": "",
+        "EMAIL": "test@test.com",
+        "EMAIL2": "test2@test.com",
+        "PHONE NUM": "555-1234",
+        "contact_person_f": "Test",
     }
 
     res = mapper.do_map(data, 1, FOLIONamespaces.organizations)
@@ -487,6 +528,7 @@ data = {
     "interface_1_localLocation": "The shelf behind the houseplant",  # String
     "interface_1_onlineLocation": "How does this differ from URI?",  # String
     "interface_2_uri": "https://www.wiki.folio.org",
+    "interface_2_name": "Wiki FOLIO",
     "interface_2_type": "End user",
 }
 
@@ -734,6 +776,12 @@ organization_map = {
         {
             "folio_field": "interfaces[0].onlineLocation",
             "legacy_field": "interface_1_onlineLocation",
+            "value": "",
+            "description": "",
+        },
+        {
+            "folio_field": "interfaces[1].name",
+            "legacy_field": "interface_2_name",
             "value": "",
             "description": "",
         },

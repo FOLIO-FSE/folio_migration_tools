@@ -1719,11 +1719,12 @@ def test_notes_empty_field(mocked_folio_client):
     mock_folio = mocked_folio_client
     user_mapper = UserMapper(mock_folio, mock_task_config, mock_library_conf, user_map, None, None)
     folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    cache_size_before = len(user_mapper.extradata_writer.cache)
     folio_user = user_mapper.perform_additional_mapping(
         legacy_user_record, folio_user, index_or_id
     )
+    assert len(user_mapper.extradata_writer.cache) == cache_size_before
     assert folio_user["externalSystemId"] == "externalid_1"
-    assert user_mapper.notes_mapper.noteprops is not None
 
 
 def test_get_users_missing_keys():
