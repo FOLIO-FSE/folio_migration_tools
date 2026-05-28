@@ -64,7 +64,6 @@ This repo plays the main part in a process using a collection of tools. The proc
 In order to perform migrations according to this process, you need the following:
 * An Installation of [FOLIO Migration Tools](https://pypi.org/project/folio-migration-tools/). Installation instructions above.
 * A clone, or a separate repo created from [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
-* Access to the [Data mapping file creator](https://data-mapping-file-creator.folio.ebsco.com/data_mapping_creation) web tool
 * A FOLIO tenant running the latest or the second latest version of FOLIO
 
 # Internationalization
