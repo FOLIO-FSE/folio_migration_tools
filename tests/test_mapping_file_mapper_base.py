@@ -1021,6 +1021,175 @@ def test_validate_required_properties_item_notes_split_on_delimiter_notes(
     assert folio_rec["notes"][1]["itemNoteTypeId"] == "A UUID"
 
 
+def test_validate_nested_array_required_fields_use_full_property_path(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "Organization profile with nested addresses",
+        "type": "object",
+        "properties": {
+            "profile": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "addresses": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "addressLine1": {"type": "string"},
+                                "addressLine2": {"type": "string"},
+                            },
+                            "required": ["addressLine1"],
+                        },
+                    },
+                },
+            },
+            "addresses": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"addressLine1": {"type": "string"}},
+                    "required": ["addressLine1"],
+                },
+            },
+        },
+    }
+    record = {
+        "id": "nested-addresses-1",
+        "profile_name": "My Profile",
+        "profile_addr_line1": "",
+        "profile_addr_line2": "Suite 100",
+        "root_addr_line1": "Root Street",
+    }
+    profile_map = {
+        "data": [
+            {
+                "folio_field": "profile.name",
+                "legacy_field": "profile_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "profile.addresses[0].addressLine1",
+                "legacy_field": "profile_addr_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "profile.addresses[0].addressLine2",
+                "legacy_field": "profile_addr_line2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "addresses[0].addressLine1",
+                "legacy_field": "root_addr_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        profile_map,
+        None,
+        FOLIONamespaces.organizations,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+
+    folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    assert folio_rec["addresses"][0]["addressLine1"] == "Root Street"
+    assert "profile" in folio_rec
+    assert folio_rec["profile"]["name"] == "My Profile"
+    assert "addresses" not in folio_rec["profile"]
+
+
+def test_validate_nested_array_missing_required_logs_full_property_path(
+    mocked_folio_client: FolioClient, mocked_file_mapper, caplog
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "Organization profile with nested addresses",
+        "type": "object",
+        "properties": {
+            "profile": {
+                "type": "object",
+                "properties": {
+                    "addresses": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "addressLine1": {"type": "string"},
+                                "addressLine2": {"type": "string"},
+                            },
+                            "required": ["addressLine1"],
+                        },
+                    }
+                },
+            }
+        },
+    }
+    record = {
+        "id": "nested-addresses-2",
+        "profile_addr_line1": "",
+        "profile_addr_line2": "Suite 200",
+    }
+    profile_map = {
+        "data": [
+            {
+                "folio_field": "profile.addresses[0].addressLine1",
+                "legacy_field": "profile_addr_line1",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "profile.addresses[0].addressLine2",
+                "legacy_field": "profile_addr_line2",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        profile_map,
+        None,
+        FOLIONamespaces.organizations,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+
+    caplog.clear()
+    with caplog.at_level(26):
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+
+    log_records = [r for r in caplog.records if r.levelno == 26]
+    assert len(log_records) >= 1
+    assert "Required properties missing in profile.addresses item" in log_records[0].message
+    assert "profile" not in folio_rec or "addresses" not in folio_rec["profile"]
+
+
 def test_validate_remove_and_report_incomplete_object_property(
     mocked_folio_client, mocked_file_mapper
 ):

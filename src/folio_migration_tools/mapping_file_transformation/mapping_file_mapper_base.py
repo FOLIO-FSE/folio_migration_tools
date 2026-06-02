@@ -496,7 +496,7 @@ class MappingFileMapperBase(MapperBase):
                 )
                 self.validate_object_items_in_array(
                     folio_object,
-                    child_property_name,
+                    f"{schema_property_name}.{child_property_name}",
                     child_property,
                     index_or_id,
                     static_only_props,
@@ -895,7 +895,7 @@ class MappingFileMapperBase(MapperBase):
     def validate_object_items_in_array(
         self,
         folio_object,
-        schema_property_name,
+        property_path,
         schema_property,
         index_or_id="",
         static_only_props: set | None = None,
@@ -903,13 +903,17 @@ class MappingFileMapperBase(MapperBase):
         valid_array_objects = []
         static_only_props = static_only_props or set()
         required = schema_property.get("items", {}).get("required", [])
+        array_items = get_from_path(folio_object, property_path, [])
         logger.debug(
             "Validating object items in array for property: %s. Objects being validated: %s",
-            schema_property_name,
-            json.dumps(folio_object.get(schema_property_name, []), indent=2),
+            property_path,
+            json.dumps(array_items, indent=2),
         )
-        for item in folio_object.get(schema_property_name, []):
+        for item in array_items:
             try:
+                if not isinstance(item, dict):
+                    valid_array_objects.append(item)
+                    continue
                 if all(item.get(r) or (isinstance(item.get(r), bool)) for r in required):
                     valid_array_objects.append(item)
                 elif any(
@@ -924,21 +928,21 @@ class MappingFileMapperBase(MapperBase):
                     ]
                     raise TransformationFieldMappingError(
                         index_or_id,
-                        f"Required properties missing in {schema_property_name} item",
+                        f"Required properties missing in {property_path} item",
                         json.dumps(missing),
                     )
                 else:
                     # Truly empty item — silently discard
                     self.migration_report.add(
                         "IncompleteSubPropertyRemoved",
-                        f"{schema_property_name}",
+                        f"{property_path}",
                     )
             except TransformationFieldMappingError as data_error:
                 self.handle_transformation_field_mapping_error(index_or_id, data_error)
         if valid_array_objects:
-            folio_object[schema_property_name] = valid_array_objects
+            set_at_path(folio_object, property_path, valid_array_objects)
         else:
-            folio_object.pop(schema_property_name, [])
+            pop_at_path(folio_object, property_path)
 
     @staticmethod
     def has_call_number_parts(folio_rec: Dict[str, Any]) -> bool:
@@ -1013,6 +1017,134 @@ def set_deep(dictionary, key, value):
     for k in keys:
         dd = dd.setdefault(k, {})
     dd.setdefault(latest, value)
+
+
+def _split_path_token(path_part: str) -> tuple[str, int | None]:
+    """Parse a path token into a dictionary key and optional list index.
+
+    Args:
+        path_part (str): A single path token such as "addresses" or
+            "addresses[0]".
+
+    Returns:
+        tuple[str, int | None]: A tuple containing the dictionary key and an
+            optional list index. If the token does not match the expected
+            pattern, returns ``(path_part, None)``.
+    """
+    match = re.match(r"^([^\[\]]+)(?:\[(\d+)\])?$", path_part)
+    if not match:
+        return path_part, None
+    key = match.group(1)
+    idx = int(match.group(2)) if match.group(2) is not None else None
+    return key, idx
+
+
+def get_from_path(dictionary, path: str, default=None):
+    """Read a value from a nested mapping/list structure by path.
+
+    Supports dot notation for dictionaries (for example, ``a.b``) and bracket
+    notation for list indexes (for example, ``a[0].b``).
+
+    Args:
+        dictionary (Any): Root object to read from.
+        path (str): Dot/bracket path expression.
+        default (Any, optional): Value returned when the path is missing or
+            type-incompatible.
+
+    Returns:
+        Any: The value at the path if present; otherwise ``default``.
+    """
+    current = dictionary
+    for part in path.split("."):
+        key, idx = _split_path_token(part)
+        if not isinstance(current, dict):
+            return default
+        if key not in current:
+            return default
+        current = current.get(key)
+        if idx is not None:
+            if not isinstance(current, list) or idx >= len(current):
+                return default
+            current = current[idx]
+    return current
+
+
+def set_at_path(dictionary, path: str, value):
+    """Set a value at a nested path, creating intermediate containers as needed.
+
+    Supports dot notation for dictionaries and bracket notation for list
+    indexes. Missing intermediate nodes are created as dictionaries or lists.
+    If an intermediate node has an incompatible type, the function exits
+    without raising.
+
+    Args:
+        dictionary (Any): Root object to mutate.
+        path (str): Dot/bracket path expression.
+        value (Any): Value to set at the resolved path.
+    """
+    current = dictionary
+    parts = path.split(".")
+    for part in parts[:-1]:
+        key, idx = _split_path_token(part)
+        if not isinstance(current, dict):
+            return
+        if key not in current or current[key] is None:
+            current[key] = [] if idx is not None else {}
+        if idx is None:
+            if not isinstance(current[key], dict):
+                current[key] = {}
+            current = current[key]
+        else:
+            if not isinstance(current[key], list):
+                current[key] = []
+            while len(current[key]) <= idx:
+                current[key].append({})
+            if not isinstance(current[key][idx], dict):
+                current[key][idx] = {}
+            current = current[key][idx]
+
+    key, idx = _split_path_token(parts[-1])
+    if not isinstance(current, dict):
+        return
+    if idx is None:
+        current[key] = value
+    else:
+        if key not in current or not isinstance(current[key], list):
+            current[key] = []
+        while len(current[key]) <= idx:
+            current[key].append(None)
+        current[key][idx] = value
+
+
+def pop_at_path(dictionary, path: str):
+    """Remove a value at a nested path if present.
+
+    This helper is tolerant of missing paths and type mismatches. It performs
+    no operation in those cases and does not raise.
+
+    Args:
+        dictionary (Any): Root object to mutate.
+        path (str): Dot/bracket path expression to remove.
+    """
+    current = dictionary
+    parts = path.split(".")
+    for part in parts[:-1]:
+        key, idx = _split_path_token(part)
+        if not isinstance(current, dict) or key not in current:
+            return
+        current = current[key]
+        if idx is not None:
+            if not isinstance(current, list) or idx >= len(current):
+                return
+            current = current[idx]
+
+    key, idx = _split_path_token(parts[-1])
+    if not isinstance(current, dict) or key not in current:
+        return
+    if idx is None:
+        current.pop(key, None)
+    elif isinstance(current[key], list) and idx < len(current[key]):
+        del current[key][idx]
 
 
 def set_deep2(dictionary, key, value):
