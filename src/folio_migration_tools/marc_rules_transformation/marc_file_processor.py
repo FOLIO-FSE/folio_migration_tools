@@ -160,6 +160,10 @@ class MarcFileProcessor:
                 marc_record,
                 folio_rec,
             )
+        else:
+            self.mapper.migration_report.add_general_statistics(
+                i18n.t("FOLIO-only instances created (no Data Import MARC record written)")
+            )
 
     def save_srs_record(
         self,
