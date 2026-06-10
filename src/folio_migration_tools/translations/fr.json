@@ -78,6 +78,7 @@
   "Error setting item status to %{status}": "Erreur lors du changement de statut de l'exemplaire à %{status}",
   "FAILED Records failed due to an error": "ÉCHEC Notices échouées en raison d'une erreur",
   "FOLIO Field": "Champ FOLIO",
+  "FOLIO-only instances created (no Data Import MARC record written)": "Instances uniquement FOLIO créées (aucune notice MARC Data Import écrite)",
   "Failed 1st time. No retries": "Échoué la 1ère fois. Pas de nouvelle tentative",
   "Failed checkout http status %{code}": "Emprunt échoué, statut HTTP %{code}",
   "Failed loans": "Prêts échoués",
