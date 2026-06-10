@@ -1069,6 +1069,11 @@ class RulesMapperBase(MapperBase):
         }
         return json.dumps(record)
 
+    def wrap_up(self):
+        raise NotImplementedError(
+            "This method should be implemented in the child class if needed."
+        )
+
 
 def has_conditions(mapping):
     return mapping.get("rules", []) and mapping["rules"][0].get("conditions", [])
