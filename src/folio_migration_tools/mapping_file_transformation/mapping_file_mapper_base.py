@@ -662,8 +662,8 @@ class MappingFileMapperBase(MapperBase):
     @staticmethod
     def split_obj_by_delim(delimiter: str, folio_obj: dict, delimited_props: List[str]):
         non_split_props = [(k, v) for k, v in folio_obj.items() if k not in delimited_props]
-        delimited_props = ([x, *folio_obj[x].split(delimiter)] for x in delimited_props)
-        zipped = list(zip(*delimited_props, strict=False))
+        delimited_props_split = [[x, *folio_obj[x].split(delimiter)] for x in delimited_props]
+        zipped = list(zip(*delimited_props_split, strict=False))
         res = []
         for (prop_name_idx, prop_name), (value_idx, ra) in itertools.product(
             enumerate(zipped[0]), enumerate(zipped[1:])
@@ -1164,7 +1164,10 @@ def set_deep2(dictionary, key, value):
     for k in keys:
         if k == keys[0] and k.endswith("]"):
             m = re.search(r"\[([\d]+)\]", k)
-            number = int(m[1])
+            if m:
+                number = int(m[1])
+            else:
+                raise ValueError(f"No list index found in key: {k}")
             name = k.split("[")[0]
             dd = dd.setdefault(name, [{}])
         else:
