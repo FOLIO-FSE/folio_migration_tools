@@ -174,6 +174,7 @@ def test_save_marc_record_task_config_false():
     mock_mapper.task_configuration = Mock()
     mock_mapper.task_configuration.data_import_marc = False
     mock_mapper.save_data_import_marc_record = Mock()
+    mock_mapper.migration_report = MigrationReport()
     mock_processor.mapper = mock_mapper
     mock_processor.data_import_marc_file = BytesIO()
     
@@ -195,6 +196,7 @@ def test_save_marc_record_file_def_false():
     mock_mapper.task_configuration = Mock()
     mock_mapper.task_configuration.data_import_marc = True
     mock_mapper.save_data_import_marc_record = Mock()
+    mock_mapper.migration_report = MigrationReport()
     mock_processor.mapper = mock_mapper
     mock_processor.data_import_marc_file = BytesIO()
     
@@ -215,6 +217,7 @@ def test_save_marc_record_no_data_import_marc_attribute():
     mock_mapper = Mock(spec=RulesMapperHoldings)
     mock_mapper.task_configuration = Mock(spec=[])  # No attributes
     mock_mapper.save_data_import_marc_record = Mock()
+    mock_mapper.migration_report = MigrationReport()
     mock_processor.mapper = mock_mapper
     mock_processor.data_import_marc_file = BytesIO()
     
