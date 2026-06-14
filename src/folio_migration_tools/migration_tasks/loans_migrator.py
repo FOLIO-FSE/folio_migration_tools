@@ -304,6 +304,11 @@ class LoansMigrator(MigrationTaskBase):
             self.set_renewal_count(legacy_loan, res_checkout)
             self.set_new_status(legacy_loan, res_checkout)
         elif res_checkout.should_be_retried:
+            self.migration_report.add(
+                "Details",
+                i18n.t("First attempt failed") + f": {res_checkout.migration_report_message}",
+            )
+            logger.info(f"First checkout failed, retrying: {res_checkout.error_message}")
             res_checkout2 = self.handle_checkout_failure(legacy_loan, res_checkout)
             if res_checkout2.was_successful and res_checkout2.folio_loan:
                 self.migration_report.add("Details", i18n_t("Checked out on second try"))

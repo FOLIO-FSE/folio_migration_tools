@@ -47,7 +47,7 @@
             "type": "object"
         }
     },
-    "description": "Task configuration for CoursesMigrator.",
+    "description": "Task configuration for UserImporter.",
     "properties": {
         "name": {
             "description": "The name of the task",
@@ -55,7 +55,7 @@
             "type": "string"
         },
         "migrationTaskType": {
-            "description": "Type of migration task",
+            "description": "The type of migration task",
             "title": "Migration task type",
             "type": "string"
         },
@@ -67,47 +67,85 @@
             "title": "ECS tenant ID",
             "type": "string"
         },
-        "compositeCourseMapPath": {
-            "description": "Path to the composite course map file",
-            "title": "Composite course map path",
-            "type": "string"
+        "files": {
+            "description": "List of JSONL files to be processed. These should be output files from UserTransformer containing mod-user-import compatible objects.",
+            "items": {
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "List of files",
+            "type": "array"
         },
-        "coursesFile": {
-            "$ref": "#/$defs/FileDefinition",
-            "description": "File containing course data",
-            "title": "Courses file"
+        "batchSize": {
+            "default": 250,
+            "description": "Number of users to process concurrently in each batch",
+            "maximum": 1000,
+            "minimum": 1,
+            "title": "Batch size",
+            "type": "integer"
         },
-        "termsMapPath": {
-            "description": "Path to the terms map file",
-            "title": "Terms map path",
-            "type": "string"
-        },
-        "departmentsMapPath": {
-            "description": "Path to the departments map file",
-            "title": "Departments map path",
-            "type": "string"
-        },
-        "lookUpInstructor": {
-            "anyOf": [
-                {
-                    "type": "boolean"
-                },
-                {
-                    "type": "null"
-                }
+        "userMatchKey": {
+            "default": "externalSystemId",
+            "description": "The key to use for matching existing users during upsert. Users with matching values will be updated rather than created.",
+            "enum": [
+                "externalSystemId",
+                "username",
+                "barcode"
             ],
+            "title": "User match key",
+            "type": "string"
+        },
+        "onlyUpdatePresentFields": {
             "default": false,
-            "description": "Flag to indicate whether to look up instructors. By default is False.",
-            "title": "Look up instructor"
+            "description": "When enabled, only fields present in the input will be updated. Missing fields will be left unchanged in existing records. When disabled, missing fields may be cleared.",
+            "title": "Only update present fields",
+            "type": "boolean"
+        },
+        "defaultPreferredContactType": {
+            "default": "002",
+            "description": "Default preferred contact type for users. Can be specified as ID (001-005) or name (mail/email/text/phone/mobile). Will be applied to users without a valid value already set.",
+            "enum": [
+                "001",
+                "002",
+                "003",
+                "004",
+                "005",
+                "mail",
+                "email",
+                "text",
+                "phone",
+                "mobile"
+            ],
+            "title": "Default preferred contact type",
+            "type": "string"
+        },
+        "fieldsToProtect": {
+            "default": [],
+            "description": "List of field paths to protect from updates (e.g., ['personal.email', 'barcode']). Protected fields will not be modified during updates.",
+            "items": {
+                "type": "string"
+            },
+            "title": "Fields to protect",
+            "type": "array"
+        },
+        "limitSimultaneousRequests": {
+            "default": 10,
+            "description": "Maximum number of concurrent async HTTP requests",
+            "maximum": 100,
+            "minimum": 1,
+            "title": "Limit simultaneous requests",
+            "type": "integer"
+        },
+        "noProgress": {
+            "default": false,
+            "description": "Disable progress reporting in the console output.",
+            "title": "No progress",
+            "type": "boolean"
         }
     },
     "required": [
         "name",
         "migrationTaskType",
-        "compositeCourseMapPath",
-        "coursesFile",
-        "termsMapPath",
-        "departmentsMapPath"
+        "files"
     ],
     "title": "TaskConfiguration",
     "type": "object"

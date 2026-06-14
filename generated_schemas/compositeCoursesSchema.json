@@ -432,9 +432,45 @@
                                         "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                     },
                                     "userId": {
-                                        "description": "A UUID",
-                                        "type": "string",
-                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                                        "$schema": "http://json-schema.org/draft-04/schema#",
+                                        "id": "metadata.schema",
+                                        "title": "Metadata Schema",
+                                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                                        "type": "object",
+                                        "properties": {
+                                            "createdDate": {
+                                                "description": "Date and time when the record was created",
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "createdByUserId": {
+                                                "description": "ID of the user who created the record (when available)",
+                                                "type": "string",
+                                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                            },
+                                            "createdByUsername": {
+                                                "description": "Username of the user who created the record (when available)",
+                                                "type": "string"
+                                            },
+                                            "updatedDate": {
+                                                "description": "Date and time when the record was last updated",
+                                                "type": "string",
+                                                "format": "date-time"
+                                            },
+                                            "updatedByUserId": {
+                                                "description": "ID of the user who last updated the record (when available)",
+                                                "type": "string",
+                                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                            },
+                                            "updatedByUsername": {
+                                                "description": "Username of the user who last updated the record (when available)",
+                                                "type": "string"
+                                            }
+                                        },
+                                        "additionalProperties": false,
+                                        "required": [
+                                            "createdDate"
+                                        ]
                                     },
                                     "name": {
                                         "type": "string",
@@ -815,32 +851,9 @@
                     "additionalProperties": false,
                     "properties": {
                         "id": {
-                            "$schema": "http://json-schema.org/draft-04/schema#",
-                            "type": "object",
-                            "description": "schema for time-period, which contains time interval 'duration' and the time unit",
-                            "properties": {
-                                "duration": {
-                                    "type": "integer",
-                                    "description": "Duration interval"
-                                },
-                                "intervalId": {
-                                    "type": "string",
-                                    "description": "Unit of time for the duration",
-                                    "enum": [
-                                        "Minutes",
-                                        "Hours",
-                                        "Days",
-                                        "Weeks",
-                                        "Months"
-                                    ],
-                                    "default": "Days"
-                                }
-                            },
-                            "required": [
-                                "duration",
-                                "intervalId"
-                            ],
-                            "additionalProperties": false
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         },
                         "name": {
                             "type": "string",
@@ -891,62 +904,9 @@
                             "description": "A description of this type"
                         },
                         "metadata": {
-                            "$schema": "http://json-schema.org/draft-04/schema#",
-                            "type": "object",
-                            "description": "Temporal periods that listings exist in",
-                            "additionalProperties": false,
-                            "properties": {
-                                "id": {
-                                    "$schema": "http://json-schema.org/draft-04/schema#",
-                                    "type": "object",
-                                    "description": "schema for time-period, which contains time interval 'duration' and the time unit",
-                                    "properties": {
-                                        "duration": {
-                                            "type": "integer",
-                                            "description": "Duration interval"
-                                        },
-                                        "intervalId": {
-                                            "type": "string",
-                                            "description": "Unit of time for the duration",
-                                            "enum": [
-                                                "Minutes",
-                                                "Hours",
-                                                "Days",
-                                                "Weeks",
-                                                "Months"
-                                            ],
-                                            "default": "Days"
-                                        }
-                                    },
-                                    "required": [
-                                        "duration",
-                                        "intervalId"
-                                    ],
-                                    "additionalProperties": false
-                                },
-                                "name": {
-                                    "type": "string",
-                                    "description": "The name of period"
-                                },
-                                "startDate": {
-                                    "type": "string",
-                                    "description": "The beginning of the time period"
-                                },
-                                "endDate": {
-                                    "type": "string",
-                                    "description": "The ending of the time period"
-                                },
-                                "metadata": {
-                                    "description": "A UUID",
-                                    "type": "string",
-                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-                                }
-                            },
-                            "required": [
-                                "name",
-                                "startDate",
-                                "endDate"
-                            ]
+                            "description": "A UUID",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     },
                     "required": [
@@ -970,48 +930,21 @@
                             "userId": {
                                 "$schema": "http://json-schema.org/draft-04/schema#",
                                 "type": "object",
-                                "description": "Temporal periods that listings exist in",
+                                "description": "The type of course a listing is",
                                 "additionalProperties": false,
                                 "properties": {
                                     "id": {
-                                        "$schema": "http://json-schema.org/draft-04/schema#",
-                                        "type": "object",
-                                        "description": "schema for time-period, which contains time interval 'duration' and the time unit",
-                                        "properties": {
-                                            "duration": {
-                                                "type": "integer",
-                                                "description": "Duration interval"
-                                            },
-                                            "intervalId": {
-                                                "type": "string",
-                                                "description": "Unit of time for the duration",
-                                                "enum": [
-                                                    "Minutes",
-                                                    "Hours",
-                                                    "Days",
-                                                    "Weeks",
-                                                    "Months"
-                                                ],
-                                                "default": "Days"
-                                            }
-                                        },
-                                        "required": [
-                                            "duration",
-                                            "intervalId"
-                                        ],
-                                        "additionalProperties": false
+                                        "description": "A UUID",
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                     },
                                     "name": {
                                         "type": "string",
-                                        "description": "The name of period"
+                                        "description": "The name of the type"
                                     },
-                                    "startDate": {
+                                    "description": {
                                         "type": "string",
-                                        "description": "The beginning of the time period"
-                                    },
-                                    "endDate": {
-                                        "type": "string",
-                                        "description": "The ending of the time period"
+                                        "description": "A description of this type"
                                     },
                                     "metadata": {
                                         "description": "A UUID",
@@ -1020,9 +953,7 @@
                                     }
                                 },
                                 "required": [
-                                    "name",
-                                    "startDate",
-                                    "endDate"
+                                    "name"
                                 ]
                             },
                             "name": {
@@ -1057,50 +988,37 @@
                                 }
                             },
                             "courseListingId": {
+                                "$schema": "http://json-schema.org/draft-04/schema#",
+                                "type": "object",
+                                "description": "schema for time-period, which contains time interval 'duration' and the time unit",
+                                "properties": {
+                                    "duration": {
+                                        "type": "integer",
+                                        "description": "Duration interval"
+                                    },
+                                    "intervalId": {
+                                        "type": "string",
+                                        "description": "Unit of time for the duration",
+                                        "enum": [
+                                            "Minutes",
+                                            "Hours",
+                                            "Days",
+                                            "Weeks",
+                                            "Months"
+                                        ],
+                                        "default": "Days"
+                                    }
+                                },
+                                "required": [
+                                    "duration",
+                                    "intervalId"
+                                ],
+                                "additionalProperties": false
+                            },
+                            "metadata": {
                                 "description": "A UUID",
                                 "type": "string",
                                 "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-                            },
-                            "metadata": {
-                                "$schema": "http://json-schema.org/draft-04/schema#",
-                                "id": "metadata.schema",
-                                "title": "Metadata Schema",
-                                "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
-                                "type": "object",
-                                "properties": {
-                                    "createdDate": {
-                                        "description": "Date and time when the record was created",
-                                        "type": "string",
-                                        "format": "date-time"
-                                    },
-                                    "createdByUserId": {
-                                        "description": "ID of the user who created the record (when available)",
-                                        "type": "string",
-                                        "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
-                                    },
-                                    "createdByUsername": {
-                                        "description": "Username of the user who created the record (when available)",
-                                        "type": "string"
-                                    },
-                                    "updatedDate": {
-                                        "description": "Date and time when the record was last updated",
-                                        "type": "string",
-                                        "format": "date-time"
-                                    },
-                                    "updatedByUserId": {
-                                        "description": "ID of the user who last updated the record (when available)",
-                                        "type": "string",
-                                        "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
-                                    },
-                                    "updatedByUsername": {
-                                        "description": "Username of the user who last updated the record (when available)",
-                                        "type": "string"
-                                    }
-                                },
-                                "additionalProperties": false,
-                                "required": [
-                                    "createdDate"
-                                ]
                             }
                         },
                         "required": [

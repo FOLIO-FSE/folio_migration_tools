@@ -217,6 +217,10 @@ class CirculationHelper:
                     stat_message,
                 )
             elif "Cannot check out item that already has an open" in error_message_from_folio:
+                logger.error(
+                    f"Item already has an open loan. Patron barcode: {legacy_loan.patron_barcode} "
+                    f"Item Barcode:{legacy_loan.item_barcode}"
+                )
                 return TransactionResult(
                     False,
                     False,
@@ -225,6 +229,10 @@ class CirculationHelper:
                     error_message_from_folio,
                 )
             elif "Item is already checked out" in error_message_from_folio:
+                logger.error(
+                    f"Item is already checked out. Patron barcode: {legacy_loan.patron_barcode} "
+                    f"Item Barcode:{legacy_loan.item_barcode}"
+                )
                 return TransactionResult(
                     False,
                     True,
