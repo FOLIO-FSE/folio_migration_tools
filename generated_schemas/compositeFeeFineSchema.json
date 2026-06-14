@@ -9,12 +9,16 @@
                 "amount": {
                     "description": "Amount of the fine/fee",
                     "javaType": "org.folio.rest.domain.MonetaryValue",
-                    "type": "number"
+                    "type": "number",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "remaining": {
                     "description": "Remaining of the fine/fee",
                     "javaType": "org.folio.rest.domain.MonetaryValue",
-                    "type": "number"
+                    "type": "number",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "dateCreated": {
                     "description": "Date and time the account of the fine/fee was created",
@@ -32,7 +36,19 @@
                     "properties": {
                         "name": {
                             "description": "Name of the status (values used are Open and Closed)",
-                            "type": "string"
+                            "type": "string",
+                            "x-fqm-visible-by-default": true,
+                            "x-fqm-essential": true,
+                            "x-fqm-values": [
+                                {
+                                    "value": "Open",
+                                    "label": "Open"
+                                },
+                                {
+                                    "value": "Closed",
+                                    "label": "Closed"
+                                }
+                            ]
                         }
                     },
                     "required": [
@@ -63,7 +79,9 @@
                                 "Cancelled as error",
                                 "Suspended claim returned"
                             ],
-                            "type": "string"
+                            "type": "string",
+                            "x-fqm-visible-by-default": true,
+                            "x-fqm-essential": true
                         }
                     },
                     "required": [
@@ -72,15 +90,20 @@
                 },
                 "feeFineType": {
                     "description": "Fee/fine that is up to the desecration of the user",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "feeFineOwner": {
                     "description": "Owner of the fee/fine defined by the library and is associated with specific fees/fines",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "title": {
                     "description": "The title associated with the item",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-visible-by-default": true
                 },
                 "callNumber": {
                     "description": "Identifier (Call number) assigned to an item",
@@ -88,19 +111,26 @@
                 },
                 "barcode": {
                     "description": "Text, with input likely validated by the barcode scanner",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "materialType": {
                     "description": "Material type what define what type of thing the item is",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "itemStatus": {
                     "description": "The status of the item",
                     "type": "object",
+                    "x-fqm-ignore": true,
                     "properties": {
                         "name": {
                             "description": "Name of the item state",
-                            "type": "string"
+                            "type": "string",
+                            "x-fqm-ignore": true,
+                            "x-fqm-visibility": "results-only"
                         }
                     },
                     "required": [
@@ -109,42 +139,82 @@
                 },
                 "location": {
                     "description": "Effective location is used to know the current home location for the item",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "metadata": {
                     "$schema": "http://json-schema.org/draft-04/schema#",
                     "id": "metadata.schema",
                     "title": "Metadata Schema",
-                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
+                    "description": "Adapted from https://raw.githubusercontent.com/folio-org/raml/raml1.0's metadata schema",
                     "type": "object",
                     "properties": {
                         "createdDate": {
                             "description": "Date and time when the record was created",
                             "type": "string",
-                            "format": "date-time"
+                            "format": "date-time",
+                            "x-fqm-essential": true,
+                            "x-fqm-visible-by-default": true
                         },
                         "createdByUserId": {
                             "description": "ID of the user who created the record (when available)",
                             "type": "string",
-                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                            "x-fqm-essential": false,
+                            "x-fqm-visible-by-default": false,
+                            "x-fqm-joins-to-raw": [
+                                {
+                                    "targetId": "bb058933-cd06-4539-bd3a-6f248ff98ee2",
+                                    "targetField": "id",
+                                    "type": "equality-cast-uuid",
+                                    "direction": "left"
+                                },
+                                {
+                                    "targetId": "f2615ea6-450b-425d-804d-6a495afd9308",
+                                    "targetField": "id",
+                                    "type": "equality-cast-uuid",
+                                    "direction": "left"
+                                }
+                            ]
                         },
                         "createdByUsername": {
                             "description": "Username of the user who created the record (when available)",
-                            "type": "string"
+                            "type": "string",
+                            "x-fqm-ignore": true
                         },
                         "updatedDate": {
                             "description": "Date and time when the record was last updated",
                             "type": "string",
-                            "format": "date-time"
+                            "format": "date-time",
+                            "x-fqm-essential": true,
+                            "x-fqm-visible-by-default": true
                         },
                         "updatedByUserId": {
                             "description": "ID of the user who last updated the record (when available)",
                             "type": "string",
-                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                            "x-fqm-essential": false,
+                            "x-fqm-visible-by-default": false,
+                            "x-fqm-joins-to-raw": [
+                                {
+                                    "targetId": "bb058933-cd06-4539-bd3a-6f248ff98ee2",
+                                    "targetField": "id",
+                                    "type": "equality-cast-uuid",
+                                    "direction": "left"
+                                },
+                                {
+                                    "targetId": "f2615ea6-450b-425d-804d-6a495afd9308",
+                                    "targetField": "id",
+                                    "type": "equality-cast-uuid",
+                                    "direction": "left"
+                                }
+                            ]
                         },
                         "updatedByUsername": {
                             "description": "Username of the user who last updated the record (when available)",
-                            "type": "string"
+                            "type": "string",
+                            "x-fqm-ignore": true
                         }
                     },
                     "additionalProperties": false,
@@ -155,12 +225,16 @@
                 "dueDate": {
                     "description": "Date time when the item is due to be returned",
                     "type": "string",
-                    "format": "date-time"
+                    "format": "date-time",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "returnedDate": {
                     "description": "Date time when the item is returned and the loan ends, if the user does not have a loan associated, hyphen (-) is added as default",
                     "type": "string",
-                    "format": "date-time"
+                    "format": "date-time",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "loanId": {
                     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -230,18 +304,21 @@
                     "description": "List of contributors",
                     "minItems": 0,
                     "items": {
+                        "type": "object",
                         "javaType": "org.folio.rest.jaxrs.model.ContributorData",
                         "properties": {
                             "name": {
                                 "type": "string",
-                                "description": "Personal name, corporate name, meeting name"
+                                "description": "Personal name, corporate name, meeting name",
+                                "x-fqm-visibility": "hidden"
                             }
                         },
                         "additionalProperties": false,
                         "required": [
                             "name"
                         ]
-                    }
+                    },
+                    "x-fqm-visibility": "hidden"
                 },
                 "loanPolicyId": {
                     "$schema": "http://json-schema.org/draft-04/schema#",
@@ -280,8 +357,7 @@
                 "paymentStatus",
                 "userId",
                 "feeFineId",
-                "ownerId",
-                "id"
+                "ownerId"
             ]
         },
         "feefineaction": {
@@ -293,29 +369,85 @@
                 "dateAction": {
                     "description": "Date and time the transaction of the fine/fee was created",
                     "type": "string",
-                    "format": "date-time"
+                    "format": "date-time",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "typeAction": {
                     "description": "Type of activity including the type of transaction",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-values": [
+                        {
+                            "value": "Paid partially",
+                            "label": "Paid partially"
+                        },
+                        {
+                            "value": "Paid fully",
+                            "label": "Paid fully"
+                        },
+                        {
+                            "value": "Waived partially",
+                            "label": "Waived partially"
+                        },
+                        {
+                            "value": "Waived fully",
+                            "label": "Waived fully"
+                        },
+                        {
+                            "value": "Transferred partially",
+                            "label": "Transferred partially"
+                        },
+                        {
+                            "value": "Transferred fully",
+                            "label": "Transferred fully"
+                        },
+                        {
+                            "value": "Refunded partially",
+                            "label": "Refunded partially"
+                        },
+                        {
+                            "value": "Refunded fully",
+                            "label": "Refunded fully"
+                        },
+                        {
+                            "value": "Credited partially",
+                            "label": "Credited partially"
+                        },
+                        {
+                            "value": "Credited fully",
+                            "label": "Credited fully"
+                        },
+                        {
+                            "value": "Cancelled as error",
+                            "label": "Cancelled as error"
+                        }
+                    ],
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "comments": {
                     "description": "Additional information entered as part of the activity or on this screen as a 'Staff info only' activity",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-essential": true
                 },
                 "notify": {
                     "description": "A flag to determine if a patron should be notified or not",
-                    "type": "boolean"
+                    "type": "boolean",
+                    "x-fqm-essential": true
                 },
                 "amountAction": {
                     "description": "Amount of activity",
                     "javaType": "org.folio.rest.domain.MonetaryValue",
-                    "type": "number"
+                    "type": "number",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "balance": {
                     "description": "Calculated amount of remaining balance based on original fee/fine and what has been paid/waived/transferred/refunded",
                     "javaType": "org.folio.rest.domain.MonetaryValue",
-                    "type": "number"
+                    "type": "number",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "transactionInformation": {
                     "description": "Number or other transaction id related to payment",
@@ -334,11 +466,14 @@
                 },
                 "source": {
                     "description": "Person who processed activity (from login information)",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-essential": true
                 },
                 "paymentMethod": {
                     "description": "Overall status of the action-setting",
-                    "type": "string"
+                    "type": "string",
+                    "x-fqm-visible-by-default": true,
+                    "x-fqm-essential": true
                 },
                 "accountId": {
                     "$schema": "http://json-schema.org/draft-04/schema#",

@@ -47,7 +47,7 @@
             "type": "object"
         }
     },
-    "description": "Task configuration for BatchPoster.",
+    "description": "Task configuration for MARCImportTask.",
     "properties": {
         "name": {
             "description": "The name of the task",
@@ -67,101 +67,110 @@
             "title": "ECS tenant ID",
             "type": "string"
         },
-        "objectType": {
-            "description": "The type of object being migratedExamples of possible values: 'Extradata', 'Instances', 'Holdings', 'Items'",
-            "title": "Object type",
-            "type": "string"
-        },
         "files": {
-            "description": "List of files to be processed",
+            "description": "List of MARC files to be imported. Files should be in binary MARC format (.mrc). Located in the source_data folder.",
             "items": {
                 "$ref": "#/$defs/FileDefinition"
             },
             "title": "List of files",
             "type": "array"
         },
+        "importProfileName": {
+            "description": "The name of the Data Import job profile to use in FOLIO. This profile determines how MARC records are processed and what FOLIO records are created/updated.",
+            "title": "Import profile name",
+            "type": "string"
+        },
         "batchSize": {
-            "description": "The batch size for processing files",
+            "default": 10,
+            "description": "Number of MARC records to include in each batch sent to FOLIO",
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Batch size",
             "type": "integer"
         },
-        "rerunFailedRecords": {
-            "default": true,
-            "description": "Toggles whether or not BatchPoster should try to rerun failed batches or just leave the failing records on disk.",
-            "title": "Rerun failed records",
-            "type": "boolean"
+        "batchDelay": {
+            "default": 0.0,
+            "description": "Number of seconds to wait between record batches. Use this to throttle requests if needed.",
+            "minimum": 0.0,
+            "title": "Batch delay",
+            "type": "number"
         },
-        "useSafeInventoryEndpoints": {
-            "default": true,
-            "description": "Toggles the use of the safe/unsafe Inventory storage endpoints. Unsafe circumvents the Optimistic locking in FOLIO. Defaults to True (using the 'safe' options)",
-            "title": "Use safe inventory endpoints",
-            "type": "boolean"
-        },
-        "extradataEndpoints": {
-            "additionalProperties": true,
-            "default": {},
-            "description": "A dictionary of extradata endpoints. The key is the object type and the value is the endpoint",
-            "title": "Extradata endpoints",
-            "type": "object"
-        },
-        "upsert": {
-            "default": false,
-            "description": "Toggles whether or not to use the upsert feature of the Inventory storage endpoints. Defaults to False",
-            "title": "Upsert",
-            "type": "boolean"
-        },
-        "preserveStatisticalCodes": {
-            "default": false,
-            "description": "Toggles whether or not to preserve statistical codes during the upsert process. Defaults to False",
-            "title": "Preserve statistical codes",
-            "type": "boolean"
-        },
-        "preserveAdministrativeNotes": {
-            "default": false,
-            "description": "Toggles whether or not to preserve administrative notes during the upsert process. Defaults to False",
-            "title": "Preserve administrative notes",
-            "type": "boolean"
-        },
-        "preserveTemporaryLocations": {
-            "default": false,
-            "description": "Toggles whether or not to preserve temporary locations on items during the upsert process. Defaults to False",
-            "title": "Preserve temporary locations",
-            "type": "boolean"
-        },
-        "preserveTemporaryLoanTypes": {
-            "default": false,
-            "description": "Toggles whether or not to preserve temporary loan types on items during the upsert process. Defaults to False",
-            "title": "Preserve temporary loan types",
-            "type": "boolean"
-        },
-        "preserveItemStatus": {
-            "default": true,
-            "description": "Toggles whether or not to preserve item status on items during the upsert process. Defaults to False",
-            "title": "Preserve item status",
-            "type": "boolean"
-        },
-        "patchExistingRecords": {
-            "default": false,
-            "description": "Toggles whether or not to patch existing records during the upsert process. Defaults to False",
-            "title": "Patch existing records",
-            "type": "boolean"
-        },
-        "patchPaths": {
+        "marcRecordPreprocessors": {
             "default": [],
-            "description": "A list of fields in JSON Path notation to patch during the upsert process (leave off the $). If empty, all fields will be patched. Examples: ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']",
+            "description": "List of preprocessor names to apply to each record before import. Preprocessors can modify MARC records before they are sent to FOLIO.",
             "items": {
                 "type": "string"
             },
-            "title": "Patch paths",
+            "title": "MARC record preprocessors",
             "type": "array"
+        },
+        "preprocessorsArgs": {
+            "anyOf": [
+                {
+                    "additionalProperties": {
+                        "additionalProperties": true,
+                        "type": "object"
+                    },
+                    "type": "object"
+                },
+                {
+                    "type": "string"
+                }
+            ],
+            "default": {},
+            "description": "Dictionary of arguments to pass to the MARC record preprocessors. Keys are preprocessor names, values are dicts of arguments.",
+            "title": "Preprocessor arguments"
+        },
+        "splitFiles": {
+            "default": false,
+            "description": "Split each file into smaller jobs of size split_size. Useful for very large files that may timeout or be difficult to monitor.",
+            "title": "Split files",
+            "type": "boolean"
+        },
+        "splitSize": {
+            "default": 1000,
+            "description": "Number of records to include in each split file",
+            "minimum": 1,
+            "title": "Split size",
+            "type": "integer"
+        },
+        "splitOffset": {
+            "default": 0,
+            "description": "Number of split files to skip before starting processing. Useful for resuming a partially completed import.",
+            "minimum": 0,
+            "title": "Split offset",
+            "type": "integer"
+        },
+        "showFileNamesInDataImportLogs": {
+            "default": false,
+            "description": "If true, set the file name for each job in the Data Import logs. This makes it easier to identify jobs in the FOLIO UI.",
+            "title": "Show file names in Data Import logs",
+            "type": "boolean"
+        },
+        "letSummaryFail": {
+            "default": false,
+            "description": "If true, do not retry or fail the import if the final job summary cannot be retrieved. Useful when FOLIO is under heavy load.",
+            "title": "Let summary fail",
+            "type": "boolean"
+        },
+        "skipSummary": {
+            "default": false,
+            "description": "If true, skip fetching the final job summary after import. The import will complete but detailed statistics won't be available.",
+            "title": "Skip summary",
+            "type": "boolean"
+        },
+        "noProgress": {
+            "default": false,
+            "description": "Disable progress reporting in the console output. Set to true for non-interactive/CI environments.",
+            "title": "No progress",
+            "type": "boolean"
         }
     },
     "required": [
         "name",
         "migrationTaskType",
-        "objectType",
         "files",
-        "batchSize"
+        "importProfileName"
     ],
     "title": "TaskConfiguration",
     "type": "object"

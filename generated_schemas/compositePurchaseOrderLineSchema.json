@@ -4,11 +4,9 @@
     "type": "object",
     "properties": {
         "id": {
-            "description": "The UUID format string",
-            "type": "string",
+            "description": "UUID of this purchase order",
             "$ref": "../../common/schemas/uuid.json",
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            "type": "Deprecated"
         },
         "approved": {
             "description": "whether or not the purchase order has been approved",
@@ -16,11 +14,9 @@
             "default": false
         },
         "approvedById": {
-            "description": "The UUID format string",
-            "type": "string",
+            "description": "UUID of the user approving the order",
             "$ref": "../../common/schemas/uuid.json",
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            "type": "Deprecated"
         },
         "approvalDate": {
             "description": "Date and time when purchase order was approved",
@@ -28,18 +24,14 @@
             "format": "date-time"
         },
         "assignedTo": {
-            "description": "The UUID format string",
-            "type": "string",
+            "description": "UUID of the user this purchase order his assigned to",
             "$ref": "../../common/schemas/uuid.json",
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            "type": "Deprecated"
         },
         "billTo": {
-            "description": "The UUID format string",
-            "type": "string",
+            "description": "UUID of the billing address",
             "$ref": "../../common/schemas/uuid.json",
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            "type": "Deprecated"
         },
         "closeReason": {
             "description": "purchase order closing reason record",
@@ -57,6 +49,11 @@
                 }
             },
             "additionalProperties": false
+        },
+        "openedById": {
+            "description": "UUID of the user opening the Order",
+            "$ref": "../../common/schemas/uuid.json",
+            "type": "Deprecated"
         },
         "dateOrdered": {
             "description": "Date and time when purchase order was opened",
@@ -144,18 +141,14 @@
             "additionalProperties": false
         },
         "shipTo": {
-            "description": "The UUID format string",
-            "type": "string",
+            "description": "UUID of the shipping address",
             "$ref": "../../common/schemas/uuid.json",
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            "type": "Deprecated"
         },
         "template": {
-            "description": "The UUID format string",
-            "type": "string",
+            "description": "The ID of the order template used for this order. Applies to both PO and POL",
             "$ref": "../../common/schemas/uuid.json",
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            "type": "Deprecated"
         },
         "totalCredited": {
             "description": "Total credited for the order",
@@ -181,11 +174,9 @@
             "type": "integer"
         },
         "vendor": {
-            "description": "The UUID format string",
-            "type": "string",
+            "description": "UUID of the vendorDetails record",
             "$ref": "../../common/schemas/uuid.json",
-            "$schema": "http://json-schema.org/draft-04/schema#",
-            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+            "type": "Deprecated"
         },
         "workflowStatus": {
             "description": "Composite workflow status",
@@ -199,20 +190,21 @@
             ],
             "default": "Pending"
         },
-        "compositePoLines": {
-            "description": "a list of completely de-referenced purchase order lines",
-            "id": "compositePoLines",
+        "poLines": {
+            "description": "a list of purchase order lines",
+            "id": "poLines",
             "type": "array",
             "items": {
                 "type": "object",
-                "$ref": "composite_po_line.json",
+                "$ref": "../../mod-orders-storage/schemas/po_line.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
-                "description": "composite purchase order line with dereferenced/expanded orders fields",
+                "description": "purchase order line",
+                "javaName": "PoLine",
                 "properties": {
                     "id": {
                         "description": "UUID identifying this purchase order line",
-                        "type": "string",
-                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "Deprecated"
                     },
                     "edition": {
                         "description": "edition of the material",
@@ -223,53 +215,20 @@
                         "type": "boolean",
                         "default": false
                     },
-                    "instanceId": {
-                        "description": "UUID of the instance record this purchase order line is related to",
-                        "type": "string",
-                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-                    },
                     "agreementId": {
                         "description": "UUID of the agreement this purchase order line is related to",
-                        "type": "string",
-                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "Deprecated"
                     },
                     "acquisitionMethod": {
-                        "description": "The UUID format string",
-                        "type": "string",
+                        "description": "UUID of the acquisition method for this purchase order line",
                         "$ref": "../../common/schemas/uuid.json",
-                        "$schema": "http://json-schema.org/draft-04/schema#",
-                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        "type": "Deprecated"
                     },
                     "automaticExport": {
                         "description": "if true then line will be marked as available to export in the EDIFACT format or other format",
                         "type": "boolean",
                         "default": false
-                    },
-                    "alerts": {
-                        "description": "alerts associated with this purchase order line",
-                        "id": "alerts",
-                        "type": "array",
-                        "items": {
-                            "description": "purchase order alert",
-                            "type": "object",
-                            "$ref": "../../mod-orders-storage/schemas/alert.json",
-                            "$schema": "http://json-schema.org/draft-04/schema#",
-                            "properties": {
-                                "id": {
-                                    "description": "UUID of this alert record",
-                                    "type": "string",
-                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-                                },
-                                "alert": {
-                                    "description": "the alert text",
-                                    "type": "string"
-                                }
-                            },
-                            "additionalProperties": false,
-                            "required": [
-                                "alert"
-                            ]
-                        }
                     },
                     "cancellationRestriction": {
                         "description": "whether or not there are cancellation restrictions for this purchase order line",
@@ -286,7 +245,7 @@
                         "items": {
                             "description": "details about an order claim",
                             "type": "object",
-                            "$ref": "../../mod-orders-storage/schemas/claim.json",
+                            "$ref": "claim.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "properties": {
                                 "claimed": {
@@ -318,7 +277,8 @@
                     },
                     "collection": {
                         "description": "whether or not this purchase order line is for a collection",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "default": false
                     },
                     "contributors": {
                         "description": "list of contributors to the material",
@@ -326,7 +286,7 @@
                         "type": "array",
                         "items": {
                             "type": "object",
-                            "$ref": "../../mod-orders-storage/schemas/contributor.json",
+                            "$ref": "contributor.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "contributor to the material",
                             "properties": {
@@ -337,7 +297,8 @@
                                 "contributorNameTypeId": {
                                     "description": "UUID of the contributor type",
                                     "type": "string",
-                                    "pattern": "^[a-f0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                    "pattern": "^[a-f0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$",
+                                    "x-fqm-visibility": "hidden"
                                 }
                             },
                             "additionalProperties": false,
@@ -349,7 +310,7 @@
                     "cost": {
                         "description": "purchase order line cost record",
                         "type": "object",
-                        "$ref": "../../mod-orders-storage/schemas/cost.json",
+                        "$ref": "cost.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "properties": {
                             "listUnitPrice": {
@@ -414,7 +375,7 @@
                     "details": {
                         "description": "purchase order line details",
                         "type": "object",
-                        "$ref": "../../mod-orders-storage/schemas/details.json",
+                        "$ref": "details.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "properties": {
                             "receivingNote": {
@@ -448,6 +409,13 @@
                                         "productIdType": {
                                             "description": "The type of product identifier",
                                             "$ref": "../../common/schemas/product_id_type.json",
+                                            "x-fqm-value-getter": "(SELECT array_agg(identifier_type.value->>'productIdType' ORDER BY identifier_type.value->>'productIdType') FROM jsonb_array_elements(:src__acquisition__orders_storage__titles.jsonb->'productIds') AS identifier_type)",
+                                            "x-fqm-filter-value-getter": "(SELECT array_agg(identifier_type.value->>'productIdType' ORDER BY identifier_type.value->>'productIdType') FROM jsonb_array_elements(:src__acquisition__orders_storage__titles.jsonb->'productIds') AS identifier_type)",
+                                            "x-fqm-data-type": "stringType",
+                                            "x-fqm-source": {
+                                                "columnName": "name",
+                                                "entityTypeId": "a0c8f96f-b630-41d5-bce3-e5b0512c4e48"
+                                            },
                                             "type": "Deprecated"
                                         },
                                         "qualifier": {
@@ -493,7 +461,7 @@
                     "eresource": {
                         "description": "purchase order line e-resource details",
                         "type": "object",
-                        "$ref": "../../mod-orders-storage/schemas/eresource.json",
+                        "$ref": "eresource.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "properties": {
                             "activated": {
@@ -527,7 +495,7 @@
                             },
                             "userLimit": {
                                 "description": "the concurrent user-limit",
-                                "type": "integer"
+                                "type": "string"
                             },
                             "accessProvider": {
                                 "description": "UUID of the access provider",
@@ -569,13 +537,13 @@
                         "additionalProperties": false
                     },
                     "fundDistribution": {
-                        "description": "the UUIDs of the fund distribution records for this purchase order line",
+                        "description": "Fund distribution records for this purchase order line",
                         "id": "fundDistribution",
                         "type": "array",
                         "items": {
                             "description": "purchase order fund distribution",
                             "type": "object",
-                            "$ref": "../../mod-orders-storage/schemas/fund_distribution.json",
+                            "$ref": "fund_distribution.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "properties": {
                                 "code": {
@@ -620,20 +588,26 @@
                             ]
                         }
                     },
+                    "instanceId": {
+                        "description": "UUID of the instance record this purchase order line is related to",
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "Deprecated"
+                    },
                     "isPackage": {
                         "description": "Indicates that this POL is for a package",
                         "type": "boolean",
                         "default": false
                     },
                     "locations": {
-                        "description": "a list of the location records for this purchase order line",
+                        "description": "Location records for this purchase order line",
                         "id": "locations",
                         "type": "array",
                         "items": {
                             "description": "purchase order line location record",
                             "type": "object",
-                            "$ref": "../../mod-orders-storage/schemas/location.json",
+                            "$ref": "location.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
+                            "javaType": "org.folio.rest.jaxrs.model.acq.Location",
                             "properties": {
                                 "locationId": {
                                     "description": "UUID of the (inventory) location record",
@@ -686,7 +660,7 @@
                     "orderFormat": {
                         "description": "The purchase order line format",
                         "type": "string",
-                        "$ref": "../../mod-orders-storage/schemas/order_format.json",
+                        "$ref": "order_format.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "enum": [
                             "Electronic Resource",
@@ -703,7 +677,7 @@
                     "paymentStatus": {
                         "description": "Payment/Receipt status",
                         "type": "string",
-                        "$ref": "../../mod-orders-storage/schemas/payment_status.json",
+                        "$ref": "payment_status.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "enum": [
                             "Awaiting Payment",
@@ -719,7 +693,7 @@
                     "physical": {
                         "description": "purchase order line physical material details",
                         "type": "object",
-                        "$ref": "../../mod-orders-storage/schemas/physical.json",
+                        "$ref": "physical.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "properties": {
                             "createInventory": {
@@ -771,10 +745,9 @@
                         "type": "string"
                     },
                     "poLineNumber": {
-                        "description": "A human readable number assigned to this PO line",
+                        "description": "A human readable number assigned to this PO line (assigned automatically)",
                         "type": "string",
-                        "pattern": "^[a-zA-Z0-9]{1,22}-[0-9]{1,3}$",
-                        "readonly": true
+                        "pattern": "^[a-zA-Z0-9]{1,22}-[0-9]{1,3}$"
                     },
                     "publicationDate": {
                         "description": "date (year) of the material's publication",
@@ -785,9 +758,9 @@
                         "type": "string"
                     },
                     "purchaseOrderId": {
-                        "description": "UUID of this parent purchase order",
-                        "type": "string",
-                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
+                        "description": "UUID of the purchase order",
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "Deprecated"
                     },
                     "receiptDate": {
                         "description": "date the purchase order line was received",
@@ -797,7 +770,7 @@
                     "receiptStatus": {
                         "description": "The purchase order line receipt status",
                         "type": "string",
-                        "$ref": "../../mod-orders-storage/schemas/receipt_status.json",
+                        "$ref": "receipt_status.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "enum": [
                             "Awaiting Receipt",
@@ -814,44 +787,14 @@
                         "description": "Renewal note for this purchase order line",
                         "type": "string"
                     },
-                    "reportingCodes": {
-                        "description": "a list of reporting codes associated with this purchase order line",
-                        "id": "reportingCodes",
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "$ref": "../../mod-orders-storage/schemas/reporting_code.json",
-                            "$schema": "http://json-schema.org/draft-04/schema#",
-                            "description": "purchase order line reporting code",
-                            "properties": {
-                                "id": {
-                                    "description": "UUID of this reporting code record",
-                                    "type": "string",
-                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
-                                },
-                                "code": {
-                                    "description": "a reporting code",
-                                    "type": "string",
-                                    "pattern": "^[a-zA-Z0-9]{4}[a-zA-Z0-9]*$"
-                                },
-                                "description": {
-                                    "description": "description of this reporting code",
-                                    "type": "string"
-                                }
-                            },
-                            "additionalProperties": false,
-                            "required": [
-                                "code"
-                            ]
-                        }
-                    },
                     "requester": {
                         "description": "who requested this purchase order line",
                         "type": "string"
                     },
                     "rush": {
                         "description": "whether or not this is a rush order",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "default": false
                     },
                     "selector": {
                         "description": "who selected this material",
@@ -860,7 +803,7 @@
                     "source": {
                         "description": "The source of the Order",
                         "type": "string",
-                        "$ref": "../../mod-orders-storage/schemas/source.json",
+                        "$ref": "source.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "enum": [
                             "User",
@@ -895,7 +838,7 @@
                     "vendorDetail": {
                         "description": "purchase order line vendor details",
                         "type": "object",
-                        "$ref": "../../mod-orders-storage/schemas/vendor_detail.json",
+                        "$ref": "vendor_detail.json",
                         "$schema": "http://json-schema.org/draft-04/schema#",
                         "properties": {
                             "instructions": {
@@ -917,6 +860,11 @@
                             }
                         },
                         "additionalProperties": false
+                    },
+                    "suppressInstanceFromDiscovery": {
+                        "type": "boolean",
+                        "description": "Records the fact that the record should not be displayed in a discovery system",
+                        "default": false
                     },
                     "customFields": {
                         "description": "Object that contains custom field",
@@ -993,8 +941,7 @@
         },
         "nextPolNumber": {
             "description": "Number that will be used next time a purchase order line is created",
-            "type": "integer",
-            "readonly": true
+            "type": "integer"
         },
         "tags": {
             "type": "object",
@@ -1021,6 +968,11 @@
             "javaName": "CustomFields",
             "additionalProperties": true,
             "properties": {}
+        },
+        "fiscalYearId": {
+            "description": "Fiscal Year Id of the first Fund Distribution used for Purchase Order opening",
+            "$ref": "../../common/schemas/uuid.json",
+            "type": "Deprecated"
         },
         "metadata": {
             "type": "object",

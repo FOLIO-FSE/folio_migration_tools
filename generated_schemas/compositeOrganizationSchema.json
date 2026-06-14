@@ -87,7 +87,8 @@
                 "properties": {
                     "id": {
                         "description": "UUID",
-                        "$ref": "../../common/schemas/uuid.json"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "string"
                     },
                     "addressLine1": {
                         "description": "The first line of this address",
@@ -119,9 +120,11 @@
                     },
                     "categories": {
                         "id": "categories",
-                        "description": "The list of categories for this organization address",
+                        "description": "The list of category ids for this organization address",
                         "type": "array",
                         "items": {
+                            "description": "UUID of the organization category",
+                            "$ref": "../../common/schemas/uuid.json",
                             "type": "string"
                         }
                     },
@@ -150,7 +153,8 @@
                 "properties": {
                     "id": {
                         "description": "UUID",
-                        "$ref": "../../common/schemas/uuid.json"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "string"
                     },
                     "phoneNumber": {
                         "description": "The entire sequence of digits for this phone number",
@@ -158,9 +162,11 @@
                     },
                     "categories": {
                         "id": "categories",
-                        "description": "The list of categories for this organization phone",
+                        "description": "The list of category ids for this organization phone",
                         "type": "array",
                         "items": {
+                            "description": "UUID of the organization category",
+                            "$ref": "../../common/schemas/uuid.json",
                             "type": "string"
                         }
                     },
@@ -206,7 +212,8 @@
                 "properties": {
                     "id": {
                         "description": "The unique id of this email",
-                        "$ref": "../../common/schemas/uuid.json"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "string"
                     },
                     "value": {
                         "description": "The value for this email",
@@ -222,9 +229,11 @@
                     },
                     "categories": {
                         "id": "categories",
-                        "description": "The list of categories for this organization email",
+                        "description": "The list of category ids for this organization email",
                         "type": "array",
                         "items": {
+                            "description": "UUID of the organization category",
+                            "$ref": "../../common/schemas/uuid.json",
                             "type": "string"
                         }
                     },
@@ -256,7 +265,8 @@
                 "properties": {
                     "id": {
                         "description": "The unique id of this url",
-                        "$ref": "../../common/schemas/uuid.json"
+                        "$ref": "../../common/schemas/uuid.json",
+                        "type": "string"
                     },
                     "value": {
                         "description": "The value for this URL",
@@ -277,9 +287,11 @@
                     },
                     "categories": {
                         "id": "categories",
-                        "description": "The list of categories for this organization URL",
+                        "description": "The list of category ids for this organization URL",
                         "type": "array",
                         "items": {
+                            "description": "UUID of the organization category",
+                            "$ref": "../../common/schemas/uuid.json",
                             "type": "string"
                         }
                     },
@@ -349,7 +361,8 @@
                             "properties": {
                                 "id": {
                                     "description": "UUID",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "string"
                                 },
                                 "phoneNumber": {
                                     "description": "The entire sequence of digits for this phone number",
@@ -357,9 +370,11 @@
                                 },
                                 "categories": {
                                     "id": "categories",
-                                    "description": "The list of categories for this organization phone",
+                                    "description": "The list of category ids for this organization phone",
                                     "type": "array",
                                     "items": {
+                                        "description": "UUID of the organization category",
+                                        "$ref": "../../common/schemas/uuid.json",
                                         "type": "string"
                                     }
                                 },
@@ -405,7 +420,8 @@
                             "properties": {
                                 "id": {
                                     "description": "The unique id of this email",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "string"
                                 },
                                 "value": {
                                     "description": "The value for this email",
@@ -421,9 +437,11 @@
                                 },
                                 "categories": {
                                     "id": "categories",
-                                    "description": "The list of categories for this organization email",
+                                    "description": "The list of category ids for this organization email",
                                     "type": "array",
                                     "items": {
+                                        "description": "UUID of the organization category",
+                                        "$ref": "../../common/schemas/uuid.json",
                                         "type": "string"
                                     }
                                 },
@@ -455,7 +473,8 @@
                             "properties": {
                                 "id": {
                                     "description": "UUID",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "string"
                                 },
                                 "addressLine1": {
                                     "description": "The first line of this address",
@@ -487,9 +506,11 @@
                                 },
                                 "categories": {
                                     "id": "categories",
-                                    "description": "The list of categories for this organization address",
+                                    "description": "The list of category ids for this organization address",
                                     "type": "array",
                                     "items": {
+                                        "description": "UUID of the organization category",
+                                        "$ref": "../../common/schemas/uuid.json",
                                         "type": "string"
                                     }
                                 },
@@ -518,7 +539,8 @@
                             "properties": {
                                 "id": {
                                     "description": "The unique id of this url",
-                                    "$ref": "../../common/schemas/uuid.json"
+                                    "$ref": "../../common/schemas/uuid.json",
+                                    "type": "string"
                                 },
                                 "value": {
                                     "description": "The value for this URL",
@@ -539,9 +561,11 @@
                                 },
                                 "categories": {
                                     "id": "categories",
-                                    "description": "The list of categories for this organization URL",
+                                    "description": "The list of category ids for this organization URL",
                                     "type": "array",
                                     "items": {
+                                        "description": "UUID of the organization category",
+                                        "$ref": "../../common/schemas/uuid.json",
                                         "type": "string"
                                     }
                                 },
@@ -563,10 +587,10 @@
                     },
                     "categories": {
                         "id": "contactCategory",
-                        "description": "The list of contact categories associated with this organization contact person",
+                        "description": "The list of category ids for this organization contact person",
                         "type": "array",
                         "items": {
-                            "description": "UUID of the contact category",
+                            "description": "UUID of the organization category",
                             "$ref": "../../common/schemas/uuid.json",
                             "type": "string"
                         }
@@ -1084,7 +1108,8 @@
                         "description": "Acquisition unit UUIDs associated with this organizations account",
                         "type": "array",
                         "items": {
-                            "$ref": "../../common/schemas/uuid.json"
+                            "$ref": "../../common/schemas/uuid.json",
+                            "type": "string"
                         }
                     }
                 },

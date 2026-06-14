@@ -22,16 +22,7 @@ This task creates real circulation transactions. Ensure items and users have bee
         "file_name": "requests.tsv"
     },
     "startingRow": 1,
-    "itemFiles": [
-        {
-            "file_name": "folio_items_transform_items.json"
-        }
-    ],
-    "patronFiles": [
-        {
-            "file_name": "folio_users_transform_users.json"
-        }
-    ]
+    "skipBarcodePrevalidation": false
 }
 ```
 
@@ -43,8 +34,7 @@ This task creates real circulation transactions. Ensure items and users have bee
 | `migrationTaskType` | string | Yes | Must be `"RequestsMigrator"` |
 | `openRequestsFile` | object | Yes | File definition with `file_name` for request data |
 | `startingRow` | integer | No | Row number to start processing. Default: 1 |
-| `itemFiles` | array | No | Transformed item files for pre-validation |
-| `patronFiles` | array | No | Transformed user files for pre-validation |
+| `skipBarcodePrevalidation` | boolean | No | Skip pre-validation of patron and item barcodes against FOLIO. Default: false |
 
 ## Source Data Requirements
 
@@ -79,12 +69,14 @@ item_barcode	patron_barcode	request_type	request_date	pickup_service_point_id
 
 ## Pre-validation
 
-If `itemFiles` and/or `patronFiles` are specified, the task validates requests before attempting to create them:
+By default, the task validates request barcodes directly against FOLIO before attempting to create requests.
 
-- **Missing items**: Rows with item barcodes not found in item files are set aside
-- **Missing patrons**: Rows with patron barcodes not found in user files are set aside
+- **Missing items**: Rows with item barcodes not found in FOLIO are set aside
+- **Missing patrons**: Rows with patron barcodes not found in FOLIO are set aside
 
 Failed records are saved for review.
+
+Set `skipBarcodePrevalidation` to `true` to bypass this step.
 
 ## Output Files
 
@@ -109,7 +101,7 @@ Files are created in `iterations/<iteration>/results/`:
 }
 ```
 
-### With Pre-validation
+### Skip Pre-validation
 
 ```json
 {
@@ -118,16 +110,7 @@ Files are created in `iterations/<iteration>/results/`:
     "openRequestsFile": {
         "file_name": "requests.tsv"
     },
-    "itemFiles": [
-        {
-            "file_name": "folio_items_transform_items.json"
-        }
-    ],
-    "patronFiles": [
-        {
-            "file_name": "folio_users_transform_users.json"
-        }
-    ]
+    "skipBarcodePrevalidation": true
 }
 ```
 

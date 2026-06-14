@@ -1,6 +1,7 @@
 {
     "$defs": {
         "FolioRelease": {
+            "description": "Enum representing different FOLIO releases.",
             "enum": [
                 "ramsons",
                 "sunflower",
@@ -11,6 +12,7 @@
             "type": "string"
         }
     },
+    "description": "Pydantic model for tenant-level configuration.",
     "properties": {
         "gateway_url": {
             "description": "The URL of the FOLIO API gateway instance. You can find this in Settings > Software versions > API gateway services.",

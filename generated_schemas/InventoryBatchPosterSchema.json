@@ -47,7 +47,7 @@
             "type": "object"
         }
     },
-    "description": "Task configuration for BatchPoster.",
+    "description": "Task configuration for InventoryBatchPoster.",
     "properties": {
         "name": {
             "description": "The name of the task",
@@ -68,12 +68,18 @@
             "type": "string"
         },
         "objectType": {
-            "description": "The type of object being migratedExamples of possible values: 'Extradata', 'Instances', 'Holdings', 'Items'",
+            "description": "The type of inventory object to post: Instances, Holdings, Items, or ShadowInstances (for consortium shadow copies)",
+            "enum": [
+                "Instances",
+                "Holdings",
+                "Items",
+                "ShadowInstances"
+            ],
             "title": "Object type",
             "type": "string"
         },
         "files": {
-            "description": "List of files to be processed",
+            "description": "List of files to be processed from the results folder",
             "items": {
                 "$ref": "#/$defs/FileDefinition"
             },
@@ -81,87 +87,82 @@
             "type": "array"
         },
         "batchSize": {
-            "description": "The batch size for processing files",
+            "default": 100,
+            "description": "Number of records to include in each batch (1-1000)",
+            "maximum": 1000,
+            "minimum": 1,
             "title": "Batch size",
             "type": "integer"
         },
-        "rerunFailedRecords": {
-            "default": true,
-            "description": "Toggles whether or not BatchPoster should try to rerun failed batches or just leave the failing records on disk.",
-            "title": "Rerun failed records",
-            "type": "boolean"
-        },
-        "useSafeInventoryEndpoints": {
-            "default": true,
-            "description": "Toggles the use of the safe/unsafe Inventory storage endpoints. Unsafe circumvents the Optimistic locking in FOLIO. Defaults to True (using the 'safe' options)",
-            "title": "Use safe inventory endpoints",
-            "type": "boolean"
-        },
-        "extradataEndpoints": {
-            "additionalProperties": true,
-            "default": {},
-            "description": "A dictionary of extradata endpoints. The key is the object type and the value is the endpoint",
-            "title": "Extradata endpoints",
-            "type": "object"
-        },
         "upsert": {
             "default": false,
-            "description": "Toggles whether or not to use the upsert feature of the Inventory storage endpoints. Defaults to False",
+            "description": "Enable upsert mode to create new records or update existing ones. When enabled, records with matching IDs will be updated instead of causing errors.",
             "title": "Upsert",
             "type": "boolean"
         },
         "preserveStatisticalCodes": {
             "default": false,
-            "description": "Toggles whether or not to preserve statistical codes during the upsert process. Defaults to False",
+            "description": "Preserve existing statistical codes during upsert. When enabled, statistical codes from existing records will be retained and merged with new codes.",
             "title": "Preserve statistical codes",
             "type": "boolean"
         },
         "preserveAdministrativeNotes": {
             "default": false,
-            "description": "Toggles whether or not to preserve administrative notes during the upsert process. Defaults to False",
+            "description": "Preserve existing administrative notes during upsert. When enabled, administrative notes from existing records will be retained and merged with new notes.",
             "title": "Preserve administrative notes",
             "type": "boolean"
         },
         "preserveTemporaryLocations": {
             "default": false,
-            "description": "Toggles whether or not to preserve temporary locations on items during the upsert process. Defaults to False",
+            "description": "Preserve temporary location assignments on items during upsert. Only applicable when object_type is 'Items'.",
             "title": "Preserve temporary locations",
             "type": "boolean"
         },
         "preserveTemporaryLoanTypes": {
             "default": false,
-            "description": "Toggles whether or not to preserve temporary loan types on items during the upsert process. Defaults to False",
+            "description": "Preserve temporary loan type assignments on items during upsert. Only applicable when object_type is 'Items'.",
             "title": "Preserve temporary loan types",
             "type": "boolean"
         },
         "preserveItemStatus": {
             "default": true,
-            "description": "Toggles whether or not to preserve item status on items during the upsert process. Defaults to False",
+            "description": "Preserve item status during upsert. When enabled, the status field from existing records will be retained. Only applicable when object_type is 'Items'.",
             "title": "Preserve item status",
             "type": "boolean"
         },
         "patchExistingRecords": {
             "default": false,
-            "description": "Toggles whether or not to patch existing records during the upsert process. Defaults to False",
+            "description": "Enable selective field patching during upsert. When enabled, only fields specified in patch_paths will be updated, preserving all other fields.",
             "title": "Patch existing records",
             "type": "boolean"
         },
         "patchPaths": {
             "default": [],
-            "description": "A list of fields in JSON Path notation to patch during the upsert process (leave off the $). If empty, all fields will be patched. Examples: ['statisticalCodeIds', 'administrativeNotes', 'instanceStatusId']",
+            "description": "List of field paths to patch during upsert (e.g., ['barcode', 'status']). If empty and patch_existing_records is True, all fields will be patched. Use this to selectively update only specific fields while preserving others.",
             "items": {
                 "type": "string"
             },
             "title": "Patch paths",
             "type": "array"
+        },
+        "rerunFailedRecords": {
+            "default": true,
+            "description": "After the main run, reprocess any failed records one at a time. This gives each record a second chance with individual error handling.",
+            "title": "Rerun failed records",
+            "type": "boolean"
+        },
+        "noProgress": {
+            "default": false,
+            "description": "Disable progress reporting in the console output.",
+            "title": "No progress",
+            "type": "boolean"
         }
     },
     "required": [
         "name",
         "migrationTaskType",
         "objectType",
-        "files",
-        "batchSize"
+        "files"
     ],
     "title": "TaskConfiguration",
     "type": "object"
