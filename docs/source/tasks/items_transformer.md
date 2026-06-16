@@ -41,7 +41,7 @@ Transform delimited (CSV/TSV) data into FOLIO Item records with support for mate
 | `tempLocationMapFileName` | string | No | TSV file for temporary location mapping |
 | `tempLoanTypesMapFileName` | string | No | TSV file for temporary loan type mapping |
 | `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
-| `statisticalCodeMapFileName` | string | No | TSV file mapping statistical codes |
+| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
 | `damagedStatusMapFileName` | string | No | TSV file mapping damaged statuses |
 | `preventPermanentLocationMapDefault` | boolean | No | If `true`, don't use fallback for permanent location mapping |
 | `boundwithFlavor` | string | No | ILS flavor for boundwith handling. Supported: `"voyager"` (default), `"aleph"` |
@@ -119,7 +119,7 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `loanTypesMapFileName` | `folio_name` | Loan type name |
 | `tempLoanTypesMapFileName` | `folio_name` | Temporary loan type name |
 | `callNumberTypeMapFileName` | `folio_name` | Call number type name |
-| `statisticalCodeMapFileName` | `folio_code` | Statistical code |
+| `statisticalCodesMapFileName` | `folio_code` | Statistical code |
 | `damagedStatusMapFileName` | `folio_name` | Damaged status name |
 
 #### Item Statuses (item_statuses.tsv)
@@ -187,7 +187,7 @@ Unlike BibsTransformer and the Holdings transformers, ItemsTransformer does not 
     "tempLoanTypesMapFileName": "temp_loan_types.tsv",
     "itemStatusesMapFileName": "item_statuses.tsv",
     "callNumberTypeMapFileName": "call_number_types.tsv",
-    "statisticalCodeMapFileName": "stat_codes.tsv",
+    "statisticalCodesMapFileName": "stat_codes.tsv",
     "damagedStatusMapFileName": "damaged_statuses.tsv",
     "files": [
         {

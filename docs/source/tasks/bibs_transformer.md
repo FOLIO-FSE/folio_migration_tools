@@ -18,7 +18,7 @@ Transform MARC bibliographic records into FOLIO Instance records and prepare MAR
     "hridHandling": "preserve001",
     "updateHridSettings": false,
     "tagsToDelete": ["841", "852"],
-    "statisticalCodeMapFileName": "statistical_codes.tsv",
+    "statisticalCodesMapFileName": "statistical_codes.tsv",
     "statisticalCodeMappingFields": ["998$a$b"],
     "files": [
         {
@@ -43,7 +43,7 @@ Transform MARC bibliographic records into FOLIO Instance records and prepare MAR
 | `hridHandling` | string | No | How to handle HRIDs. `"default"` (generate new) or `"preserve001"` (use 001 value). Default: `"default"` |
 | `updateHridSettings` | boolean | No | Whether to update FOLIO HRID settings after transformation. Default: `false` |
 | `tagsToDelete` | array | No | MARC tags to remove before saving to output MARC file. |
-| `statisticalCodeMapFileName` | string | No | TSV file mapping legacy codes to FOLIO statistical codes. |
+| `statisticalCodesMapFileName` | string | No | TSV file mapping legacy codes to FOLIO statistical codes. |
 | `statisticalCodeMappingFields` | array | No | MARC fields to extract statistical codes from (e.g., `["998$a$b"]`). |
 | `customBibIdField` | string | No | MARC field containing legacy ID when `ilsFlavour` is `"custom"`. Example: `"991$a"` |
 | `files` | array | Yes | List of MARC files to process. See [File Configuration](#file-configuration). |
@@ -169,7 +169,7 @@ Transform MARC bibs with default HRID generation:
     "name": "transform_bibs",
     "migrationTaskType": "BibsTransformer",
     "ilsFlavour": "tag001",
-    "statisticalCodeMapFileName": "stat_codes.tsv",
+    "statisticalCodesMapFileName": "stat_codes.tsv",
     "statisticalCodeMappingFields": ["998$a", "998$b"],
     "files": [
         {
