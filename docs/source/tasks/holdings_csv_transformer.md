@@ -41,7 +41,7 @@ Transform delimited (CSV/TSV) data into FOLIO Holdings records. Use this when yo
 | `holdingsMergeCriteria` | array | No | Fields used to group items into holdings. Default: `["instanceId", "permanentLocationId", "callNumber"]` |
 | `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
 | `holdingsTypeMapFileName` | string | No | TSV file mapping holdings types |
-| `statisticalCodeMapFileName` | string | No | TSV file mapping statistical codes |
+| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
 | `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith holdings (enables automatic boundwith handling) |
 | `previouslyGeneratedHoldingsFiles` | array | No | List of previous holdings result files to avoid duplicates |
 | `files` | array | Yes | List of source data files to process |
@@ -180,7 +180,7 @@ When you have both MFHD-derived holdings and need additional holdings from items
     "locationMapFileName": "locations.tsv",
     "defaultCallNumberTypeName": "Library of Congress classification",
     "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
-    "statisticalCodeMapFileName": "stat_codes.tsv",
+    "statisticalCodesMapFileName": "stat_codes.tsv",
     "files": [
         {
             "file_name": "items.tsv",

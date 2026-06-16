@@ -48,7 +48,7 @@ Transform MARC Holdings (MFHD) records into FOLIO Holdings records with support 
 | `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith holdings |
 | `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
 | `holdingsTypeMapFileName` | string | No | TSV file mapping holdings types |
-| `statisticalCodeMapFileName` | string | No | TSV file mapping statistical codes |
+| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
 | `includeMrkStatements` | boolean | No | Preserve original holdings statements as MRK in notes |
 | `mrkHoldingsNoteType` | string | No | Note type name for MRK statements |
 | `includeMfhdMrkAsNote` | boolean | No | Preserve entire MFHD as MRK in notes |

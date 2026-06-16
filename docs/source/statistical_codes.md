@@ -37,7 +37,7 @@ Task configuration
     "name": "bibs",
     "migrationTaskType": "BibsTransformer",
     "ilsFlavor": "sierra",
-    "statisticalCodeMapFileName": "statistical_codes.tsv",
+    "statisticalCodesMapFileName": "statistical_codes.tsv",
     "statistical_code_mapping_fields": [
         "998$a$b$c"
     ],
