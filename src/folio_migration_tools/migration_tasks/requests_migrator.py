@@ -12,11 +12,13 @@ import sys
 import time
 from collections.abc import AsyncGenerator
 from typing import Annotated, Optional
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 import folioclient
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
+from folioclient import FolioValidationError
 from pydantic import Field
 
 from folio_migration_tools.circulation_helper import CirculationHelper
@@ -307,9 +309,9 @@ class RequestsMigrator(MigrationTaskBase):
             try:
                 res, legacy_request = self.prepare_legacy_request(legacy_request)
                 if res:
-                    if self.circulation_helper.create_request(
-                        self.folio_client, legacy_request, self.migration_report
-                    ):
+                    logger.debug(json.dumps(legacy_request.serialize(), indent=2))
+                    success = self._create_request_with_inactive_user_retry(legacy_request)
+                    if success:
                         self.migration_report.add_general_statistics(
                             i18n_t("Successfully migrated requests")
                         )
@@ -363,6 +365,110 @@ class RequestsMigrator(MigrationTaskBase):
             failed: LegacyRequest
             for failed in self.failed_requests:
                 writer.writerow(failed.to_source_dict())
+
+    def _create_request_with_inactive_user_retry(self, legacy_request: LegacyRequest) -> bool:
+        """Create a request, retrying with user activation if inactive user error occurs.
+
+        Args:
+            legacy_request (LegacyRequest): The request to create.
+
+        Returns:
+            bool: True if request was successfully created, False otherwise.
+        """
+        try:
+            return self.circulation_helper.create_request(
+                self.folio_client, legacy_request, self.migration_report
+            )
+        except FolioValidationError as fve:
+            error_response = self.folio_client.handle_json_response(fve.response)
+            error_message = error_response.get("errors", [{}])[0].get("message", "")
+            if "Inactive users cannot make requests" in error_message:
+                logger.info(
+                    "Inactive user detected. Attempting to reactivate for request creation."
+                )
+                return self._retry_request_for_inactive_user(legacy_request)
+            return False
+
+    def _retry_request_for_inactive_user(self, legacy_request: LegacyRequest) -> bool:
+        """Retry request creation for inactive user by temporarily activating.
+
+        Args:
+            legacy_request (LegacyRequest): The request to create.
+
+        Returns:
+            bool: True if request was successfully created, False otherwise.
+        """
+        try:
+            user = self.get_user_by_barcode(legacy_request.patron_barcode)
+            if not user:
+                return False
+            original_expiration = user.get("expirationDate")
+            user["expirationDate"] = (datetime.now() + timedelta(days=1)).isoformat()
+            self.activate_user(user)
+            logger.debug("Temporarily activated user for request creation")
+            success = self.circulation_helper.create_request(
+                self.folio_client, legacy_request, self.migration_report
+            )
+            if success:
+                self.migration_report.add("Details", i18n_t("Handled inactive users"))
+            self.deactivate_user(user, original_expiration)
+            logger.debug("Deactivated user again")
+            return success
+        except Exception:
+            logger.exception(
+                "Error handling inactive user for request: %s",
+                legacy_request.patron_barcode,
+            )
+            return False
+
+    def activate_user(self, user: dict):
+        """Activate a user by setting active=True.
+
+        Args:
+            user (dict): User object to activate.
+        """
+        user["active"] = True
+        self.update_user(user)
+        self.migration_report.add("Details", i18n_t("Successfully activated user"))
+
+    def deactivate_user(self, user: dict, expiration_date: str | None):
+        """Deactivate a user by setting active=False.
+
+        Args:
+            user (dict): User object to deactivate.
+            expiration_date (str | None): Original expiration date to restore.
+        """
+        if expiration_date:
+            user["expirationDate"] = expiration_date
+        user["active"] = False
+        self.update_user(user)
+        self.migration_report.add("Details", i18n_t("Successfully deactivated user"))
+
+    def update_user(self, user: dict):
+        """Update a user via FOLIO API.
+
+        Args:
+            user (dict): User object to update.
+        """
+        url = f"/users/{user['id']}"
+        self.folio_client.folio_put(url, user)
+
+    def get_user_by_barcode(self, barcode: str) -> dict | None:
+        """Fetch a user by barcode using direct HTTP client.
+
+        Args:
+            barcode (str): User barcode to search for.
+
+        Returns:
+            dict | None: User object if found, None otherwise.
+        """
+        try:
+            query = f'barcode=="{barcode}"'
+            users = self.folio_client.folio_get("/users", "users", query=query)
+            return users[0] if users else None
+        except Exception as e:
+            logger.exception("Error fetching user by barcode %s: %s", barcode, str(e))
+            return None
 
     async def pre_validate_patron_barcodes_async(self, max_concurrent: int = 10):
         request_barcodes = {

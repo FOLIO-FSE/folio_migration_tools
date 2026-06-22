@@ -307,7 +307,7 @@ class CirculationHelper:
             message = folio_client.handle_json_response(fve.response)["errors"][0]["message"]
             logger.exception(message)
             migration_report.add_general_statistics(message)
-            return False
+            raise
         except (FolioConnectionError, FolioClientError) as fce:
             if client_response := getattr(fce, "response", None):
                 message = (
