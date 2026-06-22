@@ -399,17 +399,24 @@ class MapperBase:
                 f"{MapperBase.legacy_id_template} {legacy_id}"
             )
 
-    def create_and_write_boundwith_part(self, legacy_item_id: str, bound_with_holding_uuid: dict):
+    def create_and_write_boundwith_part(self, legacy_item_id: str, bound_with_holding_uuid: str):
+        item_id = str(
+            FolioUUID(
+                self.base_string_for_folio_uuid,
+                FOLIONamespaces.items,
+                legacy_item_id,
+            )
+        )
         part = {
-            "id": str(uuid.uuid4()),
-            "holdingsRecordId": bound_with_holding_uuid,
-            "itemId": str(
+            "id": str(
                 FolioUUID(
                     self.base_string_for_folio_uuid,
-                    FOLIONamespaces.items,
-                    legacy_item_id,
+                    FOLIONamespaces.boundWithParts,
+                    "-".join([item_id, bound_with_holding_uuid]),
                 )
             ),
+            "holdingsRecordId": bound_with_holding_uuid,
+            "itemId": item_id,
         }
         self.extradata_writer.write("boundwithPart", part)
         self.migration_report.add_general_statistics(i18n_t("Boundwith parts created"))
