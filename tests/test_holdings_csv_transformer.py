@@ -30,7 +30,11 @@ def test_generate_boundwith_part(caplog):
 
     assert any("boundwithPart\t" in ed for ed in mock_mapper.extradata_writer.cache)
     assert any(
-        '"itemId": "c6792640-a656-527f-84e7-e2524c141f66"}\n' in ed
+        '"itemId": "c6792640-a656-527f-84e7-e2524c141f66"' in ed
+        for ed in mock_mapper.extradata_writer.cache
+    )
+    assert any(
+        '"id": "f5411afb-a2a3-5ce3-9e59-16a67c573bda"' in ed
         for ed in mock_mapper.extradata_writer.cache
     )
     assert any(

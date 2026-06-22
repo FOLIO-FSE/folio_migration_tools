@@ -151,6 +151,7 @@ def test_generate_and_write_bound_with_part(mocked_mapper):
     assert args[0] == "boundwithPart"
     assert args[1]["holdingsRecordId"] == hold_1_id
     assert args[1]["itemId"] == "d33c5266-df65-5187-9358-b115afe55f2d"
+    assert args[1]["id"] == "3552d507-ea79-53f9-8d7e-516057941b8f"
     assert mocked_mapper.migration_report.report["GeneralStatistics"]["Boundwith parts created"] == 1
 
 
