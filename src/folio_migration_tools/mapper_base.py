@@ -554,11 +554,11 @@ class MapperBase:
             self.library_configuration.use_gateway_url_for_uuids
             and not self.library_configuration.is_ecs
         ):
-            return str(self.folio_client.gateway_url)
+            return self.folio_client.gateway_url
         elif self.library_configuration.ecs_tenant_id:
-            return str(self.library_configuration.ecs_tenant_id)
+            return self.library_configuration.ecs_tenant_id
         else:
-            return str(self.library_configuration.tenant_id)
+            return self.library_configuration.tenant_id
 
     @staticmethod
     def validate_location_map(location_map: List[Dict], locations: List[Dict]) -> List[Dict]:
