@@ -170,21 +170,109 @@ class TestInactiveUserHandling:
 
         assert result is True
 
-    def test_create_request_with_inactive_user_retry_reraises_other_errors(self):
+    def test_create_request_with_inactive_user_retry_returns_false_on_non_inactive_error(self):
         m = self._make_migrator()
         legacy_request = DummyLegacyRequest(patron_barcode="P001")
         
-        # Mock a different error
-        error_response = Mock()
-        error_response.json.return_value = {
-            "errors": [{"message": "Some other error"}]
-        }
-        error_request = Mock()
-        m.folio_client.handle_json_response.return_value = {
-            "errors": [{"message": "Some other error"}]
-        }
-        fve = FolioValidationError(request=error_request, response=error_response)
-        m.circulation_helper.create_request.side_effect = fve
+        # circulation_helper.create_request catches FolioValidationError and returns False
+        # so _create_request_with_inactive_user_retry just returns that False
+        m.circulation_helper.create_request.return_value = False
 
-        with pytest.raises(FolioValidationError):
-            m._create_request_with_inactive_user_retry(legacy_request)
+        result = m._create_request_with_inactive_user_retry(legacy_request)
+
+        assert result is False
+
+    def test_get_user_by_barcode_exception_handling(self):
+        m = self._make_migrator()
+        m.folio_client.folio_get.side_effect = Exception("API Error")
+
+        result = m.get_user_by_barcode("P001")
+
+        assert result is None
+
+    def test_update_user_calls_folio_put_correctly(self):
+        m = self._make_migrator()
+        user_data = {
+            "id": "user-123",
+            "barcode": "P001",
+            "active": True,
+            "name": "John Doe",
+        }
+
+        m.update_user(user_data)
+
+        m.folio_client.folio_put.assert_called_once_with("/users/user-123", user_data)
+
+    def test_full_inactive_user_flow_integration(self):
+        m = self._make_migrator()
+        legacy_request = DummyLegacyRequest(patron_barcode="P001")
+        
+        # Mock user data
+        user_data = {
+            "id": "user-123",
+            "barcode": "P001",
+            "active": False,
+            "expirationDate": "2024-12-31",
+        }
+        m.folio_client.folio_get.return_value = [user_data]
+        m.circulation_helper.create_request.return_value = True
+        
+        # Call the retry method
+        result = m._retry_request_for_inactive_user(legacy_request)
+        
+        # Verify the flow
+        assert result is True
+        m.folio_client.folio_get.assert_called_once_with("/users", "users", query='barcode=="P001"')
+        # Should call folio_put twice: once for activate, once for deactivate
+        assert m.folio_client.folio_put.call_count == 2
+        # Verify the URLs called
+        assert m.folio_client.folio_put.call_args_list[0][0][0] == "/users/user-123"
+        assert m.folio_client.folio_put.call_args_list[1][0][0] == "/users/user-123"
+
+    def test_deactivate_user_restores_original_expiration(self):
+        m = self._make_migrator()
+        user_data = {
+            "id": "user-123",
+            "barcode": "P001",
+            "active": True,
+            "expirationDate": "2025-06-30",
+        }
+        original_expiration = "2024-12-31"
+
+        m.deactivate_user(user_data, original_expiration)
+
+        assert user_data["active"] is False
+        assert user_data["expirationDate"] == "2024-12-31"
+        m.folio_client.folio_put.assert_called_once()
+
+    def test_activate_user_extends_expiration_correctly(self):
+        m = self._make_migrator()
+        user_data = {
+            "id": "user-123",
+            "barcode": "P001",
+            "active": False,
+        }
+        
+        m.activate_user(user_data)
+        
+        assert user_data["active"] is True
+        m.folio_client.folio_put.assert_called_once()
+
+    def test_request_creation_fails_after_reactivation(self):
+        m = self._make_migrator()
+        legacy_request = DummyLegacyRequest(patron_barcode="P001")
+        
+        user_data = {
+            "id": "user-123",
+            "barcode": "P001",
+            "active": False,
+            "expirationDate": "2024-12-31",
+        }
+        m.folio_client.folio_get.return_value = [user_data]
+        m.circulation_helper.create_request.return_value = False
+        
+        result = m._retry_request_for_inactive_user(legacy_request)
+        
+        assert result is False
+        # User should still be deactivated even though request failed
+        assert m.folio_client.folio_put.call_count == 2
