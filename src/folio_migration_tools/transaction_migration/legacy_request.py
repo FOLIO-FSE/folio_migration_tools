@@ -106,7 +106,7 @@ class LegacyRequest(object):
         return {
             "requestLevel": "Item",
             "requestType": self.request_type,
-            "fulfilmentPreference": self.fulfillment_preference,
+            "fulfillmentPreference": self.fulfillment_preference,
             "requester": {"barcode": self.patron_barcode},
             "requesterId": self.patron_id,
             "item": {"barcode": self.item_barcode},
@@ -130,7 +130,7 @@ class LegacyRequest(object):
             "requestDate",
             "holdingsRecordId",
             "itemId",
-            "fulfilmentPreference",
+            "fulfillmentPreference",
             "pickupServicePointId",
         ]
         if req["requestLevel"] == "Title":
