@@ -243,3 +243,103 @@ def test_handle_transformation_process_error(mocked_mapper, caplog):
             mock_exit.assert_called_once_with(1)
 
     assert "Test process error" in caplog.text
+
+
+def test_base_string_for_folio_uuid_uses_gateway_url():
+    """Test base_string_for_folio_uuid returns gateway URL when configured."""
+    mapper = MapperBase(
+        mocked_classes.get_mocked_library_config(),
+        AbstractTaskConfiguration(
+            name="Test Task",
+            migration_task_type="Test Task",
+            files=[
+                FileDefinition(
+                    file_type="items",
+                    file_path="items.json",
+                    discovery_suppressed=False,
+                )
+            ],
+        ),
+        Mock(),
+    )
+    mapper.library_configuration.use_gateway_url_for_uuids = True
+    mapper.library_configuration.is_ecs = False
+    mapper.folio_client.gateway_url = "https://folio-gateway.example.com"
+    
+    result = mapper.base_string_for_folio_uuid
+    assert result == "https://folio-gateway.example.com"
+
+
+def test_base_string_for_folio_uuid_uses_ecs_tenant_id():
+    """Test base_string_for_folio_uuid returns ecs_tenant_id when configured."""
+    mapper = MapperBase(
+        mocked_classes.get_mocked_library_config(),
+        AbstractTaskConfiguration(
+            name="Test Task",
+            migration_task_type="Test Task",
+            files=[
+                FileDefinition(
+                    file_type="items",
+                    file_path="items.json",
+                    discovery_suppressed=False,
+                )
+            ],
+        ),
+        Mock(),
+    )
+    mapper.library_configuration.use_gateway_url_for_uuids = False
+    mapper.library_configuration.ecs_tenant_id = "ecs_tenant_123"
+    
+    result = mapper.base_string_for_folio_uuid
+    assert result == "ecs_tenant_123"
+
+
+def test_base_string_for_folio_uuid_uses_tenant_id_default():
+    """Test base_string_for_folio_uuid returns tenant_id as fallback."""
+    mapper = MapperBase(
+        mocked_classes.get_mocked_library_config(),
+        AbstractTaskConfiguration(
+            name="Test Task",
+            migration_task_type="Test Task",
+            files=[
+                FileDefinition(
+                    file_type="items",
+                    file_path="items.json",
+                    discovery_suppressed=False,
+                )
+            ],
+        ),
+        Mock(),
+    )
+    mapper.library_configuration.use_gateway_url_for_uuids = False
+    mapper.library_configuration.ecs_tenant_id = None
+    mapper.library_configuration.tenant_id = "tenant_fallback"
+    
+    result = mapper.base_string_for_folio_uuid
+    assert result == "tenant_fallback"
+
+
+def test_base_string_for_folio_uuid_gateway_url_takes_precedence_over_ecs():
+    """Test that gateway URL takes precedence over ecs_tenant_id."""
+    mapper = MapperBase(
+        mocked_classes.get_mocked_library_config(),
+        AbstractTaskConfiguration(
+            name="Test Task",
+            migration_task_type="Test Task",
+            files=[
+                FileDefinition(
+                    file_type="items",
+                    file_path="items.json",
+                    discovery_suppressed=False,
+                )
+            ],
+        ),
+        Mock(),
+    )
+    mapper.library_configuration.use_gateway_url_for_uuids = True
+    mapper.library_configuration.is_ecs = False
+    mapper.library_configuration.ecs_tenant_id = "ecs_tenant_123"
+    mapper.folio_client.gateway_url = "https://folio-gateway.example.com"
+    
+    result = mapper.base_string_for_folio_uuid
+    assert result == "https://folio-gateway.example.com"
