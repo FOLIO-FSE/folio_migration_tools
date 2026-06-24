@@ -1,3 +1,4 @@
+from pymarc.field import Indicators
 import datetime
 import io
 import json
@@ -16,6 +17,9 @@ from pymarc.reader import MARCReader
 from pymarc.record import Field, Record
 
 from folio_migration_tools.library_configuration import FolioRelease, HridHandling, LibraryConfiguration
+from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
+    DEFAULT_MARC_RECORD_PREPROCESSORS,
+)
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
@@ -46,10 +50,10 @@ def folio_client():
 def mapper_base(folio_client):
     mapper_library_configuration = LibraryConfiguration(
         **{
-            "okapi_url": "https://folio-snapshot.dev.folio.org",
+            "gateway_url": "https://folio-snapshot.dev.folio.org",
             "tenant_id": "diku",
-            "okapi_username": "diku_admin",
-            "okapi_password": "admin",
+            "folio_username": "diku_admin",
+            "folio_password": "admin",
             "iteration_identifier": "test",
             "library_name": "Test Library",
             "folio_release": FolioRelease.sunflower,
@@ -66,7 +70,7 @@ def mapper_base(folio_client):
             # "ils_flavour": "field001"
         }
     )
-    mapper = RulesMapperBase(folio_client, mapper_library_configuration, mapper_task_configuration, [], {})
+    mapper = RulesMapperBase(folio_client, mapper_library_configuration, mapper_task_configuration, {}, {})
     mapper.conditions = Conditions(folio_client, mapper, "any", FolioRelease.ramsons, "Library of Congress classification")
     return mapper
 
@@ -76,6 +80,19 @@ def test_dedupe_recs():
     RulesMapperBase.dedupe_rec(my_dict)
     assert my_dict != {"my_arr": [{"a": "b"}, {"a": "b"}, {"c": "d"}]}
     assert my_dict == {"my_arr": [{"a": "b"}, {"c": "d"}]}
+
+
+def test_marc_task_configuration_default_preprocessors():
+    config = MarcTaskConfigurationBase(
+        **{
+            "name": "test",
+            "migration_task_type": "BibsTransformer",
+            "files": [],
+        }
+    )
+
+    assert config.marc_record_preprocessors == DEFAULT_MARC_RECORD_PREPROCESSORS
+    assert config.preprocessors_args == {}
 
 
 def test_datetime_from_005():
@@ -111,7 +128,7 @@ def test_date_from_008():
 def test_get_first_subfield_value():
     marc_field = Field(
         tag="100",
-        indicators=["0", "1"],
+        indicators=Indicators(*["0", "1"]),
         subfields=[
             Subfield(code="e", value="puppeteer"),
             Subfield(code="e", value="assistant puppeteer"),
@@ -125,7 +142,7 @@ def test_get_first_subfield_value_no_subfields():
     with pytest.raises(IndexError):
         marc_field = Field(
             tag="100",
-            indicators=["0", "1"],
+            indicators=Indicators(*["0", "1"]),
             subfields=[],
         )
         assert marc_field.get_subfields("j", "e")[0] == "puppeteer"
@@ -134,7 +151,7 @@ def test_get_first_subfield_value_no_subfields():
 def test_remove_subfields():
     marc_field = Field(
         tag="338",
-        indicators=["0", "1"],
+        indicators=Indicators(*["0", "1"]),
         subfields=[
             Subfield(code="b", value="ac"),
             Subfield(code="b", value="ab"),
@@ -176,7 +193,7 @@ def test_weirdness():
         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
         reader.hide_utf8_warnings = True
         reader.force_utf8 = True
-        record1 = None
+        record1 = Record()
         for record in reader:
             record1 = record
         f020s = record1.get_fields("020")
@@ -191,7 +208,7 @@ def test_grouped():
         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
         reader.hide_utf8_warnings = True
         reader.force_utf8 = True
-        record1 = None
+        record1 = Record()
         for record in reader:
             record1 = record
         f020s = record1.get_fields("020")
@@ -244,7 +261,7 @@ def test_get_srs_string_bad_leaders():
         reader = MARCReader(marc_file, to_unicode=True, permissive=True)
         reader.hide_utf8_warnings = True
         reader.force_utf8 = True
-        record: Record = None
+        record: Record = Record()
         record = next(reader)
         l1 = record.leader
         record.leader = Leader(f"{record.leader[:-4]}4500")
@@ -454,7 +471,7 @@ def test_handle_entity_mapping_with_856_uri(mapper_base):
     mapper.schema = schema_ea
     marc_field = Field(
         tag="856",
-        indicators=["4", "0"],
+        indicators=Indicators(*["4", "0"]),
         subfields=[
             Subfield(code="u", value="http://example.com"),
             Subfield(code="y", value="Link Text"),
@@ -489,7 +506,7 @@ def test_handle_entity_mapping_with_856_without_uri(mapper_base, caplog):
     logging.addLevelName(DATA_ISSUE_LVL_NUM, "DATA_ISSUES")
     marc_field = Field(
         tag="856",
-        indicators=["4", "0"],
+        indicators=Indicators(*["4", "0"]),
         subfields=[
             Subfield(code="u", value=""),
             Subfield(code="y", value="Link Text"),
@@ -512,7 +529,7 @@ def test_handle_entity_mapping_with_856_no_u(mapper_base, caplog):
     logging.addLevelName(DATA_ISSUE_LVL_NUM, "DATA_ISSUES")
     marc_field = Field(
         tag="856",
-        indicators=["4", "0"],
+        indicators=Indicators(*["4", "0"]),
         subfields=[],
     )
     folio_record = {}
@@ -531,7 +548,7 @@ def test_map_field_according_to_mapping_exception_logging(mapper_base, caplog):
     mapper = mapper_base
     marc_field = Field(
         tag="100",
-        indicators=["1", " "],
+        indicators=Indicators(*["1", " "]),
         subfields=[Subfield(code="a", value="Test Author")],
     )
 

@@ -57,6 +57,17 @@ Transform MARC Holdings (MFHD) records into FOLIO Holdings records with support 
 | `mfhdMrcNoteType` | string | No | Note type name for full MFHD MARC21 |
 | `files` | array | Yes | List of MFHD files to process |
 
+## MARC Record Preprocessors
+
+`HoldingsMarcTransformer` supports the same MARC preprocessor configuration as `BibsTransformer`.
+
+- `marcRecordPreprocessors`: ordered list of preprocessor names or full module paths.
+- `preprocessorsArgs`: inline JSON object or the name of a JSON file in `mapping_files/` containing per-preprocessor arguments.
+
+The default configuration includes `folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader`. If you provide your own list and omit it, leader normalization is skipped.
+
+All preprocessors are called with the task's `migration_report` object via keyword arguments. Custom preprocessors must accept `**kwargs`.
+
 ## Source Data Requirements
 
 - **Location**: Place MARC21 MFHD files (`.mrc`) in `iterations/<iteration>/source_data/holdings/`

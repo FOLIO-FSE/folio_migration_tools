@@ -5,12 +5,14 @@ encoding detection, and record validation. Supports multiple MARC file formats
 and handles corrupted records gracefully.
 """
 
+import json
 import logging
 import sys
 from io import IOBase
 from pathlib import Path
 
 import i18n
+from folio_data_import.marc_preprocessors import MARCPreprocessor
 from pymarc import Leader, MARCReader, Record
 
 from folio_migration_tools.custom_exceptions import (
@@ -26,8 +28,106 @@ from folio_migration_tools.migration_report import MigrationReport
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_MARC_RECORD_PREPROCESSORS = [
+    "folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader"
+]
+
+
+def set_leader(
+    marc_record: Record,
+    migration_report: MigrationReport | None = None,
+    **kwargs,
+) -> Record:
+    migration_report = migration_report or kwargs.get("migration_report")
+
+    if marc_record.leader[9] != "a":
+        if migration_report is not None:
+            migration_report.add(
+                "LeaderManipulation",
+                i18n.t(
+                    "Set leader 09 (Character coding scheme) from %{field} to a",
+                    field=marc_record.leader[9],
+                ),
+            )
+        marc_record.leader = Leader(f"{marc_record.leader[:9]}a{marc_record.leader[10:]}")
+
+    if not str(marc_record.leader).endswith("4500"):
+        if migration_report is not None:
+            migration_report.add(
+                "LeaderManipulation",
+                i18n.t(
+                    "Set leader 20-23 from %{field} to 4500",
+                    field=marc_record.leader[-4:],
+                ),
+            )
+        marc_record.leader = Leader(f"{marc_record.leader[:-4]}4500")
+
+    if marc_record.leader[10] != "2":
+        if migration_report is not None:
+            migration_report.add(
+                "LeaderManipulation",
+                i18n.t(
+                    "Set leader 10 (Indicator count) from %{field} to 2",
+                    field=marc_record.leader[10],
+                ),
+            )
+        marc_record.leader = Leader(f"{marc_record.leader[:10]}2{marc_record.leader[11:]}")
+
+    if marc_record.leader[11] != "2":
+        if migration_report is not None:
+            migration_report.add(
+                "LeaderManipulation",
+                i18n.t(
+                    "Set leader 11 (Subfield code count) from %{record} to 2",
+                    record=marc_record.leader[11],
+                ),
+            )
+        marc_record.leader = Leader(f"{marc_record.leader[:11]}2{marc_record.leader[12:]}")
+
+    return marc_record
+
 
 class MARCReaderWrapper:
+    @staticmethod
+    def get_marc_record_preprocessor(processor: MarcFileProcessor) -> MARCPreprocessor:
+        task_config = processor.mapper.task_configuration
+        preprocessors = (
+            getattr(task_config, "marc_record_preprocessors", None)
+            or DEFAULT_MARC_RECORD_PREPROCESSORS
+        )
+        if isinstance(preprocessors, list):
+            preprocessors = ",".join(preprocessors)
+        preprocessors_args = MARCReaderWrapper.load_preprocessors_args(
+            task_config,
+            processor.folder_structure,
+        )
+        default_args = dict(preprocessors_args.get("default", {}))
+        default_args["migration_report"] = processor.mapper.migration_report
+        preprocessors_args["default"] = default_args
+        return MARCPreprocessor(preprocessors, **preprocessors_args)
+
+    @staticmethod
+    def load_preprocessors_args(task_config, folder_structure: FolderStructure) -> dict:
+        preprocessors_args = getattr(task_config, "preprocessors_args", {}) or {}
+        if isinstance(preprocessors_args, str):
+            with open(folder_structure.mapping_files_folder / preprocessors_args, "r") as f:
+                return json.load(f)
+        return dict(preprocessors_args)
+
+    @staticmethod
+    def preprocess_record(
+        marc_record: Record,
+        marc_record_preprocessor: MARCPreprocessor,
+    ) -> Record:
+        try:
+            return marc_record_preprocessor.do_work(marc_record)
+        except TypeError as error:
+            logger.warning(
+                "Skipping MARC record preprocessing: preprocessors must accept **kwargs (%s)",
+                error,
+            )
+            return marc_record
+
     @staticmethod
     def process_single_file(
         file_def: FileDefinition,
@@ -61,6 +161,7 @@ class MARCReaderWrapper:
         failed_records_file: IOBase,
         processor: MarcFileProcessor,
     ):
+        marc_record_preprocessor = MARCReaderWrapper.get_marc_record_preprocessor(processor)
         for idx, record in enumerate(reader):
             processor.mapper.migration_report.add_general_statistics(
                 i18n.t("Records in file before parsing")
@@ -77,7 +178,10 @@ class MARCReaderWrapper:
                     )
                 # The normal case
                 else:
-                    MARCReaderWrapper.set_leader(record, processor.mapper.migration_report)
+                    record = MARCReaderWrapper.preprocess_record(
+                        record,
+                        marc_record_preprocessor,
+                    )
                     processor.mapper.migration_report.add_general_statistics(
                         i18n.t("Records successfully decoded from MARC21"),
                     )
@@ -93,42 +197,7 @@ class MARCReaderWrapper:
 
     @staticmethod
     def set_leader(marc_record: Record, migration_report: MigrationReport):
-        if marc_record.leader[9] != "a":
-            migration_report.add(
-                "LeaderManipulation",
-                i18n.t(
-                    "Set leader 09 (Character coding scheme) from %{field} to a",
-                    field=marc_record.leader[9],
-                ),
-            )
-            marc_record.leader = Leader(f"{marc_record.leader[:9]}a{marc_record.leader[10:]}")
-
-        if not str(marc_record.leader).endswith("4500"):
-            migration_report.add(
-                "LeaderManipulation",
-                i18n.t("Set leader 20-23 from %{field} to 4500", field=marc_record.leader[-4:]),
-            )
-            marc_record.leader = Leader(f"{marc_record.leader[:-4]}4500")
-
-        if marc_record.leader[10] != "2":
-            migration_report.add(
-                "LeaderManipulation",
-                i18n.t(
-                    "Set leader 10 (Indicator count) from %{field} to 2",
-                    field=marc_record.leader[10],
-                ),
-            )
-            marc_record.leader = Leader(f"{marc_record.leader[:10]}2{marc_record.leader[11:]}")
-
-        if marc_record.leader[11] != "2":
-            migration_report.add(
-                "LeaderManipulation",
-                i18n.t(
-                    "Set leader 11 (Subfield code count) from %{record} to 2",
-                    record=marc_record.leader[11],
-                ),
-            )
-            marc_record.leader = Leader(f"{marc_record.leader[:11]}2{marc_record.leader[12:]}")
+        return set_leader(marc_record, migration_report)
 
 
 def report_failed_parsing(

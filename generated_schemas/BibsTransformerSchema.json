@@ -141,6 +141,34 @@
             "title": "Statistical code mapping fields",
             "type": "array"
         },
+        "marcRecordPreprocessors": {
+            "default": [
+                "folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader"
+            ],
+            "description": "List of preprocessor names to apply to each record before transformation. Preprocessors can modify MARC records before they are mapped to FOLIO.",
+            "items": {
+                "type": "string"
+            },
+            "title": "MARC record preprocessors",
+            "type": "array"
+        },
+        "preprocessorsArgs": {
+            "anyOf": [
+                {
+                    "additionalProperties": {
+                        "additionalProperties": true,
+                        "type": "object"
+                    },
+                    "type": "object"
+                },
+                {
+                    "type": "string"
+                }
+            ],
+            "default": {},
+            "description": "Dictionary of arguments to pass to the MARC record preprocessors. Keys are preprocessor names, values are dicts of arguments. A string value is interpreted as a JSON file name in the mapping_files folder.",
+            "title": "Preprocessor arguments"
+        },
         "ils_flavor": {
             "$ref": "#/$defs/IlsFlavour",
             "description": "The type of ILS you are migrating records from.",
