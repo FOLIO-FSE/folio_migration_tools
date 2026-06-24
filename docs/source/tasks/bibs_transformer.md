@@ -48,6 +48,41 @@ Transform MARC bibliographic records into FOLIO Instance records and prepare MAR
 | `customBibIdField` | string | No | MARC field containing legacy ID when `ilsFlavour` is `"custom"`. Example: `"991$a"` |
 | `files` | array | Yes | List of MARC files to process. See [File Configuration](#file-configuration). |
 
+### MARC Record Preprocessors
+
+`BibsTransformer` can apply MARC preprocessors to each `pymarc.Record` before mapping it to FOLIO.
+
+- `marcRecordPreprocessors`: ordered list of preprocessor names or full module paths.
+- `preprocessorsArgs`: inline JSON object or the name of a JSON file in `mapping_files/` containing per-preprocessor arguments.
+
+By default, the task includes `folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader`, which normalizes leader bytes 09-11 and 20-23. If you provide your own `marcRecordPreprocessors` list and omit that preprocessor, it will not run.
+
+All preprocessors are called with the task's `migration_report` object via keyword arguments. Custom preprocessors must accept `**kwargs`.
+
+Example:
+
+```json
+{
+    "name": "transform_bibs",
+    "migrationTaskType": "BibsTransformer",
+    "ilsFlavour": "voyager",
+    "marcRecordPreprocessors": [
+        "folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader",
+        "folio_data_import.marc_preprocessors.clean_empty_fields"
+    ],
+    "preprocessorsArgs": {
+        "default": {
+            "log_level": "DEBUG"
+        }
+    },
+    "files": [
+        {
+            "file_name": "bibs.mrc"
+        }
+    ]
+}
+```
+
 ### ILS Flavours
 
 The `ilsFlavour` parameter determines how the legacy system identifier is extracted from MARC records:

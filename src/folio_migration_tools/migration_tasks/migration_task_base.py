@@ -39,6 +39,7 @@ from folio_migration_tools.marc_rules_transformation.marc_file_processor import 
     MarcFileProcessor,
 )
 from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
+    DEFAULT_MARC_RECORD_PREPROCESSORS,
     MARCReaderWrapper,
 )
 
@@ -523,6 +524,27 @@ class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):
             ),
         ),
     ] = []
+    marc_record_preprocessors: Annotated[
+        List[str],
+        Field(
+            title="MARC record preprocessors",
+            description=(
+                "List of preprocessor names to apply to each record before transformation. "
+                "Preprocessors can modify MARC records before they are mapped to FOLIO."
+            ),
+        ),
+    ] = DEFAULT_MARC_RECORD_PREPROCESSORS
+    preprocessors_args: Annotated[
+        Dict[str, Dict] | str,
+        Field(
+            title="Preprocessor arguments",
+            description=(
+                "Dictionary of arguments to pass to the MARC record preprocessors. "
+                "Keys are preprocessor names, values are dicts of arguments. A string value "
+                "is interpreted as a JSON file name in the mapping_files folder."
+            ),
+        ),
+    ] = {}
 
 
 class ExcludeLevelFilter(logging.Filter):
