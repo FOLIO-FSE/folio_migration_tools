@@ -55,7 +55,7 @@ The primary difference is that InventoryBatchPoster uses the `folio_data_import`
 ```{tip}
 `patchPaths` and `upsert=True` for `source=MARC` instances
 
-When performing an `upsert=True` task for instances where some existing instances my be `source=MARC`, if you want to update `staffSuppress`, `discoverySuppress` or `deleted` based on the contents of the incoming record, you will need to add those fields to `patchPaths` in your task configuration.
+When performing an `upsert=True` task for instances where some existing instances may be `source=MARC`, if you want to update `staffSuppress`, `discoverySuppress` or `deleted` based on the contents of the incoming record, you will need to add those fields to `patchPaths` in your task configuration.
 ```
 ### Object Types
 
