@@ -1,3 +1,4 @@
+from pymarc.field import Indicators
 from types import SimpleNamespace
 
 from pymarc import Field, MARCReader, Record, Subfield
@@ -18,7 +19,7 @@ def add_local_note(
     record.add_field(
         Field(
             tag="590",
-            indicators=[" ", " "],
+            indicators=Indicators(*[" ", " "]),
             subfields=[Subfield(code="a", value=note_text)],
         )
     )
