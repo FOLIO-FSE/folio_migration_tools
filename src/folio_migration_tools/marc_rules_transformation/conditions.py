@@ -386,7 +386,7 @@ class Conditions:
                 "MappedIdentifierTypes", f"{marc_field.tag} -> {t[1]}"
             )
             return t[0]
-        identifier_type: dict = next(
+        identifier_type: dict | None = next(
             (
                 f
                 for f in self.folio.identifier_types  # type: ignore
@@ -397,6 +397,12 @@ class Conditions:
             ),
             None,
         )
+        if identifier_type is None:
+            raise TransformationFieldMappingError(
+                legacy_id,
+                i18n.t("no matching identifier_types in %{names}", names=parameter["names"]),
+                marc_field,
+            )
         self.mapper.migration_report.add("MappedIdentifierTypes", identifier_type["name"])
         my_id = identifier_type["id"]
         if not my_id:
