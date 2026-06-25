@@ -14,7 +14,7 @@ import time
 import traceback
 from datetime import datetime, timedelta
 from collections.abc import AsyncGenerator
-from typing import Annotated, List, Literal, Optional
+from typing import Annotated, List, Literal
 from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 
@@ -66,7 +66,7 @@ class LoansMigrator(MigrationTaskBase):
             ),
         ]
         open_loans_files: Annotated[
-            Optional[list[FileDefinition]],
+            List[FileDefinition],
             Field(
                 title="Open loans files",
                 description="List of files containing open loan data.",
@@ -80,28 +80,28 @@ class LoansMigrator(MigrationTaskBase):
             ),
         ]
         starting_row: Annotated[
-            Optional[int],
+            int,
             Field(
                 title="Starting row",
                 description=("The starting row for data processing. By default is 1."),
             ),
         ] = 1
         item_files: Annotated[
-            Optional[list[FileDefinition]],
+            List[FileDefinition],
             Field(
                 title="Item files",
                 description=("List of files containing item data. By default is empty list."),
             ),
         ] = []
         patron_files: Annotated[
-            Optional[list[FileDefinition]],
+            List[FileDefinition],
             Field(
                 title="Patron files",
                 description=("List of files containing patron data. By default is empty list."),
             ),
         ] = []
         skip_barcode_prevalidation: Annotated[
-            Optional[bool],
+            bool,
             Field(
                 title="Skip barcode pre-validation",
                 description=(
@@ -138,6 +138,7 @@ class LoansMigrator(MigrationTaskBase):
         self.failed_and_not_dupe: dict = {}
         self.migration_report = MigrationReport()
         self.valid_legacy_loans: List[LegacyLoan] = []
+        self.task_configuration: LoansMigrator.TaskConfiguration
         super().__init__(library_config, task_configuration, folio_client)
         self.circulation_helper = CirculationHelper(
             self.folio_client,
@@ -151,16 +152,8 @@ class LoansMigrator(MigrationTaskBase):
         tenant_locale_endpoint = (
             "/configurations/entries?query=(module==ORG%20and%20configName==localeSettings)"
         )
-        try:
-            self.tenant_timezone_str = json.loads(
-                self.folio_client.folio_get_single_object(tenant_locale_endpoint)["configs"][0][
-                    "value"
-                ]
-            )["timezone"]
-            logger.info("Tenant timezone is: %s", self.tenant_timezone_str)
-        except Exception:
-            logger.info('Tenant locale settings not available. Using "UTC".')
-            self.tenant_timezone_str = "UTC"
+        self.get_tenant_timezone(tenant_locale_endpoint)
+
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         self.semi_valid_legacy_loans = []
         other_circulation_settings_endpoint = (
@@ -221,6 +214,16 @@ class LoansMigrator(MigrationTaskBase):
         logger.info("Loaded and validated %s loans in total", len(self.semi_valid_legacy_loans))
         logger.info("Starting row number is %s", task_configuration.starting_row)
         logger.info("Init completed")
+
+    def get_tenant_timezone(self, tenant_locale_endpoint):
+        try:
+            locale_config = self.folio_client.folio_get_single_object(tenant_locale_endpoint)
+            configs = locale_config.get("configs", [{}]) if locale_config else [{}]
+            self.tenant_timezone_str = json.loads(configs[0]["value"])["timezone"]
+            logger.info("Tenant timezone is: %s", self.tenant_timezone_str)
+        except Exception:
+            logger.info('Tenant locale settings not available. Using "UTC".')
+            self.tenant_timezone_str = "UTC"
 
     def check_smtp_config(self):
         try:
@@ -455,6 +458,14 @@ class LoansMigrator(MigrationTaskBase):
                     f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
                 )
                 num_invalid += 1
+            elif "patronGroup" not in fetch_patron[0] or not fetch_patron[0]["patronGroup"]:
+                logger.warning("Patron exists but has no group: %s", barcode)
+                Helper.log_data_issue_failed(
+                    "",
+                    "Fetched patron has no group assigned",
+                    f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
+                )
+                num_invalid += 1
             else:
                 try:
                     self.valid_patron_map[barcode] = fetch_patron[0]["barcode"]
@@ -462,7 +473,7 @@ class LoansMigrator(MigrationTaskBase):
                     logger.warning("Patron exists but has no barcode: %s", barcode)
                     Helper.log_data_issue(
                         "",
-                        "Fetched patron has no barcode",
+                        "Fetched patron has no barcode assigned",
                         f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
                     )
                     num_invalid += 1
@@ -506,16 +517,15 @@ class LoansMigrator(MigrationTaskBase):
         for i in range(0, len(barcode_list), batch_size):
             batch = barcode_list[i : i + batch_size]
             try:
-                response = (
-                    self.folio_client.folio_post(  # type: ignore[misc]
-                        "/item-storage/items/retrieve",
-                        {
-                            "query": " OR ".join([f'barcode=="{barcode}"' for barcode in batch]),
-                            "limit": len(batch),
-                        },
-                    )
-                    or {}
+                response = self.folio_client.folio_post(
+                    "/item-storage/items/retrieve",
+                    {
+                        "query": " OR ".join([f'barcode=="{barcode}"' for barcode in batch]),
+                        "limit": len(batch),
+                    },
                 )
+                if not isinstance(response, dict):
+                    response = {}
                 fetch_items.extend(response.get("items", []))
             except folioclient.FolioClientError as e:
                 logger.exception(
@@ -853,7 +863,7 @@ class LoansMigrator(MigrationTaskBase):
         data = {
             "declaredLostDateTime": datetime.isoformat(due_date + timedelta(days=1)),
             "comment": "Created at migration. Date is due date + 1 day",
-            "servicePointId": str(self.task_configuration.fallback_service_point_id),
+            "servicePointId": self.task_configuration.fallback_service_point_id,
         }
         logger.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
         if self.folio_put_post(declare_lost_url, data, "POST", i18n.t("Declare item as lost")):

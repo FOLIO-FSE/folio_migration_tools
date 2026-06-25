@@ -1,5 +1,6 @@
 import asyncio
 import csv
+import json
 from io import StringIO
 from unittest.mock import AsyncMock, Mock, patch
 from zoneinfo import ZoneInfo
@@ -222,7 +223,7 @@ class TestPreValidatePatronBarcodesAsync:
     async def test_valid_patron_found(self):
         loans = [DummyLegacyLoan(patron_barcode="P001")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1", "patronGroup": "group-1"}]
 
         await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
@@ -268,7 +269,7 @@ class TestPreValidatePatronBarcodesAsync:
             DummyLegacyLoan(patron_barcode="P001"),
         ]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1"}]
+        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1", "patronGroup": "group-1"}]
 
         await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
@@ -281,8 +282,8 @@ class TestPreValidatePatronBarcodesAsync:
         loans = [DummyLegacyLoan(patron_barcode="P001", proxy_patron_barcode="PROXY1")]
         m = self._make_migrator(loans)
         m.folio_client.folio_get_async.side_effect = [
-            [{"barcode": "P001", "id": "uuid-1"}],
-            [{"barcode": "PROXY1", "id": "uuid-2"}],
+            [{"barcode": "P001", "id": "uuid-1", "patronGroup": "group-1"}],
+            [{"barcode": "PROXY1", "id": "uuid-2", "patronGroup": "group-2"}],
         ]
 
         await LoansMigrator.pre_validate_patron_barcodes_async(m)
@@ -470,6 +471,85 @@ class TestCheckBarcodes:
 
         assert result == []
         assert "I001" in m.failed
+
+
+def test_get_tenant_timezone_success():
+    migrator = Mock(spec=LoansMigrator)
+    migrator.folio_client = Mock()
+    migrator.folio_client.folio_get_single_object.return_value = {
+        "configs": [{"value": json.dumps({"timezone": "America/Chicago"})}]
+    }
+
+    LoansMigrator.get_tenant_timezone(migrator, "/configurations/entries?query=timezone")
+
+    assert migrator.tenant_timezone_str == "America/Chicago"
+
+
+def test_get_tenant_timezone_falls_back_to_utc_when_missing_value():
+    migrator = Mock(spec=LoansMigrator)
+    migrator.folio_client = Mock()
+    migrator.folio_client.folio_get_single_object.return_value = {"configs": [{}]}
+
+    LoansMigrator.get_tenant_timezone(migrator, "/configurations/entries?query=timezone")
+
+    assert migrator.tenant_timezone_str == "UTC"
+
+
+@pytest.mark.asyncio
+async def test_pre_validate_patron_barcodes_async_rejects_patron_without_group():
+    migrator = Mock(spec=LoansMigrator)
+    migrator.semi_valid_legacy_loans = [DummyLegacyLoan(patron_barcode="P001")]
+    migrator.patron_identifiers = ["barcode"]
+    migrator.folio_client = Mock()
+    migrator.folio_client.folio_get_async = AsyncMock(
+        return_value=[{"id": "uuid-1", "barcode": "P001", "patronGroup": ""}]
+    )
+
+    await LoansMigrator.pre_validate_patron_barcodes_async(migrator)
+
+    assert migrator.valid_patron_map == {}
+
+
+@pytest.mark.asyncio
+async def test_pre_validate_patron_barcodes_async_rejects_patron_without_barcode():
+    migrator = Mock(spec=LoansMigrator)
+    migrator.semi_valid_legacy_loans = [DummyLegacyLoan(patron_barcode="P001")]
+    migrator.patron_identifiers = ["barcode"]
+    migrator.folio_client = Mock()
+    migrator.folio_client.folio_get_async = AsyncMock(
+        return_value=[{"id": "uuid-1", "patronGroup": "group-1"}]
+    )
+
+    await LoansMigrator.pre_validate_patron_barcodes_async(migrator)
+
+    assert migrator.valid_patron_map == {}
+
+
+def test_pre_validate_item_barcodes_handles_non_dict_response():
+    migrator = Mock(spec=LoansMigrator)
+    migrator.semi_valid_legacy_loans = [DummyLegacyLoan(item_barcode="I001")]
+    migrator.folio_client = Mock()
+    migrator.folio_client.folio_post.return_value = []
+
+    LoansMigrator.pre_validate_item_barcodes(migrator)
+
+    assert migrator.valid_item_barcodes == set()
+
+
+@patch("folio_migration_tools.migration_tasks.loans_migrator.i18n", autospec=True)
+def test_declare_lost_uses_fallback_service_point_id_without_cast(mock_i18n):
+    migrator = Mock(spec=LoansMigrator)
+    migrator.task_configuration = Mock()
+    migrator.task_configuration.fallback_service_point_id = "sp-id-123"
+    migrator.folio_put_post = Mock(return_value=True)
+    migrator.migration_report = Mock()
+
+    folio_loan = {"id": "loan-1", "dueDate": "2024-01-01T00:00:00+00:00"}
+
+    LoansMigrator.declare_lost(migrator, folio_loan)
+
+    _, call_data, _, _ = migrator.folio_put_post.call_args[0]
+    assert call_data["servicePointId"] == "sp-id-123"
 
     @pytest.mark.asyncio
     async def test_discards_loan_with_invalid_proxy_barcode(self):

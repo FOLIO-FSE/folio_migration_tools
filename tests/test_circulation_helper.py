@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 from unittest.mock import patch, MagicMock
 
 from folio_migration_tools.circulation_helper import CirculationHelper
@@ -103,3 +104,34 @@ def test_get_holding_by_uuid_exception(caplog):
 
     assert result == {}
     assert "Holdings lookup failed" in caplog.text
+
+
+def test_check_out_by_barcode_handles_internal_server_error():
+    mocked_folio = mocked_classes.mocked_folio_client()
+    sp_id = str(uuid.uuid4())
+    circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
+
+    class DummyInternalServerError(Exception):
+        pass
+
+    legacy_loan = MagicMock()
+    legacy_loan.item_barcode = "item123"
+    legacy_loan.patron_barcode = "user123"
+    legacy_loan.proxy_patron_barcode = ""
+    legacy_loan.service_point_id = sp_id
+    legacy_loan.out_date = datetime.now(timezone.utc)
+    legacy_loan.due_date = datetime.now(timezone.utc)
+
+    mocked_folio.folio_post = MagicMock(
+        side_effect=DummyInternalServerError("FOLIO internal server error")
+    )
+
+    with patch(
+        "folio_migration_tools.circulation_helper.FolioInternalServerError",
+        DummyInternalServerError,
+    ):
+        result = circ_helper.check_out_by_barcode(legacy_loan)
+
+    assert result.was_successful is False
+    assert result.should_be_retried is False
+    assert "internal server error" in result.error_message.lower()

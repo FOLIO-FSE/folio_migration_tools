@@ -15,7 +15,13 @@ from typing import Set
 
 import httpx
 import i18n
-from folioclient import FolioClient, FolioClientError, FolioConnectionError, FolioValidationError
+from folioclient import (
+    FolioClient,
+    FolioClientError,
+    FolioConnectionError,
+    FolioValidationError,
+    FolioInternalServerError,
+)
 
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
@@ -248,6 +254,20 @@ class CirculationHelper:
             self.migration_report.add("Details", stat_message)
             return TransactionResult(
                 False, True, None, error_message, f"Check out error: {stat_message}"
+            )
+        except FolioInternalServerError as fise:
+            logger.exception(
+                "Internal server error\tPOST FAILED %s\n\t%s\n\t%s",
+                path,
+                json.dumps(data),
+                str(fise),
+            )
+            return TransactionResult(
+                False,
+                False,
+                None,
+                str(fise),
+                i18n_t("Internal server error during checkout"),
             )
         except FolioClientError as fce:
             logger.exception(
