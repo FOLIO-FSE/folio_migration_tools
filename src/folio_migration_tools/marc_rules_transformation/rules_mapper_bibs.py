@@ -45,7 +45,7 @@ class BibsRulesMapper(RulesMapperBase):
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
         task_configuration: MarcTaskConfigurationBase,
-        statistical_codes_map: Dict[str, str] = None,
+        statistical_codes_map: Dict[str, str] | None = None,
     ):
         """Initialize mapper for bibliographic record transformations.
 
@@ -65,14 +65,13 @@ class BibsRulesMapper(RulesMapperBase):
         )
         logger.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-bib"
-        self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
+        self.mappings = self.folio_client.folio_get_single_object(rules_endpoint) or {}
         logger.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
         self.instance_relationships: dict = {}
         self.instance_relationship_types: dict = {}
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio_client)
-        self.data_import_marc = self.task_configuration.data_import_marc
-        if self.data_import_marc:
+        if getattr(self.task_configuration, "data_import_marc", False):
             self.hrid_handler.deactivate035_from001 = True
         self.start = time.time()
 
@@ -98,7 +97,7 @@ class BibsRulesMapper(RulesMapperBase):
                 legacy_ids,
             )
         self.handle_leader_05(marc_record, legacy_ids)
-        if self.task_configuration.add_administrative_notes_with_legacy_ids:
+        if getattr(self.task_configuration, "add_administrative_notes_with_legacy_ids", False):
             for legacy_id in legacy_ids:
                 self.add_legacy_id_to_admin_note(folio_instance, legacy_id)
 
@@ -132,9 +131,9 @@ class BibsRulesMapper(RulesMapperBase):
         """
         self.print_progress()
         ignored_subsequent_fields: set = set()
-        bad_tags = set(self.task_configuration.tags_to_delete)  # "907"
+        bad_tags = set(getattr(self.task_configuration, "tags_to_delete", []))  # "907"
         folio_instance = self.perform_initial_preparation(file_def, marc_record, legacy_ids)
-        if self.data_import_marc:
+        if getattr(self.task_configuration, "data_import_marc", False):
             self.simple_bib_map(folio_instance, marc_record, ignored_subsequent_fields, legacy_ids)
         else:
             for marc_field in marc_record:
