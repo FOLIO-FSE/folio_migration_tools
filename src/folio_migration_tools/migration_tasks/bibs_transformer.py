@@ -136,7 +136,7 @@ class BibsTransformer(MigrationTaskBase):
         """
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
-        self.task_configuration = self.task_config
+        self.task_configuration: BibsTransformer.TaskConfiguration = self.task_config
         if self.task_config.statistical_codes_map_file_name:
             statcode_mapping = self.load_ref_data_mapping_file(
                 "statisticalCodeIds",
