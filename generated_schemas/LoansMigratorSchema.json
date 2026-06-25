@@ -68,19 +68,12 @@
             "type": "string"
         },
         "openLoansFiles": {
-            "anyOf": [
-                {
-                    "items": {
-                        "$ref": "#/$defs/FileDefinition"
-                    },
-                    "type": "array"
-                },
-                {
-                    "type": "null"
-                }
-            ],
             "description": "List of files containing open loan data.",
-            "title": "Open loans files"
+            "items": {
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Open loans files",
+            "type": "array"
         },
         "fallbackServicePointId": {
             "description": "Identifier of the fallback service point.",
@@ -88,62 +81,34 @@
             "type": "string"
         },
         "startingRow": {
-            "anyOf": [
-                {
-                    "type": "integer"
-                },
-                {
-                    "type": "null"
-                }
-            ],
             "default": 1,
             "description": "The starting row for data processing. By default is 1.",
-            "title": "Starting row"
+            "title": "Starting row",
+            "type": "integer"
         },
         "itemFiles": {
-            "anyOf": [
-                {
-                    "items": {
-                        "$ref": "#/$defs/FileDefinition"
-                    },
-                    "type": "array"
-                },
-                {
-                    "type": "null"
-                }
-            ],
             "default": [],
             "description": "List of files containing item data. By default is empty list.",
-            "title": "Item files"
+            "items": {
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Item files",
+            "type": "array"
         },
         "patronFiles": {
-            "anyOf": [
-                {
-                    "items": {
-                        "$ref": "#/$defs/FileDefinition"
-                    },
-                    "type": "array"
-                },
-                {
-                    "type": "null"
-                }
-            ],
             "default": [],
             "description": "List of files containing patron data. By default is empty list.",
-            "title": "Patron files"
+            "items": {
+                "$ref": "#/$defs/FileDefinition"
+            },
+            "title": "Patron files",
+            "type": "array"
         },
         "skipBarcodePrevalidation": {
-            "anyOf": [
-                {
-                    "type": "boolean"
-                },
-                {
-                    "type": "null"
-                }
-            ],
             "default": false,
             "description": "Skip pre-validation of patron and item barcodes against FOLIO. By default, barcodes are validated before loan migration.",
-            "title": "Skip barcode pre-validation"
+            "title": "Skip barcode pre-validation",
+            "type": "boolean"
         }
     },
     "required": [
