@@ -405,6 +405,15 @@ class MappingFileMapperBase(MapperBase):
         # Value mapped from the Legacy field(s)
         value = legacy_object.get(mapping_file_entry["legacy_field"], "")
 
+        if value and mapping_file_entry.get("rules", {}).get("regexGsub", ""):
+            gsub_rule = mapping_file_entry.get("rules", {}).get("regexGsub", "")
+
+            if not isinstance(gsub_rule, dict):
+                raise ValueError("regexGsub must be a dictionary with 'pattern' and 'replacement'")
+
+            pattern = gsub_rule.get("pattern", "")
+            replacement = gsub_rule.get("replacement", "")
+            value = re.sub(pattern, replacement, value)
         if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
             if multi_field_delimiter and multi_field_delimiter in value:
                 replaced_split_values = [
