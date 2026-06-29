@@ -186,7 +186,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         if folio_prop_name.endswith(".fundId"):
             return self.get_mapped_ref_data_value(
-                self.location_mapping,
+                self.funds_mapping,
                 legacy_order,
                 folio_prop_name,
                 index_or_id,
