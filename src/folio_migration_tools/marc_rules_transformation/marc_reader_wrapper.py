@@ -8,8 +8,11 @@ and handles corrupted records gracefully.
 import json
 import logging
 import sys
-from io import IOBase
+from contextlib import redirect_stderr
+from io import IOBase, StringIO
+from itertools import count
 from pathlib import Path
+from typing import List
 
 import i18n
 from folio_data_import.marc_preprocessors import MARCPreprocessor
@@ -20,6 +23,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
@@ -27,6 +31,9 @@ from folio_migration_tools.marc_rules_transformation.marc_file_processor import 
 from folio_migration_tools.migration_report import MigrationReport
 
 logger = logging.getLogger(__name__)
+
+MARC8_SIGNAL_BYTES = (b"\x8e", b"\x8f")
+MARC8_WARNING_PREFIX = "Multi-byte position "
 
 DEFAULT_MARC_RECORD_PREPROCESSORS = [
     "folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader"
@@ -161,23 +168,56 @@ class MARCReaderWrapper:
         failed_records_file: IOBase,
         processor: MarcFileProcessor,
     ):
+        """Read and process records while preserving per-record parser diagnostics.
+
+        We intentionally call ``next(reader)`` inside ``redirect_stderr`` so we can
+        capture pymarc MARC-8 decode warnings emitted to stderr and associate each
+        warning with the specific record index.
+        """
         marc_record_preprocessor = MARCReaderWrapper.get_marc_record_preprocessor(processor)
-        for idx, record in enumerate(reader):
+        for idx in count():
+            stderr_buffer = StringIO()
+            # Pull exactly one record per iteration so warning output stays scoped
+            # to this record index.
+            with redirect_stderr(stderr_buffer):
+                try:
+                    record = next(reader)
+                except StopIteration:
+                    break
             processor.mapper.migration_report.add_general_statistics(
                 i18n.t("Records in file before parsing")
             )
             try:
-                # None = Something bad happened
+                # A permissive MARCReader yields None when parsing fails.
                 if record is None:
-                    report_failed_parsing(
+                    recovered_record, recovery_strategy = MARCReaderWrapper.recover_failed_record(
+                        reader
+                    )
+                    MARCReaderWrapper.log_parsing_issue(
                         reader,
                         source_file,
-                        failed_records_file,
                         idx,
                         processor.mapper.migration_report,
+                        recovered=bool(recovered_record),
+                        recovery_strategy=recovery_strategy,
                     )
-                # The normal case
-                else:
+                    if recovered_record is None:
+                        report_failed_parsing(
+                            reader,
+                            source_file,
+                            failed_records_file,
+                            idx,
+                            processor.mapper.migration_report,
+                        )
+                    record = recovered_record
+                # Normal successful decode path.
+                if record is not None:
+                    # Log MARC-8 truncation warnings, but do not alter decoding.
+                    MARCReaderWrapper.log_marc8_decoding_warnings(
+                        source_file,
+                        idx,
+                        stderr_buffer.getvalue(),
+                    )
                     record = MARCReaderWrapper.preprocess_record(
                         record,
                         marc_record_preprocessor,
@@ -199,16 +239,285 @@ class MARCReaderWrapper:
     def set_leader(marc_record: Record, migration_report: MigrationReport):
         return set_leader(marc_record, migration_report)
 
+    @staticmethod
+    def decode_candidate_chunk(
+        candidate_chunk: bytes,
+        strategy: str,
+        **decode_kwargs,
+    ) -> tuple[Record | None, str]:
+        try:
+            recovered_record = Record()
+            recovered_record.decode_marc(
+                candidate_chunk,
+                to_unicode=True,
+                force_utf8=False,
+                hide_utf8_warnings=True,
+                utf8_handling="strict",
+                **decode_kwargs,
+            )
+            return recovered_record, strategy
+        except Exception:
+            logger.debug(
+                "Unable to recover MARC record using strategy '%s'",
+                strategy,
+                exc_info=True,
+            )
+            return None, strategy
+
+    @staticmethod
+    def recover_failed_record(reader) -> tuple[Record | None, str]:
+        current_exception = getattr(reader, "current_exception", None)
+        current_chunk = getattr(reader, "current_chunk", b"") or b""
+
+        strategies = [
+            (
+                "marc8_leader_heuristic",
+                MARCReaderWrapper.should_attempt_marc8_redecode(
+                    current_exception,
+                    current_chunk,
+                ),
+                MARCReaderWrapper.patch_chunk_leader9_for_marc8(current_chunk),
+                {},
+            ),
+            (
+                "dagger_subfield_heuristic",
+                MARCReaderWrapper.should_attempt_dagger_subfield_fix(
+                    current_exception,
+                    current_chunk,
+                ),
+                MARCReaderWrapper.repair_dagger_subfield_markers(current_chunk),
+                {},
+            ),
+            (
+                "latin1_leader_heuristic",
+                MARCReaderWrapper.should_attempt_latin1_redecode(
+                    current_exception,
+                    current_chunk,
+                ),
+                MARCReaderWrapper.patch_chunk_leader9_for_marc8(current_chunk),
+                {"encoding": "iso8859-1"},
+            ),
+        ]
+
+        for strategy, should_attempt, candidate_chunk, decode_kwargs in strategies:
+            if not should_attempt or candidate_chunk is None:
+                continue
+            recovered_record, _ = MARCReaderWrapper.decode_candidate_chunk(
+                candidate_chunk,
+                strategy,
+                **decode_kwargs,
+            )
+            if recovered_record is not None:
+                return recovered_record, strategy
+
+        return None, "none"
+
+    @staticmethod
+    def should_attempt_marc8_redecode(current_exception, current_chunk: bytes) -> bool:
+        if not isinstance(current_exception, UnicodeDecodeError):
+            return False
+        if len(current_chunk) < 10:
+            return False
+        if current_chunk[9:10] != b"a":
+            return False
+        return any(signal in current_chunk for signal in MARC8_SIGNAL_BYTES)
+
+    @staticmethod
+    def should_attempt_latin1_redecode(current_exception, current_chunk: bytes) -> bool:
+        if not isinstance(current_exception, UnicodeDecodeError):
+            return False
+        if len(current_chunk) < 10:
+            return False
+        if current_chunk[9:10] != b"a":
+            return False
+        if any(signal in current_chunk for signal in MARC8_SIGNAL_BYTES):
+            return False
+        return True
+
+    @staticmethod
+    def should_attempt_dagger_subfield_fix(current_exception, current_chunk: bytes) -> bool:
+        if not isinstance(current_exception, UnicodeDecodeError):
+            return False
+        if len(current_chunk) < 24:
+            return False
+        if b"\xe2\x80\xa1" not in current_chunk:
+            return False
+        return True
+
+    @staticmethod
+    def parse_directory_entries(
+        chunk: bytes,
+    ) -> tuple[bytes, int, List[tuple[str, int, int]]] | None:
+        leader = chunk[:24]
+        try:
+            base_addr = int(leader[12:17].decode("ascii"))
+        except Exception:
+            return None
+
+        if base_addr <= 25 or base_addr > len(chunk):
+            return None
+
+        directory = chunk[24 : base_addr - 1]
+        entries = []
+        for i in range(0, len(directory), 12):
+            entry = directory[i : i + 12]
+            if len(entry) < 12:
+                continue
+            try:
+                tag = entry[:3].decode("ascii")
+                length = int(entry[3:7].decode("ascii"))
+                offset = int(entry[7:12].decode("ascii"))
+            except Exception:
+                return None
+            entries.append((tag, length, offset))
+        return leader, base_addr, entries
+
+    @staticmethod
+    def repair_dagger_subfield_markers(current_chunk: bytes) -> bytes | None:
+        parsed = MARCReaderWrapper.parse_directory_entries(current_chunk)
+        if parsed is None:
+            return None
+
+        leader, base_addr, entries = parsed
+        data = current_chunk[base_addr:]
+        if not data.endswith(b"\x1d"):
+            return None
+
+        new_entries = []
+        new_fields = []
+        running_offset = 0
+        replacements = 0
+
+        for tag, length, offset in entries:
+            field = data[offset : offset + length]
+            if len(field) != length or not field.endswith(b"\x1e"):
+                return None
+
+            body = field[:-1]
+            if (
+                tag >= "010"
+                and len(body) >= 6
+                and body[2:5] == b"\xe2\x80\xa1"
+                and b"\x1f" not in body[2:]
+            ):
+                body = body[:2] + b"\x1f" + body[5:]
+                replacements += 1
+
+            new_field = body + b"\x1e"
+            new_fields.append(new_field)
+            new_entries.append((tag, len(new_field), running_offset))
+            running_offset += len(new_field)
+
+        if replacements == 0:
+            return None
+
+        new_data = b"".join(new_fields) + b"\x1d"
+        new_base_addr = 24 + 12 * len(new_entries) + 1
+        new_record_len = new_base_addr + len(new_data)
+
+        new_leader = bytearray(leader)
+        new_leader[0:5] = f"{new_record_len:05d}".encode("ascii")
+        new_leader[12:17] = f"{new_base_addr:05d}".encode("ascii")
+
+        new_directory = (
+            b"".join(
+                tag.encode("ascii") + f"{length:04d}{offset:05d}".encode("ascii")
+                for tag, length, offset in new_entries
+            )
+            + b"\x1e"
+        )
+
+        repaired_chunk = bytes(new_leader) + new_directory + new_data
+        if len(repaired_chunk) != new_record_len:
+            return None
+        return repaired_chunk
+
+    @staticmethod
+    def patch_chunk_leader9_for_marc8(current_chunk: bytes) -> bytes | None:
+        if len(current_chunk) < 10:
+            return None
+        if current_chunk[9:10] != b"a":
+            return None
+        return current_chunk[:9] + b" " + current_chunk[10:]
+
+    @staticmethod
+    def build_parsing_issue_context(reader) -> str:
+        current_chunk = getattr(reader, "current_chunk", b"") or b""
+        leader_preview = current_chunk[:24].decode("ascii", errors="replace")
+        return (
+            f"exception={reader.current_exception}; "
+            f"leader={leader_preview!r}; "
+            f"chunk_len={len(current_chunk)}; "
+            f"chunk_hex={current_chunk[:32].hex()}"
+        )
+
+    @staticmethod
+    def log_parsing_issue(
+        reader,
+        source_file: FileDefinition,
+        idx: int,
+        migration_report: MigrationReport,
+        recovered: bool,
+        recovery_strategy: str,
+    ):
+        legacy_id = f"{source_file.file_name}:{idx}"
+        context = MARCReaderWrapper.build_parsing_issue_context(reader)
+        if recovered:
+            migration_report.add_general_statistics(
+                i18n.t("Records with encoding errors - repaired"),
+            )
+            recovery_message = {
+                "marc8_leader_heuristic": i18n.t(
+                    "MARC parsing issue repaired with MARC-8 leader heuristic"
+                ),
+                "dagger_subfield_heuristic": i18n.t(
+                    "MARC parsing issue repaired by converting MARCMaker dagger "
+                    "to subfield delimiter"
+                ),
+                "latin1_leader_heuristic": i18n.t(
+                    "MARC parsing issue repaired with Latin-1 leader heuristic"
+                ),
+            }.get(recovery_strategy, i18n.t("MARC parsing issue repaired after re-decode"))
+            Helper.log_data_issue(
+                legacy_id,
+                recovery_message,
+                context,
+            )
+        else:
+            migration_report.add_general_statistics(
+                i18n.t("Records with encoding errors - parsing failed"),
+            )
+            Helper.log_data_issue(
+                legacy_id,
+                i18n.t("MARC parsing issue could not be repaired with configured heuristics"),
+                context,
+            )
+
+    @staticmethod
+    def log_marc8_decoding_warnings(
+        source_file: FileDefinition,
+        idx: int,
+        stderr_output: str,
+    ):
+        for line in stderr_output.splitlines():
+            if not line.startswith(MARC8_WARNING_PREFIX):
+                continue
+            Helper.log_data_issue(
+                f"{source_file.file_name}:{idx}",
+                i18n.t("MARC-8 decoding warning"),
+                line,
+            )
+
 
 def report_failed_parsing(
     reader, source_file, failed_bibs_file, idx, migration_report: MigrationReport
 ):
-    migration_report.add_general_statistics(
-        i18n.t("Records with encoding errors - parsing failed"),
-    )
     failed_bibs_file.write(reader.current_chunk)
     raise TransformationRecordFailedError(
         f"Index in {source_file.file_name}:{idx}",
         f"MARC parsing error: {reader.current_exception}",
-        "Failed records stored in results/failed_bib_records.mrc",
+        (
+            "Failed records stored in results/failed_bib_records.mrc; "
+            f"{MARCReaderWrapper.build_parsing_issue_context(reader)}"
+        ),
     )
