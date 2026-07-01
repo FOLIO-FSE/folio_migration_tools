@@ -247,6 +247,28 @@ Migrates course and course listing data.
 
 ## Additional Output Files
 
+### MARC Decoding Diagnostics
+
+For MARC-based transformation tasks, report outputs include decoding and recovery signals.
+
+Common **GeneralStatistics** counters include:
+
+- `Records in file before parsing`
+- `Records successfully decoded from MARC21`
+- `Records with encoding errors - repaired`
+- `Records with encoding errors - parsing failed`
+
+In `data_issues_log_<task_name>.tsv`, common decoding messages include:
+
+- `MARC-8 decoding warning`
+- `MARC parsing issue repaired with MARC-8 leader heuristic`
+- `MARC parsing issue repaired by converting MARCMaker dagger to subfield delimiter`
+- `MARC parsing issue repaired with Latin-1 leader heuristic`
+- `MARC parsing issue could not be repaired with configured heuristics`
+
+Use these together to determine whether decode issues were non-blocking warnings,
+automatically repaired, or unrecoverable failures.
+
 ### Data Issues Log
 
 In addition to the migration report, transformation tasks generate a **data issues log** as a TSV file:

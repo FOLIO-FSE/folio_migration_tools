@@ -2,6 +2,38 @@
 
 ## Introduction
 
+## MARC Decoding and Recovery Behavior
+
+MARC-based transformation tasks (`BibsTransformer` and `HoldingsMarcTransformer`) use a
+shared MARC reader wrapper that applies permissive parsing and targeted recovery heuristics
+when decoding fails.
+
+### How decoding is handled
+
+For each source record, the reader:
+
+1. Attempts permissive MARC decode.
+2. Captures parser warnings emitted during that record's decode attempt.
+3. If decode fails, tries heuristic repair and re-decode in this order:
+    - MARC-8 leader heuristic
+    - MARCMaker dagger-to-subfield repair
+    - Latin-1 leader heuristic
+
+If any heuristic succeeds, processing continues for that record. If all heuristics fail,
+the record is marked as failed and skipped from transformation output.
+
+### Warnings vs failures
+
+- MARC-8 decoding warnings do not stop processing.
+- Recoverable decoding failures are logged as repaired and continue.
+- Unrecoverable decoding failures are logged as failed and written to the failed MARC file.
+
+### Where to inspect outcomes
+
+- `reports/data_issues_log_<task_name>.tsv` for per-record warning and recovery messages.
+- `reports/report_<task_name>.md` for aggregate decoding statistics.
+- `results/failed_bib_records.mrc` (or corresponding failed MARC output) for unrecoverable records.
+
 ## The mapping rules
 FOLIO stores its MARC-to-FOLIO mapping rules as a JSON object that you can download and edit via:
 
