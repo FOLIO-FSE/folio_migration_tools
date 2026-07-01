@@ -1,13 +1,47 @@
+import sys
+from io import BytesIO
 from pymarc.field import Indicators
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 from pymarc import Field, MARCReader, Record, Subfield
 
+from folio_migration_tools.helper import Helper
+from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
     DEFAULT_MARC_RECORD_PREPROCESSORS,
     MARCReaderWrapper,
 )
 from folio_migration_tools.migration_report import MigrationReport
+
+
+class FakeReader:
+    def __init__(self, current_chunk, current_exception):
+        self.current_chunk = current_chunk
+        self.current_exception = current_exception
+        self._records = iter([None])
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._records)
+
+
+class WarningReader:
+    def __init__(self, records, warning_lines=None):
+        self.records = iter(records)
+        self.warning_lines = warning_lines or []
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        record = next(self.records)
+        for line in self.warning_lines:
+            print(line, file=sys.stderr)
+        self.warning_lines = []
+        return record
 
 
 def add_local_note(
@@ -154,3 +188,399 @@ def test_preprocessor_without_kwargs_is_skipped(caplog):
 
     assert record["001"].data == original_control_number
     assert "must accept **kwargs" in caplog.text
+
+
+def build_latin1_recoverable_chunk() -> bytes:
+    """Build a chunk that fails UTF-8 decode but is recoverable as Latin-1."""
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-l1"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Sample title")],
+        )
+    )
+    chunk = bytearray(record.as_marc())
+    # Mark as UTF-8 and inject a non-UTF-8 byte in field data.
+    chunk[9] = ord("a")
+    title_offset = bytes(chunk).find(b"Sample")
+    if title_offset == -1:
+        raise AssertionError("Could not locate title bytes in synthetic Latin-1 chunk")
+    chunk[title_offset + 1] = 0xE1
+    return bytes(chunk)
+
+
+def build_dagger_repair_chunk() -> bytes:
+    """Build a chunk with a MARCMaker dagger marker replacing subfield delimiter."""
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-dag"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Anonymized title")],
+        )
+    )
+    chunk = record.as_marc()
+
+    leader = chunk[:24]
+    base_addr = int(leader[12:17].decode("ascii"))
+    directory = chunk[24 : base_addr - 1]
+    data = chunk[base_addr:]
+
+    entries = []
+    for i in range(0, len(directory), 12):
+        entry = directory[i : i + 12]
+        tag = entry[:3].decode("ascii")
+        length = int(entry[3:7].decode("ascii"))
+        offset = int(entry[7:12].decode("ascii"))
+        entries.append((tag, length, offset))
+
+    rebuilt_fields = []
+    rebuilt_entries = []
+    running_offset = 0
+    replaced = False
+
+    for tag, length, offset in entries:
+        field = data[offset : offset + length]
+        body = field[:-1]
+
+        if tag == "245":
+            needle = b"\x1fa"
+            needle_offset = body.find(needle)
+            if needle_offset == -1:
+                raise AssertionError(
+                    "Could not locate subfield delimiter bytes in synthetic dagger chunk"
+                )
+            # Replace delimiter + code with dagger + same code, preserving title bytes.
+            body = body[:needle_offset] + b"\xe2\x80\xa1a" + body[needle_offset + 2 :]
+            replaced = True
+
+        new_field = body + b"\x1e"
+        rebuilt_fields.append(new_field)
+        rebuilt_entries.append((tag, len(new_field), running_offset))
+        running_offset += len(new_field)
+
+    if not replaced:
+        raise AssertionError("Could not locate 245 field in synthetic dagger chunk")
+
+    new_data = b"".join(rebuilt_fields) + b"\x1d"
+    new_base_addr = 24 + 12 * len(rebuilt_entries) + 1
+    new_record_len = new_base_addr + len(new_data)
+
+    new_leader = bytearray(leader)
+    new_leader[0:5] = f"{new_record_len:05d}".encode("ascii")
+    new_leader[12:17] = f"{new_base_addr:05d}".encode("ascii")
+
+    new_directory = b"".join(
+        tag.encode("ascii") + f"{length:04d}{offset:05d}".encode("ascii")
+        for tag, length, offset in rebuilt_entries
+    ) + b"\x1e"
+
+    return bytes(new_leader) + new_directory + new_data
+
+
+def build_unrecoverable_structural_chunk() -> bytes:
+    """Build a chunk that is structurally invalid and cannot be repaired."""
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-unrecoverable"))
+    # Remove the record terminator so leader length no longer matches data length.
+    return record.as_marc()[:-1]
+
+
+def build_bad_directory_chunk() -> bytes:
+    """Build a chunk with an invalid directory length field."""
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-dir-bad"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Directory corruption")],
+        )
+    )
+    chunk = bytearray(record.as_marc())
+    # First directory entry starts at byte 24. Its length occupies bytes 27:31.
+    # Make the length non-numeric so directory parsing fails immediately.
+    chunk[27:31] = b"ABCD"
+    return bytes(chunk)
+
+
+def build_bad_directory_numeric_length_chunk() -> bytes:
+    """Build a chunk with a numeric but unrealistic directory length value."""
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-dir-bad-num"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Directory length corruption")],
+        )
+    )
+    chunk = bytearray(record.as_marc())
+    # First directory entry starts at byte 24. Its length occupies bytes 27:31.
+    # Use a numeric but unrealistic length to emulate a likely directory corruption.
+    chunk[27:31] = b"9999"
+    return bytes(chunk)
+
+
+def test_read_records_recovers_parse_failure_and_logs_data_issue(monkeypatch):
+    reader = FakeReader(
+        current_chunk=b"bad marc chunk",
+        current_exception=UnicodeDecodeError(
+            "utf-8",
+            b"bad marc chunk",
+            0,
+            1,
+            "invalid start byte",
+        ),
+    )
+    file_def = FileDefinition(file_name="crashes.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processed_records = []
+    processor.process_record = lambda idx, record, source_file: processed_records.append(
+        (idx, record, source_file)
+    )
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+    monkeypatch.setattr(
+        MARCReaderWrapper,
+        "recover_failed_record",
+        lambda reader: (get_test_record(), "marc8_leader_heuristic"),
+    )
+
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert len(logged_issues) == 1
+    assert "MARC-8 leader heuristic" in logged_issues[0][1]
+    assert "exception=" in logged_issues[0][2]
+    assert len(processed_records) == 1
+    assert processed_records[0][0] == 0
+    assert processed_records[0][1]["001"].value() == get_test_record()["001"].value()
+
+
+def test_read_records_logs_marc8_warning_without_attempting_repair(monkeypatch):
+    reader = WarningReader(
+        [get_test_record()],
+        ["Multi-byte position 93 exceeds length of marc8 string 92"],
+    )
+    file_def = FileDefinition(file_name="warnings.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processed_records = []
+    processor.process_record = lambda idx, record, source_file: processed_records.append(
+        (idx, record, source_file)
+    )
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert len(processed_records) == 1
+    assert processed_records[0][0] == 0
+    assert logged_issues == [
+        (
+            "warnings.mrc:0",
+            "MARC-8 decoding warning",
+            "Multi-byte position 93 exceeds length of marc8 string 92",
+        )
+    ]
+
+
+def test_recover_failed_record_requires_marc8_signals():
+    # leader[9] is 'a', but no MARC-8 single-shift bytes (0x8E/0x8F),
+    # so heuristic recovery should be skipped.
+    chunk = b"00023nam a2200000 i 4500abc\x1d"
+    reader = FakeReader(
+        current_chunk=chunk,
+        current_exception=UnicodeDecodeError(
+            "utf-8",
+            b"\x80",
+            0,
+            1,
+            "invalid start byte",
+        ),
+    )
+
+    recovered_record, recovery_strategy = MARCReaderWrapper.recover_failed_record(reader)
+    assert recovered_record is None
+    assert recovery_strategy == "none"
+
+
+def test_recover_failed_record_attempts_latin1_when_marc8_signals_absent():
+    chunk = build_latin1_recoverable_chunk()
+    reader = FakeReader(
+        current_chunk=chunk,
+        current_exception=UnicodeDecodeError(
+            "utf-8",
+            b"\xe9\xa0",
+            0,
+            1,
+            "invalid continuation byte",
+        ),
+    )
+
+    _, recovery_strategy = MARCReaderWrapper.recover_failed_record(reader)
+    assert recovery_strategy == "latin1_leader_heuristic"
+
+
+def test_recover_failed_record_repairs_marcmaker_dagger_subfield_marker():
+    chunk = build_dagger_repair_chunk()
+    current_exception = UnicodeDecodeError(
+        "ascii",
+        b"\xe2",
+        0,
+        1,
+        "ordinal not in range(128)",
+    )
+    reader = FakeReader(
+        current_chunk=chunk,
+        current_exception=current_exception,
+    )
+
+    recovered_record, recovery_strategy = MARCReaderWrapper.recover_failed_record(reader)
+
+    assert recovered_record is not None
+    assert recovery_strategy == "dagger_subfield_heuristic"
+    assert recovered_record["001"].value() == "anon-dag"
+
+
+def test_read_records_logs_failure_when_repair_is_unavailable(monkeypatch, caplog):
+    reader = FakeReader(
+        current_chunk=b"bad marc chunk",
+        current_exception=UnicodeDecodeError(
+            "utf-8",
+            b"bad marc chunk",
+            0,
+            1,
+            "invalid start byte",
+        ),
+    )
+    file_def = FileDefinition(file_name="bad.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.process_record = Mock()
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+    monkeypatch.setattr(MARCReaderWrapper, "recover_failed_record", lambda reader: (None, "none"))
+
+    caplog.set_level(26)
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert len(logged_issues) == 1
+    assert "could not be repaired with configured heuristics" in logged_issues[0][1]
+    assert "bad.mrc:0" in logged_issues[0][0]
+    assert "RECORD FAILED" in caplog.text
+    processor.process_record.assert_not_called()
+
+
+def test_read_records_logs_failure_for_unrecoverable_structural_record(monkeypatch, caplog):
+    chunk = build_unrecoverable_structural_chunk()
+    reader = MARCReader(BytesIO(chunk), to_unicode=True, permissive=True)
+    reader.hide_utf8_warnings = True
+    reader.force_utf8 = False
+
+    file_def = FileDefinition(file_name="unrecoverable.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.process_record = Mock()
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+
+    caplog.set_level(26)
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert len(logged_issues) == 1
+    assert "could not be repaired with configured heuristics" in logged_issues[0][1]
+    assert "unrecoverable.mrc:0" in logged_issues[0][0]
+    assert "Record length in leader is greater than the length of data" in logged_issues[0][2]
+    assert "RECORD FAILED" in caplog.text
+    processor.process_record.assert_not_called()
+
+
+def test_read_records_logs_failure_for_bad_directory_record(monkeypatch, caplog):
+    chunk = build_bad_directory_chunk()
+    reader = MARCReader(BytesIO(chunk), to_unicode=True, permissive=True)
+    reader.hide_utf8_warnings = True
+    reader.force_utf8 = False
+
+    file_def = FileDefinition(file_name="bad_directory.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.process_record = Mock()
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+
+    caplog.set_level(26)
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert len(logged_issues) == 1
+    assert "could not be repaired with configured heuristics" in logged_issues[0][1]
+    assert "bad_directory.mrc:0" in logged_issues[0][0]
+    assert "invalid literal for int() with base 10: 'ABCD'" in logged_issues[0][2]
+    assert "RECORD FAILED" in caplog.text
+    processor.process_record.assert_not_called()
+
+
+def test_read_records_tolerates_numeric_bad_directory_length(monkeypatch, caplog):
+    chunk = build_bad_directory_numeric_length_chunk()
+    reader = MARCReader(BytesIO(chunk), to_unicode=True, permissive=True)
+    reader.hide_utf8_warnings = True
+    reader.force_utf8 = False
+
+    file_def = FileDefinition(file_name="bad_directory_numeric_length.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.process_record = Mock()
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+
+    caplog.set_level(26)
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    # Permissive pymarc often tolerates numeric directory-length corruption,
+    # so this should not be treated as an unrecoverable parsing failure.
+    assert all(
+        "could not be repaired with configured heuristics" not in message
+        for _, message, _ in logged_issues
+    )
+    assert "RECORD FAILED" not in caplog.text
+    processor.process_record.assert_called_once()
