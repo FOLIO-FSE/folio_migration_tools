@@ -11,3 +11,12 @@ Q: Regarding the Location field, What if the library here contains one location,
 
 Q: What are the MigrationTasks  we should use when transforming (csv/tsv) Holdings & Items files to json, and also the posting tasks?
 : First use HoldingsCsvTransformer followed by ItemsTransformer to build the objects. Then use two separate BatchPoster tasks to post them to FOLIO.
+
+Q: How should I troubleshoot MARC decoding warnings and parsing failures during transformation?
+: Start with the task's `data_issues_log_<task_name>.tsv` and `report_<task_name>.md`.
+	- If you see `MARC-8 decoding warning`, processing continued for those records.
+	- If you see `Records with encoding errors - repaired`, built-in heuristics repaired records and processing continued.
+	- If you see `Records with encoding errors - parsing failed`, those records could not be repaired and were skipped.
+
+	For unrecoverable records, review the failed MARC output file in the results folder and correct source MARC issues before rerunning.
+	When filing an issue, include the data issues log message, the record index/file name, and a minimal MARC sample that reproduces the problem.

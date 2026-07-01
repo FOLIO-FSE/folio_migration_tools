@@ -10,6 +10,9 @@ Transform MARC bibliographic records into FOLIO Instance records and prepare MAR
 
 ## Configuration
 
+Configuration keys can be provided in either `camelCase` or `snake_case` in JSON files.
+The examples below use `camelCase` for consistency.
+
 ```json
 {
     "name": "transform_bibs",
@@ -40,13 +43,28 @@ Transform MARC bibliographic records into FOLIO Instance records and prepare MAR
 | `name` | string | Yes | The name of this task. Used to identify the task and name output files. |
 | `migrationTaskType` | string | Yes | Must be `"BibsTransformer"` |
 | `ilsFlavour` | string | Yes | The ILS type for legacy ID handling. See [ILS Flavours](#ils-flavours) below. |
+| `customBibIdField` | string | No | MARC field containing legacy ID when ILS flavour is `"custom"`. Example: `"991$a"` |
+| `addAdministrativeNotesWithLegacyIds` | boolean | No | Add administrative notes containing legacy IDs. Default: `true` |
 | `hridHandling` | string | No | How to handle HRIDs. `"default"` (generate new) or `"preserve001"` (use 001 value). Default: `"default"` |
-| `updateHridSettings` | boolean | No | Whether to update FOLIO HRID settings after transformation. Default: `false` |
+| `deactivate035From001` | boolean | No | Disable adding MARC 035 from legacy 001/003 during HRID handling. Default: `false` |
+| `dataImportMarc` | boolean | No | Generate MARC output for Data Import overlay workflow. Default: `true` |
+| `parseCatalogedDate` | boolean | No | Parse mapped `catalogedDate` values into FOLIO date format. Default: `false` |
+| `resetHridSettings` | boolean | No | Reset instance HRID counter before processing. Default: `false` |
+| `updateHridSettings` | boolean | No | Whether to update FOLIO HRID settings after transformation. Default: `true` |
 | `tagsToDelete` | array | No | MARC tags to remove before saving to output MARC file. |
 | `statisticalCodesMapFileName` | string | No | TSV file mapping legacy codes to FOLIO statistical codes. |
 | `statisticalCodeMappingFields` | array | No | MARC fields to extract statistical codes from (e.g., `["998$a$b"]`). |
-| `customBibIdField` | string | No | MARC field containing legacy ID when `ilsFlavour` is `"custom"`. Example: `"991$a"` |
+| `createSourceRecords` | boolean | No | Task-level control for creating SRS records. Default: `false` |
 | `files` | array | Yes | List of MARC files to process. See [File Configuration](#file-configuration). |
+
+```{note}
+Task-level `createSourceRecords` and per-file `create_source_records` are both applied.
+SRS records are only created when both are `true`, and `dataImportMarc` is `false`.
+```
+
+```{note}
+When `dataImportMarc` is `true`, BibsTransformer forces 035 generation from 001/003 off in the HRID flow.
+```
 
 ### MARC Record Preprocessors
 
@@ -118,6 +136,22 @@ Each file object in the `files` array supports:
 - **Location**: Place MARC21 binary files (`.mrc`) in `iterations/<iteration>/source_data/instances/`
 - **Format**: Standard MARC21 binary format
 - **Encoding**: UTF-8 recommended
+
+## Decoding Error Handling
+
+`BibsTransformer` uses permissive MARC decoding with per-record diagnostics and recovery
+heuristics.
+
+- MARC-8 decoding warnings are logged but do not stop processing.
+- Some decode failures are automatically repaired (for example, MARC-8 leader and MARCMaker
+    dagger marker issues).
+- Records that cannot be repaired are skipped and logged as failed.
+
+Use the following outputs to review decoding behavior:
+
+- `reports/data_issues_log_<task_name>.tsv` for warning and repair messages.
+- `reports/report_<task_name>.md` for repaired vs failed decode counts.
+- `results/failed_bib_records.mrc` for unrecoverable records.
 
 ## Output Files
 

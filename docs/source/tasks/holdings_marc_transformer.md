@@ -74,6 +74,21 @@ All preprocessors are called with the task's `migration_report` object via keywo
 - **Format**: MARC21 Holdings Format
 - **Prerequisite**: Run [BibsTransformer](bibs_transformer) first to create `instance_id_map`
 
+## Decoding Error Handling
+
+`HoldingsMarcTransformer` uses the same MARC decoding and recovery flow as
+`BibsTransformer`.
+
+- MARC-8 decoding warnings are logged and processing continues.
+- Recoverable decode failures are repaired with built-in heuristics.
+- Unrecoverable records are logged as failed and skipped.
+
+Review diagnostics in:
+
+- `reports/data_issues_log_<task_name>.tsv`
+- `reports/report_<task_name>.md`
+- Failed MARC output in the task results folder
+
 ### Reference Data Mapping Files
 
 Reference data mapping files connect values from your legacy data to FOLIO reference data. See [Reference Data Mapping](../reference_data_mapping) for detailed documentation on how these files work.
