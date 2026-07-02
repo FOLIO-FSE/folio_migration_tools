@@ -13,7 +13,7 @@ import urllib.parse
 import uuid
 from abc import abstractmethod
 from textwrap import wrap
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import i18n
 import pymarc
