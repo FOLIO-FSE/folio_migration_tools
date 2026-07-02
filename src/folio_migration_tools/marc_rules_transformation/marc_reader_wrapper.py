@@ -162,8 +162,10 @@ class MARCReaderWrapper:
                     folder_structure.legacy_records_folder / file_def.file_name,
                     "rb",
                 ) as marc_file:
-                    reader = MARCReader(marc_file, to_unicode=True, permissive=True)
-                    reader.hide_utf8_warnings = True
+                    reader = MARCReader(
+                        marc_file, to_unicode=True, permissive=True, utf8_handling="strict"
+                    )
+                    reader.hide_utf8_warnings = False
                     reader.force_utf8 = False
                     logger.info("Running %s", file_def.file_name)
                     MARCReaderWrapper.read_records(
@@ -565,9 +567,7 @@ class MARCReaderWrapper:
         if replacement_found:
             signals.append("replacement_character_detected")
         if mojibake_hits:
-            signals.append(
-                f"possible_mojibake_detected(tokens={','.join(sorted(mojibake_hits))})"
-            )
+            signals.append(f"possible_mojibake_detected(tokens={','.join(sorted(mojibake_hits))})")
         return signals
 
     @staticmethod
