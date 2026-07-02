@@ -20,7 +20,7 @@ import pymarc
 from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from pymarc import Field, Optional, Record, Subfield
+from pymarc import Field, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
