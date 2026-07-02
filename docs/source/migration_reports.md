@@ -257,6 +257,7 @@ Common **GeneralStatistics** counters include:
 - `Records successfully decoded from MARC21`
 - `Records with encoding errors - repaired`
 - `Records with encoding errors - parsing failed`
+- `Records with text fidelity warnings`
 
 In `data_issues_log_<task_name>.tsv`, common decoding messages include:
 
@@ -265,9 +266,17 @@ In `data_issues_log_<task_name>.tsv`, common decoding messages include:
 - `MARC parsing issue repaired by converting MARCMaker dagger to subfield delimiter`
 - `MARC parsing issue repaired with Latin-1 leader heuristic`
 - `MARC parsing issue could not be repaired with configured heuristics`
+- `MARC text fidelity warning`
 
 Use these together to determine whether decode issues were non-blocking warnings,
 automatically repaired, or unrecoverable failures.
+
+Notes:
+
+- `MARC-8 decoding warning` entries are captured from parser stderr output and are logged
+  as informational diagnostics.
+- `MARC text fidelity warning` is emitted only after a successful non-UTF8 recovery
+  strategy (currently MARC-8 leader or Latin-1 heuristic).
 
 ### Data Issues Log
 

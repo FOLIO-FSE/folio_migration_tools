@@ -15,6 +15,7 @@ Q: What are the MigrationTasks  we should use when transforming (csv/tsv) Holdin
 Q: How should I troubleshoot MARC decoding warnings and parsing failures during transformation?
 : Start with the task's `data_issues_log_<task_name>.tsv` and `report_<task_name>.md`.
 	- If you see `MARC-8 decoding warning`, processing continued for those records.
+	- If you see `MARC text fidelity warning`, a recovered record was processed but may contain replacement/mojibake artifacts that should be reviewed.
 	- If you see `Records with encoding errors - repaired`, built-in heuristics repaired records and processing continued.
 	- If you see `Records with encoding errors - parsing failed`, those records could not be repaired and were skipped.
 
