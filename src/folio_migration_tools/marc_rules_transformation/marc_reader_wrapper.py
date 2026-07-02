@@ -307,7 +307,7 @@ class MARCReaderWrapper:
                     current_exception,
                     current_chunk,
                 ),
-                MARCReaderWrapper.get_marc8_candidate_chunk(current_chunk),
+                MARCReaderWrapper.get_non_utf8_candidate_chunk(current_chunk),
                 {},
             ),
             (
@@ -325,7 +325,7 @@ class MARCReaderWrapper:
                     current_exception,
                     current_chunk,
                 ),
-                MARCReaderWrapper.get_latin1_candidate_chunk(current_chunk),
+                MARCReaderWrapper.get_non_utf8_candidate_chunk(current_chunk),
                 {"encoding": "iso8859-1"},
             ),
         ]
@@ -460,15 +460,7 @@ class MARCReaderWrapper:
         return repaired_chunk
 
     @staticmethod
-    def get_marc8_candidate_chunk(current_chunk: bytes) -> bytes | None:
-        if len(current_chunk) < 10:
-            return None
-        if current_chunk[9:10] == b"a":
-            return current_chunk[:9] + b" " + current_chunk[10:]
-        return current_chunk
-
-    @staticmethod
-    def get_latin1_candidate_chunk(current_chunk: bytes) -> bytes | None:
+    def get_non_utf8_candidate_chunk(current_chunk: bytes) -> bytes | None:
         if len(current_chunk) < 10:
             return None
         if current_chunk[9:10] == b"a":
