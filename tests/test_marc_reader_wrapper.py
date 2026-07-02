@@ -190,7 +190,7 @@ def test_preprocessor_without_kwargs_is_skipped(caplog):
     assert "must accept **kwargs" in caplog.text
 
 
-def build_latin1_recoverable_chunk() -> bytes:
+def build_latin1_recoverable_chunk(leader9: str = "a") -> bytes:
     """Build a chunk that fails UTF-8 decode but is recoverable as Latin-1."""
     record = Record()
     record.add_field(Field(tag="001", data="anon-l1"))
@@ -203,7 +203,7 @@ def build_latin1_recoverable_chunk() -> bytes:
     )
     chunk = bytearray(record.as_marc())
     # Mark as UTF-8 and inject a non-UTF-8 byte in field data.
-    chunk[9] = ord("a")
+    chunk[9] = ord(leader9)
     title_offset = bytes(chunk).find(b"Sample")
     if title_offset == -1:
         raise AssertionError("Could not locate title bytes in synthetic Latin-1 chunk")
@@ -325,22 +325,6 @@ def build_bad_directory_numeric_length_chunk() -> bytes:
     return bytes(chunk)
 
 
-def build_mislabelled_utf8_chunk(title: str) -> bytes:
-    """Build a UTF-8 record whose leader[9] is intentionally mislabelled as blank."""
-    record = Record()
-    record.add_field(Field(tag="001", data="anon-mislabelled"))
-    record.add_field(
-        Field(
-            tag="245",
-            indicators=Indicators(*["1", "0"]),
-            subfields=[Subfield(code="a", value=title)],
-        )
-    )
-    chunk = bytearray(record.as_marc())
-    chunk[9] = ord(" ")
-    return bytes(chunk)
-
-
 def test_read_records_recovers_parse_failure_and_logs_data_issue(monkeypatch):
     reader = FakeReader(
         current_chunk=b"bad marc chunk",
@@ -439,6 +423,23 @@ def test_recover_failed_record_requires_marc8_signals():
 
 def test_recover_failed_record_attempts_latin1_when_marc8_signals_absent():
     chunk = build_latin1_recoverable_chunk()
+    reader = FakeReader(
+        current_chunk=chunk,
+        current_exception=UnicodeDecodeError(
+            "utf-8",
+            b"\xe9\xa0",
+            0,
+            1,
+            "invalid continuation byte",
+        ),
+    )
+
+    _, recovery_strategy = MARCReaderWrapper.recover_failed_record(reader)
+    assert recovery_strategy == "latin1_leader_heuristic"
+
+
+def test_recover_failed_record_attempts_latin1_with_blank_leader9():
+    chunk = build_latin1_recoverable_chunk(" ")
     reader = FakeReader(
         current_chunk=chunk,
         current_exception=UnicodeDecodeError(
@@ -651,76 +652,6 @@ def test_read_records_logs_text_fidelity_warning_for_latin1_recovery(monkeypatch
     ] == 1
 
 
-def test_read_records_applies_probable_utf8_mislabeling_safeguard(monkeypatch):
-    chunk = build_mislabelled_utf8_chunk("François")
-    reader = MARCReader(BytesIO(chunk), to_unicode=True, permissive=True, utf8_handling="strict")
-    reader.hide_utf8_warnings = True
-    reader.force_utf8 = False
-
-    file_def = FileDefinition(file_name="mislabelled_utf8.mrc")
-    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
-    processed_records = []
-    processor.process_record = lambda idx, record, source_file: processed_records.append(
-        (idx, record, source_file)
-    )
-
-    logged_issues = []
-    monkeypatch.setattr(
-        Helper,
-        "log_data_issue",
-        lambda index_or_id, message, legacy_value: logged_issues.append(
-            (index_or_id, message, legacy_value)
-        ),
-    )
-
-    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
-
-    assert len(processed_records) == 1
-    assert processed_records[0][1]["245"].value() == "François"
-    assert any(
-        issue[1] == "Probable UTF-8 mislabeling detected; record re-decoded using UTF-8 safeguard"
-        for issue in logged_issues
-    )
-    assert processor.mapper.migration_report.report["GeneralStatistics"][
-        "Records with probable UTF-8 mislabeling override applied"
-    ] == 1
-
-
-def test_read_records_skips_probable_utf8_safeguard_without_signals(monkeypatch):
-    chunk = build_mislabelled_utf8_chunk("simple ascii title")
-    reader = MARCReader(BytesIO(chunk), to_unicode=True, permissive=True, utf8_handling="strict")
-    reader.hide_utf8_warnings = True
-    reader.force_utf8 = False
-
-    file_def = FileDefinition(file_name="mislabelled_ascii.mrc")
-    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
-    processed_records = []
-    processor.process_record = lambda idx, record, source_file: processed_records.append(
-        (idx, record, source_file)
-    )
-
-    logged_issues = []
-    monkeypatch.setattr(
-        Helper,
-        "log_data_issue",
-        lambda index_or_id, message, legacy_value: logged_issues.append(
-            (index_or_id, message, legacy_value)
-        ),
-    )
-
-    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
-
-    assert len(processed_records) == 1
-    assert processed_records[0][1]["245"].value() == "simple ascii title"
-    assert not any(
-        issue[1] == "Probable UTF-8 mislabeling detected; record re-decoded using UTF-8 safeguard"
-        for issue in logged_issues
-    )
-    assert "Records with probable UTF-8 mislabeling override applied" not in (
-        processor.mapper.migration_report.report.get("GeneralStatistics", {})
-    )
-
-
 def test_read_records_logs_text_fidelity_warning_for_marc8_recovery(monkeypatch):
     record = Record()
     record.add_field(Field(tag="001", data="anon-fidelity-2"))
@@ -768,6 +699,40 @@ def test_read_records_logs_text_fidelity_warning_for_marc8_recovery(monkeypatch)
     assert processor.mapper.migration_report.report["GeneralStatistics"][
         "Records with text fidelity warnings"
     ] == 1
+
+
+def test_detect_text_fidelity_signals_ignores_weak_symbols_without_strong_markers():
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-weak-only"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Legitimate © and ♭ usage")],
+        )
+    )
+
+    signals = MARCReaderWrapper.detect_text_fidelity_signals(record)
+
+    assert signals == []
+
+
+def test_detect_text_fidelity_signals_includes_weak_symbols_when_strong_marker_present():
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-weak-with-strong"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Mojibake Ã with © marker")],
+        )
+    )
+
+    signals = MARCReaderWrapper.detect_text_fidelity_signals(record)
+
+    assert any("possible_mojibake_detected" in signal for signal in signals)
+    assert any("Ã" in signal for signal in signals)
+    assert any("©" in signal for signal in signals)
 
 
 def test_read_records_skips_text_fidelity_warning_without_recovery_strategy(monkeypatch):
