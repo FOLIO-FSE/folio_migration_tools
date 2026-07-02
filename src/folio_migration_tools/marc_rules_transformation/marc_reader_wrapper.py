@@ -48,9 +48,6 @@ MOJIBAKE_PATTERNS = (
     "â€“",
     "â€”",
     "ı̉",
-    "©",
-    "♭",
-    "ʹ",
 )
 WEAK_MOJIBAKE_PATTERNS = {
     "©",
