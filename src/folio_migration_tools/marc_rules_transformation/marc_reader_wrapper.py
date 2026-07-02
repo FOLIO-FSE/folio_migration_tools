@@ -572,10 +572,10 @@ class MARCReaderWrapper:
                 replacement_found = True
             for token in MOJIBAKE_PATTERNS:
                 if token in value:
-                    if token in WEAK_MOJIBAKE_PATTERNS:
-                        weak_mojibake_hits.add(token)
-                    else:
-                        strong_mojibake_hits.add(token)
+                    strong_mojibake_hits.add(token)
+            for token in WEAK_MOJIBAKE_PATTERNS:
+                if token in value:
+                    weak_mojibake_hits.add(token)
 
         mojibake_hits = set(strong_mojibake_hits)
         # Weak symbols like copyright/music marks are only suspicious when they
