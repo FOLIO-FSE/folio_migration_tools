@@ -9,13 +9,12 @@ import copy
 import json
 import logging
 import re
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
-from pymarc import Optional
 from pymarc.field import Field
 from pymarc.record import Record
 
