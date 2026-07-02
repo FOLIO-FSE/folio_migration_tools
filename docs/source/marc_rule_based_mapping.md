@@ -18,6 +18,8 @@ For each source record, the reader:
     - MARC-8 leader heuristic
     - MARCMaker dagger-to-subfield repair
     - Latin-1 leader heuristic
+4. If a non-UTF8 heuristic repair succeeds (MARC-8 leader or Latin-1), emits a text
+    fidelity diagnostic when suspicious replacement/mojibake patterns are detected.
 
 If any heuristic succeeds, processing continues for that record. If all heuristics fail,
 the record is marked as failed and skipped from transformation output.
@@ -25,8 +27,12 @@ the record is marked as failed and skipped from transformation output.
 ### Warnings vs failures
 
 - MARC-8 decoding warnings do not stop processing.
+- MARC-8 decoding warnings are observational only; they are logged but do not trigger
+    dedicated auto-repair by themselves.
 - Recoverable decoding failures are logged as repaired and continue.
 - Unrecoverable decoding failures are logged as failed and written to the failed MARC file.
+- Text fidelity diagnostics are informational data-issue logs for successfully recovered
+    records and do not change record pass/fail status.
 
 ### Where to inspect outcomes
 
