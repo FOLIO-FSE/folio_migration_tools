@@ -34,6 +34,20 @@ logger = logging.getLogger(__name__)
 
 MARC8_SIGNAL_BYTES = (b"\x8e", b"\x8f")
 MARC8_WARNING_PREFIX = "Multi-byte position "
+TEXT_FIDELITY_CHECK_STRATEGIES = {
+    "marc8_leader_heuristic",
+    "latin1_leader_heuristic",
+}
+REPLACEMENT_CHAR = "\ufffd"
+MOJIBAKE_PATTERNS = (
+    "Ã",
+    "Â",
+    "â€™",
+    "â€œ",
+    "â€",
+    "â€“",
+    "â€”",
+)
 
 DEFAULT_MARC_RECORD_PREPROCESSORS = [
     "folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader"
@@ -188,6 +202,7 @@ class MARCReaderWrapper:
                 i18n.t("Records in file before parsing")
             )
             try:
+                recovery_strategy = "none"
                 # A permissive MARCReader yields None when parsing fails.
                 if record is None:
                     recovered_record, recovery_strategy = MARCReaderWrapper.recover_failed_record(
@@ -218,6 +233,14 @@ class MARCReaderWrapper:
                         idx,
                         stderr_buffer.getvalue(),
                     )
+                    if recovery_strategy in TEXT_FIDELITY_CHECK_STRATEGIES:
+                        MARCReaderWrapper.log_record_text_fidelity_warnings(
+                            source_file,
+                            idx,
+                            record,
+                            processor.mapper.migration_report,
+                            recovery_strategy,
+                        )
                     record = MARCReaderWrapper.preprocess_record(
                         record,
                         marc_record_preprocessor,
@@ -507,6 +530,67 @@ class MARCReaderWrapper:
                 i18n.t("MARC-8 decoding warning"),
                 line,
             )
+
+    @staticmethod
+    def iter_text_values(record: Record):
+        for field in record.get_fields():
+            if field.is_control_field():
+                continue
+            subfields = getattr(field, "subfields", [])
+            if not subfields:
+                continue
+            first = subfields[0]
+            if hasattr(first, "value"):
+                for subfield in subfields:
+                    value = getattr(subfield, "value", None)
+                    if isinstance(value, str):
+                        yield value
+                continue
+            for value in subfields[1::2]:
+                if isinstance(value, str):
+                    yield value
+
+    @staticmethod
+    def detect_text_fidelity_signals(record: Record) -> list[str]:
+        replacement_found = False
+        mojibake_hits: set[str] = set()
+        for value in MARCReaderWrapper.iter_text_values(record):
+            if REPLACEMENT_CHAR in value:
+                replacement_found = True
+            for token in MOJIBAKE_PATTERNS:
+                if token in value:
+                    mojibake_hits.add(token)
+
+        signals: list[str] = []
+        if replacement_found:
+            signals.append("replacement_character_detected")
+        if mojibake_hits:
+            signals.append(
+                f"possible_mojibake_detected(tokens={','.join(sorted(mojibake_hits))})"
+            )
+        return signals
+
+    @staticmethod
+    def log_record_text_fidelity_warnings(
+        source_file: FileDefinition,
+        idx: int,
+        record: Record,
+        migration_report: MigrationReport,
+        recovery_strategy: str,
+    ):
+        signals = MARCReaderWrapper.detect_text_fidelity_signals(record)
+        if not signals:
+            return
+
+        migration_report.add_general_statistics(
+            i18n.t("Records with text fidelity warnings"),
+        )
+        context = f"recovery_strategy={recovery_strategy}; signals={'; '.join(signals)}"
+        Helper.log_data_issue(
+            f"{source_file.file_name}:{idx}",
+            i18n.t("MARC text fidelity warning"),
+            context,
+        )
 
 
 def report_failed_parsing(
