@@ -584,3 +584,134 @@ def test_read_records_tolerates_numeric_bad_directory_length(monkeypatch, caplog
     )
     assert "RECORD FAILED" not in caplog.text
     processor.process_record.assert_called_once()
+
+
+def test_read_records_logs_text_fidelity_warning_for_latin1_recovery(monkeypatch):
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-fidelity"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Bad\ufffd text")],
+        )
+    )
+    reader = FakeReader(
+        current_chunk=b"bad marc chunk",
+        current_exception=UnicodeDecodeError(
+            "utf-8",
+            b"\xe1",
+            0,
+            1,
+            "invalid continuation byte",
+        ),
+    )
+    file_def = FileDefinition(file_name="fidelity.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.process_record = Mock()
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+    monkeypatch.setattr(
+        MARCReaderWrapper,
+        "recover_failed_record",
+        lambda reader: (record, "latin1_leader_heuristic"),
+    )
+
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert len(logged_issues) == 2
+    fidelity_issue = next(issue for issue in logged_issues if issue[1] == "MARC text fidelity warning")
+    assert fidelity_issue[0] == "fidelity.mrc:0"
+    assert "replacement_character_detected" in fidelity_issue[2]
+    assert processor.mapper.migration_report.report["GeneralStatistics"][
+        "Records with text fidelity warnings"
+    ] == 1
+
+
+def test_read_records_logs_text_fidelity_warning_for_marc8_recovery(monkeypatch):
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-fidelity-2"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="This has Ã and â€™ markers")],
+        )
+    )
+    reader = FakeReader(
+        current_chunk=b"bad marc chunk",
+        current_exception=UnicodeDecodeError(
+            "utf-8",
+            b"\x8f",
+            0,
+            1,
+            "invalid start byte",
+        ),
+    )
+    file_def = FileDefinition(file_name="fidelity_mojibake.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.process_record = Mock()
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+    monkeypatch.setattr(
+        MARCReaderWrapper,
+        "recover_failed_record",
+        lambda reader: (record, "marc8_leader_heuristic"),
+    )
+
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert len(logged_issues) == 2
+    fidelity_issue = next(issue for issue in logged_issues if issue[1] == "MARC text fidelity warning")
+    assert fidelity_issue[0] == "fidelity_mojibake.mrc:0"
+    assert "possible_mojibake_detected" in fidelity_issue[2]
+    assert processor.mapper.migration_report.report["GeneralStatistics"][
+        "Records with text fidelity warnings"
+    ] == 1
+
+
+def test_read_records_skips_text_fidelity_warning_without_recovery_strategy(monkeypatch):
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-fidelity-3"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="Bad\ufffd text")],
+        )
+    )
+    reader = WarningReader([record])
+    file_def = FileDefinition(file_name="fidelity_skipped.mrc")
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.process_record = Mock()
+
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+
+    MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
+
+    assert logged_issues == []
+    assert "Records with text fidelity warnings" not in processor.mapper.migration_report.report.get(
+        "GeneralStatistics",
+        {},
+    )
