@@ -8,7 +8,6 @@ and handles corrupted records gracefully.
 import json
 import logging
 import sys
-import unicodedata
 from contextlib import redirect_stderr
 from io import IOBase, StringIO
 from itertools import count
@@ -53,6 +52,11 @@ MOJIBAKE_PATTERNS = (
     "♭",
     "ʹ",
 )
+WEAK_MOJIBAKE_PATTERNS = {
+    "©",
+    "♭",
+    "ʹ",
+}
 
 DEFAULT_MARC_RECORD_PREPROCESSORS = [
     "folio_migration_tools.marc_rules_transformation.marc_reader_wrapper.set_leader"
@@ -171,7 +175,7 @@ class MARCReaderWrapper:
                         marc_file, to_unicode=True, permissive=True, utf8_handling="strict"
                     )
                     reader.hide_utf8_warnings = False
-                    reader.force_utf8 = False
+                    reader.force_utf8 = True
                     logger.info("Running %s", file_def.file_name)
                     MARCReaderWrapper.read_records(
                         reader, file_def, failed_marc_records_file, processor
@@ -240,14 +244,6 @@ class MARCReaderWrapper:
                         idx,
                         stderr_buffer.getvalue(),
                     )
-                    if recovery_strategy == "none":
-                        record, recovery_strategy = MARCReaderWrapper.apply_probable_utf8_override(
-                            reader,
-                            record,
-                            source_file,
-                            idx,
-                            processor.mapper.migration_report,
-                        )
                     if recovery_strategy in TEXT_FIDELITY_CHECK_STRATEGIES:
                         MARCReaderWrapper.log_record_text_fidelity_warnings(
                             source_file,
@@ -314,7 +310,7 @@ class MARCReaderWrapper:
                     current_exception,
                     current_chunk,
                 ),
-                MARCReaderWrapper.patch_chunk_leader9_for_marc8(current_chunk),
+                MARCReaderWrapper.get_marc8_candidate_chunk(current_chunk),
                 {},
             ),
             (
@@ -332,7 +328,7 @@ class MARCReaderWrapper:
                     current_exception,
                     current_chunk,
                 ),
-                MARCReaderWrapper.patch_chunk_leader9_for_marc8(current_chunk),
+                MARCReaderWrapper.get_latin1_candidate_chunk(current_chunk),
                 {"encoding": "iso8859-1"},
             ),
         ]
@@ -356,8 +352,6 @@ class MARCReaderWrapper:
             return False
         if len(current_chunk) < 10:
             return False
-        if current_chunk[9:10] != b"a":
-            return False
         return any(signal in current_chunk for signal in MARC8_SIGNAL_BYTES)
 
     @staticmethod
@@ -365,8 +359,6 @@ class MARCReaderWrapper:
         if not isinstance(current_exception, UnicodeDecodeError):
             return False
         if len(current_chunk) < 10:
-            return False
-        if current_chunk[9:10] != b"a":
             return False
         if any(signal in current_chunk for signal in MARC8_SIGNAL_BYTES):
             return False
@@ -471,12 +463,20 @@ class MARCReaderWrapper:
         return repaired_chunk
 
     @staticmethod
-    def patch_chunk_leader9_for_marc8(current_chunk: bytes) -> bytes | None:
+    def get_marc8_candidate_chunk(current_chunk: bytes) -> bytes | None:
         if len(current_chunk) < 10:
             return None
-        if current_chunk[9:10] != b"a":
+        if current_chunk[9:10] == b"a":
+            return current_chunk[:9] + b" " + current_chunk[10:]
+        return current_chunk
+
+    @staticmethod
+    def get_latin1_candidate_chunk(current_chunk: bytes) -> bytes | None:
+        if len(current_chunk) < 10:
             return None
-        return current_chunk[:9] + b" " + current_chunk[10:]
+        if current_chunk[9:10] == b"a":
+            return current_chunk[:9] + b" " + current_chunk[10:]
+        return current_chunk
 
     @staticmethod
     def build_parsing_issue_context(reader) -> str:
@@ -568,13 +568,23 @@ class MARCReaderWrapper:
     @staticmethod
     def detect_text_fidelity_signals(record: Record) -> list[str]:
         replacement_found = False
-        mojibake_hits: set[str] = set()
+        strong_mojibake_hits: set[str] = set()
+        weak_mojibake_hits: set[str] = set()
         for value in MARCReaderWrapper.iter_text_values(record):
             if REPLACEMENT_CHAR in value:
                 replacement_found = True
             for token in MOJIBAKE_PATTERNS:
                 if token in value:
-                    mojibake_hits.add(token)
+                    if token in WEAK_MOJIBAKE_PATTERNS:
+                        weak_mojibake_hits.add(token)
+                    else:
+                        strong_mojibake_hits.add(token)
+
+        mojibake_hits = set(strong_mojibake_hits)
+        # Weak symbols like copyright/music marks are only suspicious when they
+        # co-occur with stronger mojibake indicators in the same record.
+        if strong_mojibake_hits:
+            mojibake_hits.update(weak_mojibake_hits)
 
         signals: list[str] = []
         if replacement_found:
@@ -604,86 +614,6 @@ class MARCReaderWrapper:
             i18n.t("MARC text fidelity warning"),
             context,
         )
-
-    @staticmethod
-    def decode_chunk_force_utf8(current_chunk: bytes) -> Record | None:
-        if not current_chunk:
-            return None
-        try:
-            recovered_record = Record()
-            recovered_record.decode_marc(
-                current_chunk,
-                to_unicode=True,
-                force_utf8=True,
-                hide_utf8_warnings=True,
-                utf8_handling="strict",
-            )
-            return recovered_record
-        except Exception:
-            return None
-
-    @staticmethod
-    def contains_high_bit_bytes(current_chunk: bytes) -> bool:
-        return any(byte > 0x7F for byte in current_chunk)
-
-    @staticmethod
-    def text_fidelity_penalty(record: Record) -> int:
-        penalty = 0
-        for value in MARCReaderWrapper.iter_text_values(record):
-            penalty += value.count(REPLACEMENT_CHAR) * 8
-            for token in MOJIBAKE_PATTERNS:
-                penalty += value.count(token) * 3
-            combining_marks = sum(1 for ch in value if unicodedata.combining(ch) > 0)
-            if value and combining_marks / len(value) > 0.25:
-                penalty += 2
-        return penalty
-
-    @staticmethod
-    def should_attempt_probable_utf8_override(
-        record: Record,
-        current_chunk: bytes,
-    ) -> bool:
-        if str(record.leader)[9] == "a":
-            return False
-        if not current_chunk or not MARCReaderWrapper.contains_high_bit_bytes(current_chunk):
-            return False
-        signals = MARCReaderWrapper.detect_text_fidelity_signals(record)
-        return bool(signals)
-
-    @staticmethod
-    def apply_probable_utf8_override(
-        reader,
-        record: Record,
-        source_file: FileDefinition,
-        idx: int,
-        migration_report: MigrationReport,
-    ) -> tuple[Record, str]:
-        current_chunk = getattr(reader, "current_chunk", b"") or b""
-        if not MARCReaderWrapper.should_attempt_probable_utf8_override(record, current_chunk):
-            return record, "none"
-
-        utf8_record = MARCReaderWrapper.decode_chunk_force_utf8(current_chunk)
-        if utf8_record is None:
-            return record, "none"
-
-        current_penalty = MARCReaderWrapper.text_fidelity_penalty(record)
-        utf8_penalty = MARCReaderWrapper.text_fidelity_penalty(utf8_record)
-        if utf8_penalty >= current_penalty:
-            return record, "none"
-
-        migration_report.add_general_statistics(
-            i18n.t("Records with probable UTF-8 mislabeling override applied"),
-        )
-        Helper.log_data_issue(
-            f"{source_file.file_name}:{idx}",
-            i18n.t("Probable UTF-8 mislabeling detected; record re-decoded using UTF-8 safeguard"),
-            (
-                f"leader={str(record.leader)!r}; "
-                f"previous_penalty={current_penalty}; "
-                f"utf8_penalty={utf8_penalty}"
-            ),
-        )
-        return utf8_record, "probable_utf8_mislabeling_safeguard"
 
 
 def report_failed_parsing(
