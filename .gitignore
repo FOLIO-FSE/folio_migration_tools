@@ -119,6 +119,7 @@ archive/
 source_data/
 scratch_pad.*
 *.db
+*.mrc
 
 .env.json
 poetry.lock
