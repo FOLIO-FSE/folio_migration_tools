@@ -79,13 +79,12 @@ All preprocessors are called with the task's `migration_report` object via keywo
 `HoldingsMarcTransformer` uses the same MARC decoding and recovery flow as
 `BibsTransformer`.
 
+See [MARC Decoding and Recovery Behavior](../marc_rule_based_mapping.md#marc-decoding-and-recovery-behavior)
+for full details of the shared decoding pipeline and heuristic order.
+
 - MARC-8 decoding warnings are logged and processing continues.
-- MARC-8 decoding warnings are observational and do not trigger dedicated auto-repair by
-    themselves.
 - Recoverable decode failures are repaired with built-in heuristics.
 - Unrecoverable records are logged as failed and skipped.
-- After successful non-UTF8 heuristic repair, text fidelity diagnostics may be logged when
-    suspicious replacement/mojibake patterns are detected.
 
 Review diagnostics in:
 
