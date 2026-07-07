@@ -142,14 +142,13 @@ Each file object in the `files` array supports:
 `BibsTransformer` uses permissive MARC decoding with per-record diagnostics and recovery
 heuristics.
 
+See [MARC Decoding and Recovery Behavior](../marc_rule_based_mapping.md#marc-decoding-and-recovery-behavior)
+for full details of the shared decoding pipeline and heuristic order.
+
 - MARC-8 decoding warnings are logged but do not stop processing.
-- MARC-8 decoding warnings are not auto-repaired on warning alone; they remain
-    informational unless decode fails.
 - Some decode failures are automatically repaired (for example, MARC-8 leader and MARCMaker
     dagger marker issues).
 - Records that cannot be repaired are skipped and logged as failed.
-- After successful non-UTF8 heuristic repair, text fidelity diagnostics may be logged when
-    suspicious replacement/mojibake patterns are detected.
 
 Use the following outputs to review decoding behavior:
 
