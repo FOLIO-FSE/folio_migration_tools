@@ -68,11 +68,18 @@ Congratulations! You have now completed the first step. Take a look around in th
 uv run folio-migration-tools mapping_files/exampleConfiguration.json --base_folder_path ./ post_instances
 ```
 
-## Post the SRS (MARC) Records into FOLIO
+## Import the MARC Records into FOLIO via Data Import
+Rather than posting SRS records directly, the modern workflow uses FOLIO's native Data Import pipeline to load the transformed MARC file and update the SRS records. This gives you full control over match and overlay behavior through your configured job profiles.
+
 ```shell
-uv run folio-migration-tools mapping_files/exampleConfiguration.json --base_folder_path ./ post_srs_bibs
+uv run folio-migration-tools mapping_files/exampleConfiguration.json --base_folder_path ./ import_marc_bibs
 ```
-Now, you can go off and explore the records in the FOLIO tenant! Make sure to check all the reports and lists of failed records in the reports and results folders!
+
+```{tip}
+This step uses the [MARCImportTask](tasks/marc_import), which sends the MARC file produced by the transform step to FOLIO's change-manager API. The job profile configured in `importProfileName` controls how records are matched and overlaid in FOLIO.
+```
+
+Now, you can go off and explore the records in the FOLIO tenant! Make sure to check all the reports and lists of failed records in the reports and results folders. You can also monitor job progress in the FOLIO Data Import UI under **Actions → View all logs**.
 
 
-For complete documentation on how to run the process, refer to [Read the Docs](https://folio-migration-tools.readthedocs.io/) (under construction)
+For complete documentation on how to run the process, refer to [Read the Docs](https://folio-migration-tools.readthedocs.io/)
