@@ -116,8 +116,11 @@ class FolderStructure:
         self.created_objects_path = (
             self.results_folder / f"folio_{object_type_string}{self.file_template}.json"
         )
-        self.failed_marc_recs_file = (
-            self.results_folder / f"failed_records{self.file_template}.mrc"
+        self.failed_records_decode_file = (
+            self.results_folder / f"failed_records_decode{self.file_template}.mrc"
+        )
+        self.failed_records_transformation_file = (
+            self.results_folder / f"failed_records_transformation{self.file_template}.mrc"
         )
 
         self.migration_reports_file = self.reports_folder / f"report{self.file_template}.md"

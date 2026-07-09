@@ -49,6 +49,9 @@ class MarcFileProcessor:
         self.folder_structure: FolderStructure = folder_structure
         self.mapper: RulesMapperBase = mapper
         self.created_objects_file: TextIO = created_objects_file
+        self.failed_records_transformation_file: BinaryIO = open(
+            self.folder_structure.failed_records_transformation_file, "wb+"
+        )
         if mapper.create_source_records and any(
             x.create_source_records for x in mapper.task_configuration.files
         ):
@@ -139,6 +142,7 @@ class MarcFileProcessor:
         finally:
             if not success:
                 self.failed_records_count += 1
+                self.failed_records_transformation_file.write(marc_record.as_marc())
                 remove_from_id_map = getattr(self.mapper, "remove_from_id_map", None)
                 if callable(remove_from_id_map) and ids_added_to_map:
                     self.mapper.remove_from_id_map(ids_added_to_map)
@@ -297,6 +301,10 @@ class MarcFileProcessor:
             if not self.data_import_marc_file.read(1):
                 os.remove(self.data_import_marc_file.name)
             self.data_import_marc_file.close()
+        self.failed_records_transformation_file.seek(0)
+        if not self.failed_records_transformation_file.read(1):
+            os.remove(self.failed_records_transformation_file.name)
+        self.failed_records_transformation_file.close()
         self.mapper.wrap_up()
 
         logger.info("Transformation report written to %s", report_file.name)
