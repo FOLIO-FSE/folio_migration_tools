@@ -33,20 +33,20 @@ Report it on the [Github Issue tracker](https://github.com/FOLIO-FSE/folio_migra
 
 The scripts requires a FOLIO tenant with reference data properly set up. The script will throw messages telling what reference data is missing.
 # Installing
-Make sure you are running Python 3.9 or above. 
-## 1. Using pip and venv
-### 2.1. Create and activate a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#creating-a-virtual-environment)   
+Make sure you are running Python 3.10 or above. 
+## 1. Using [`uv`](https://docs.astral.sh/uv)
+### 2.1. Create and activate a [virtual environment](https://docs.astral.sh/uv/pip/environments/)   
 ```   
-python -m venv ./.venv     # Creates a virtual env in the current folder
+uv venv    # Creates a virtual env in the current folder
 source .venv/bin/activate  # Activates the venv    
 ```
 ### 2. Install using pip: 
 ```
-python -m pip install folio_migration_tools
+uv pip install folio-migration-tools
 ```
 ### 3. Test the installation by showing the help pages 
 ```   
-python -m folio_migration_tools -h
+uv run folio-migration-tools -h
 ```    
 
 ## 2. Using pipenv
