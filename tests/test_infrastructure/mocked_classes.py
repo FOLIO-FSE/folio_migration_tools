@@ -1,6 +1,7 @@
 import json
 import logging
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -15,6 +16,46 @@ from folio_migration_tools.library_configuration import (
     LibraryConfiguration,
     FolioRelease,
 )
+
+
+_SCHEMA_CACHE: dict[tuple[str, str, str, bool], dict] = {}
+_SCHEMA_CACHE_HITS = 0
+_SCHEMA_CACHE_MISSES = 0
+
+
+def clear_mocked_schema_cache() -> None:
+    """Clear the local schema cache used by test doubles."""
+    global _SCHEMA_CACHE_HITS, _SCHEMA_CACHE_MISSES
+    _SCHEMA_CACHE.clear()
+    _SCHEMA_CACHE_HITS = 0
+    _SCHEMA_CACHE_MISSES = 0
+
+
+def get_mocked_schema_cache_stats() -> dict[str, int]:
+    """Expose cache statistics for tests and diagnostics."""
+    return {
+        "hits": _SCHEMA_CACHE_HITS,
+        "misses": _SCHEMA_CACHE_MISSES,
+        "size": len(_SCHEMA_CACHE),
+    }
+
+
+def get_cached_github_schema(owner: str, repo: str, file_path: str, ssl_verify=True):
+    """Fetch and cache GitHub schemas for test runs.
+
+    Returns deep copies so callers can safely mutate schema content without
+    leaking state across tests.
+    """
+    global _SCHEMA_CACHE_HITS, _SCHEMA_CACHE_MISSES
+    cache_key = (owner, repo, file_path, ssl_verify)
+    if cache_key in _SCHEMA_CACHE:
+        _SCHEMA_CACHE_HITS += 1
+        return deepcopy(_SCHEMA_CACHE[cache_key])
+
+    _SCHEMA_CACHE_MISSES += 1
+    schema = FolioClient.get_latest_from_github(owner, repo, file_path, ssl_verify)
+    _SCHEMA_CACHE[cache_key] = schema
+    return deepcopy(schema)
 
 
 def mocked_holdings_mapper() -> Mock:
@@ -361,7 +402,7 @@ def folio_get_single_object_mocked(*args, **kwargs):
 
 
 def folio_get_from_github(owner, repo, file_path):
-    return FolioClient.get_latest_from_github(owner, repo, file_path, True)
+    return get_cached_github_schema(owner, repo, file_path, True)
 
 
 OKAPI_URL = "https://localhost:9130"
@@ -425,5 +466,6 @@ def get_mocked_folder_structure():
     mock_fs.transformation_extra_data_path = Path("transformation_extra_data")
     mock_fs.transformation_log_path = Path("/dev/null")
     mock_fs.data_issue_file_path = Path("/dev/null")
-    mock_fs.failed_marc_recs_file = Path("failed_marc_recs.txt")
+    mock_fs.failed_records_decode_file = Path("failed_marc_recs.txt")
+    mock_fs.failed_records_transformation_file = Path("failed_records_transformation.txt")
     return mock_fs

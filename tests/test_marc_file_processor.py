@@ -1,5 +1,5 @@
 from io import BytesIO
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -293,6 +293,7 @@ def test_process_record_duplicate_does_not_remove_original_from_id_map():
     mock_processor.mapper = mock_mapper
     mock_processor.object_type = FOLIONamespaces.holdings
     mock_processor.created_objects_file = Mock()
+    mock_processor.failed_records_transformation_file = Mock()
 
     # Wire real implementations for methods called by process_record
     mock_processor.process_record = lambda idx, rec, fd: MarcFileProcessor.process_record(
@@ -345,4 +346,55 @@ def test_process_record_duplicate_does_not_remove_original_from_id_map():
     # The original record's entry must still be in the id_map
     assert "legacy-1" in mock_mapper.id_map
     assert mock_mapper.id_map["legacy-1"] == ("legacy-1", "folio-uuid-a")
+
+
+def test_cached_github_schema_reuses_fetch_for_same_key():
+    mocked_classes.clear_mocked_schema_cache()
+
+    fake_schema = {"properties": {"title": {"type": "string"}}}
+    with patch(
+        "tests.test_infrastructure.mocked_classes.FolioClient.get_latest_from_github",
+        return_value=fake_schema,
+    ) as mock_fetch:
+        schema_1 = mocked_classes.get_cached_github_schema(
+            "folio-org", "mod-inventory-storage", "/ramls/instance.json", True
+        )
+        schema_2 = mocked_classes.get_cached_github_schema(
+            "folio-org", "mod-inventory-storage", "/ramls/instance.json", True
+        )
+
+    assert schema_1 == fake_schema
+    assert schema_2 == fake_schema
+    assert mock_fetch.call_count == 1
+    stats = mocked_classes.get_mocked_schema_cache_stats()
+    assert stats["misses"] == 1
+    assert stats["hits"] == 1
+    assert stats["size"] == 1
+
+
+def test_cached_github_schema_returns_deepcopy_for_isolation():
+    mocked_classes.clear_mocked_schema_cache()
+
+    fake_schema = {
+        "properties": {
+            "customFields": {
+                "type": "object",
+                "properties": {"foo": {"type": "string"}},
+            }
+        }
+    }
+    with patch(
+        "tests.test_infrastructure.mocked_classes.FolioClient.get_latest_from_github",
+        return_value=fake_schema,
+    ):
+        schema_1 = mocked_classes.get_cached_github_schema(
+            "folio-org", "mod-users", "/ramls/user.json", True
+        )
+        schema_1["properties"]["customFields"]["properties"]["bar"] = {"type": "number"}
+
+        schema_2 = mocked_classes.get_cached_github_schema(
+            "folio-org", "mod-users", "/ramls/user.json", True
+        )
+
+    assert "bar" not in schema_2["properties"]["customFields"]["properties"]
 

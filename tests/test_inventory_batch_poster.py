@@ -134,7 +134,7 @@ def mock_folder_structure():
     folder_structure.migration_reports_file = Path("/tmp/report.md")
     folder_structure.migration_reports_raw_file = Path("/tmp/report.json")
     folder_structure.data_issue_file_path = Path("/tmp/data_issues.tsv")
-    folder_structure.failed_marc_recs_file = Path("/tmp/failed_marc.mrc")
+    folder_structure.failed_records_decode_file = Path("/tmp/failed_marc.mrc")
     folder_structure.transformation_log_path = Path("/tmp/log.log")
     return folder_structure
 

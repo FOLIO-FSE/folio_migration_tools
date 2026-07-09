@@ -138,11 +138,18 @@ class MigrationTaskBase:
             logger.info("Removed data issues file since it was empty")
 
         if (
-            self.folder_structure.failed_marc_recs_file.is_file()
-            and os.stat(self.folder_structure.failed_marc_recs_file).st_size == 0
+            self.folder_structure.failed_records_decode_file.is_file()
+            and os.stat(self.folder_structure.failed_records_decode_file).st_size == 0
         ):
-            os.remove(self.folder_structure.failed_marc_recs_file)
+            os.remove(self.folder_structure.failed_records_decode_file)
             logger.info("Removed empty failed marc records file since it was empty")
+
+        if (
+            self.folder_structure.failed_records_transformation_file.is_file()
+            and os.stat(self.folder_structure.failed_records_transformation_file).st_size == 0
+        ):
+            os.remove(self.folder_structure.failed_records_transformation_file)
+            logger.info("Removed empty failed transformation records file since it was empty")
 
     @abstractmethod
     async def do_work(self):
@@ -306,9 +313,12 @@ class MigrationTaskBase:
         self,
     ):
         logger.info("Starting....")
-        if self.folder_structure.failed_marc_recs_file.is_file():
-            os.remove(self.folder_structure.failed_marc_recs_file)
-            logger.info("Removed failed marc records file to prevent duplicating data")
+        if self.folder_structure.failed_records_decode_file.is_file():
+            os.remove(self.folder_structure.failed_records_decode_file)
+            logger.info("Removed failed decode records file to prevent duplicating data")
+        if self.folder_structure.failed_records_transformation_file.is_file():
+            os.remove(self.folder_structure.failed_records_transformation_file)
+            logger.info("Removed failed transformation records file to prevent duplicating data")
         with open(self.folder_structure.created_objects_path, "w+") as created_records_file:
             self.processor = MarcFileProcessor(
                 self.mapper, self.folder_structure, created_records_file
@@ -317,7 +327,7 @@ class MigrationTaskBase:
                 MARCReaderWrapper.process_single_file(
                     file_def,
                     self.processor,
-                    self.folder_structure.failed_marc_recs_file,
+                    self.folder_structure.failed_records_decode_file,
                     self.folder_structure,
                 )
 
