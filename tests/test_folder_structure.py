@@ -49,6 +49,11 @@ def test_setup_migration_file_structure():
         == "iterations/test_iteration/results/failed_records_decode_test_task.mrc"
     )
 
+    assert (
+        str(folder_structure.failed_records_transformation_file)
+        == "iterations/test_iteration/results/failed_records_transformation_test_task.mrc"
+    )
+
     assert str(folder_structure.failed_recs_path).startswith(
         "iterations/test_iteration/results/failed_records_test_task_"
     )

@@ -1,3 +1,5 @@
+import io
+from datetime import datetime, timezone
 from io import BytesIO
 from unittest.mock import Mock, patch
 
@@ -293,7 +295,8 @@ def test_process_record_duplicate_does_not_remove_original_from_id_map():
     mock_processor.mapper = mock_mapper
     mock_processor.object_type = FOLIONamespaces.holdings
     mock_processor.created_objects_file = Mock()
-    mock_processor.failed_records_transformation_file = Mock()
+    mock_transformation_file = BytesIO()
+    mock_processor.failed_records_transformation_file = mock_transformation_file
 
     # Wire real implementations for methods called by process_record
     mock_processor.process_record = lambda idx, rec, fd: MarcFileProcessor.process_record(
@@ -306,7 +309,8 @@ def test_process_record_duplicate_does_not_remove_original_from_id_map():
     mock_processor.exit_on_too_many_exceptions = lambda: MarcFileProcessor.exit_on_too_many_exceptions(
         mock_processor
     )
-
+    mock_transformation_file = BytesIO()
+    mock_processor.failed_records_transformation_file = mock_transformation_file
     record_a = Record()
     record_a.add_field(
         Field(tag="001", data="legacy-1"),
@@ -346,6 +350,8 @@ def test_process_record_duplicate_does_not_remove_original_from_id_map():
     # The original record's entry must still be in the id_map
     assert "legacy-1" in mock_mapper.id_map
     assert mock_mapper.id_map["legacy-1"] == ("legacy-1", "folio-uuid-a")
+    # Failed record must have been written to the transformation failures file
+    assert mock_transformation_file.tell() > 0
 
 
 def test_cached_github_schema_reuses_fetch_for_same_key():
@@ -397,4 +403,150 @@ def test_cached_github_schema_returns_deepcopy_for_isolation():
         )
 
     assert "bar" not in schema_2["properties"]["customFields"]["properties"]
+
+
+def _make_mock_mapper_for_init(tmp_path, create_source_records=False, data_import_marc=False):
+    """Return a minimal mapper mock suitable for MarcFileProcessor.__init__."""
+    mock_mapper = Mock(spec=RulesMapperHoldings)
+    mock_mapper.create_source_records = create_source_records
+    mock_mapper.task_configuration = Mock()
+    mock_mapper.task_configuration.files = []
+    # Only set data_import_marc if requested so getattr falls back to False otherwise
+    if data_import_marc:
+        mock_mapper.task_configuration.data_import_marc = True
+    else:
+        del mock_mapper.task_configuration.data_import_marc
+    return mock_mapper
+
+
+def _make_mock_folder_structure(tmp_path):
+    mock_fs = Mock()
+    mock_fs.object_type = FOLIONamespaces.instances
+    mock_fs.failed_records_transformation_file = tmp_path / "failed_records_transformation.mrc"
+    mock_fs.srs_records_path = tmp_path / "srs.json"
+    mock_fs.data_import_marc_path = tmp_path / "data_import.mrc"
+    return mock_fs
+
+
+def test_marc_file_processor_init_creates_transformation_file(tmp_path):
+    """MarcFileProcessor.__init__ must open the failed_records_transformation_file."""
+    mock_mapper = _make_mock_mapper_for_init(tmp_path)
+    mock_fs = _make_mock_folder_structure(tmp_path)
+    created_objects_file = io.StringIO()
+
+    processor = MarcFileProcessor(mock_mapper, mock_fs, created_objects_file)
+
+    assert mock_fs.failed_records_transformation_file.exists()
+    processor.failed_records_transformation_file.close()
+
+
+def test_marc_file_processor_init_no_srs_or_data_import_files_when_flags_false(tmp_path):
+    """When create_source_records and data_import_marc are False, those files must not be opened."""
+    mock_mapper = _make_mock_mapper_for_init(tmp_path, create_source_records=False, data_import_marc=False)
+    mock_fs = _make_mock_folder_structure(tmp_path)
+    created_objects_file = io.StringIO()
+
+    processor = MarcFileProcessor(mock_mapper, mock_fs, created_objects_file)
+
+    assert not hasattr(processor, "srs_records_file")
+    assert not hasattr(processor, "data_import_marc_file")
+    processor.failed_records_transformation_file.close()
+
+
+def test_wrap_up_removes_empty_transformation_file(tmp_path):
+    """wrap_up must delete the transformation file when it is empty."""
+    transformation_file_path = tmp_path / "failed_records_transformation.mrc"
+    transformation_file_path.write_bytes(b"")  # empty
+
+    mock_processor = Mock(spec=MarcFileProcessor)
+    mock_processor.records_count = 0
+    mock_processor.failed_records_transformation_file = open(transformation_file_path, "rb+")
+
+    mock_fs = Mock()
+    mock_fs.id_map_path = tmp_path / "id_map.json"
+    mock_fs.migration_reports_file = tmp_path / "report.md"
+    mock_processor.folder_structure = mock_fs
+
+    mock_mapper = Mock()
+    mock_mapper.id_map = {}
+    mock_mapper.migration_report = MigrationReport()
+    mock_mapper.start_datetime = datetime.now(timezone.utc)
+    mock_mapper.parsed_records = 0
+    mock_mapper.mapped_folio_fields = {}
+    mock_mapper.mapped_legacy_fields = {}
+    mock_processor.mapper = mock_mapper
+
+    MarcFileProcessor.wrap_up(mock_processor)
+
+    assert not transformation_file_path.exists()
+
+
+def test_wrap_up_keeps_nonempty_transformation_file(tmp_path):
+    """wrap_up must keep the transformation file when it contains data."""
+    transformation_file_path = tmp_path / "failed_records_transformation.mrc"
+    transformation_file_path.write_bytes(b"some data")
+
+    mock_processor = Mock(spec=MarcFileProcessor)
+    mock_processor.records_count = 0
+    mock_processor.failed_records_transformation_file = open(transformation_file_path, "rb+")
+
+    mock_fs = Mock()
+    mock_fs.id_map_path = tmp_path / "id_map.json"
+    mock_fs.migration_reports_file = tmp_path / "report.md"
+    mock_processor.folder_structure = mock_fs
+
+    mock_mapper = Mock()
+    mock_mapper.id_map = {}
+    mock_mapper.migration_report = MigrationReport()
+    mock_mapper.start_datetime = datetime.now(timezone.utc)
+    mock_mapper.parsed_records = 0
+    mock_mapper.mapped_folio_fields = {}
+    mock_mapper.mapped_legacy_fields = {}
+    mock_processor.mapper = mock_mapper
+
+    MarcFileProcessor.wrap_up(mock_processor)
+
+    assert transformation_file_path.exists()
+
+
+def test_clean_out_empty_logs_removes_empty_transformation_file(tmp_path):
+    """clean_out_empty_logs must delete an empty failed_records_transformation_file."""
+    from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+
+    decode_file = tmp_path / "failed_records_decode.mrc"
+    transformation_file = tmp_path / "failed_records_transformation.mrc"
+    data_issue_file = tmp_path / "data_issues.tsv"
+    transformation_file.write_bytes(b"")  # empty — should be removed
+
+    mock_task = Mock()
+    mock_task.data_issue_file_handler = None
+    mock_task.folder_structure = Mock()
+    mock_task.folder_structure.data_issue_file_path = data_issue_file
+    mock_task.folder_structure.failed_records_decode_file = decode_file
+    mock_task.folder_structure.failed_records_transformation_file = transformation_file
+
+    MigrationTaskBase.clean_out_empty_logs(mock_task)
+
+    assert not transformation_file.exists()
+
+
+def test_clean_out_empty_logs_keeps_nonempty_transformation_file(tmp_path):
+    """clean_out_empty_logs must keep a non-empty failed_records_transformation_file."""
+    from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+
+    decode_file = tmp_path / "failed_records_decode.mrc"
+    transformation_file = tmp_path / "failed_records_transformation.mrc"
+    data_issue_file = tmp_path / "data_issues.tsv"
+    transformation_file.write_bytes(b"failed marc data")  # has content — must stay
+
+    mock_task = Mock()
+    mock_task.data_issue_file_handler = None
+    mock_task.folder_structure = Mock()
+    mock_task.folder_structure.data_issue_file_path = data_issue_file
+    mock_task.folder_structure.failed_records_decode_file = decode_file
+    mock_task.folder_structure.failed_records_transformation_file = transformation_file
+
+    MigrationTaskBase.clean_out_empty_logs(mock_task)
+
+    assert transformation_file.exists()
 
