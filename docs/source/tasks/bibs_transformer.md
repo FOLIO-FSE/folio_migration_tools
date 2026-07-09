@@ -154,7 +154,8 @@ Use the following outputs to review decoding behavior:
 
 - `reports/data_issues_log_<task_name>.tsv` for warning and repair messages.
 - `reports/report_<task_name>.md` for repaired vs failed decode counts.
-- `results/failed_bib_records.mrc` for unrecoverable records.
+- `results/failed_records_decode_<task_name>.mrc` for records that fail MARC decoding.
+- `results/failed_records_transformation_<task_name>.mrc` for records that fail transformation (e.g., missing required fields).
 
 ## Output Files
 
@@ -165,6 +166,8 @@ Files are created in `iterations/<iteration>/results/`:
 | `folio_instances_<task_name>.json` | FOLIO Instance records (one per line) |
 | `folio_marc_instances_<task_name>.mrc` | MARC21 file for loading via Data Import |
 | `instance_id_map_<task_name>.json` | Legacy ID to FOLIO UUID mapping |
+| `failed_records_decode_<task_name>.mrc` | MARC records that failed to decode from MARC21 format |
+| `failed_records_transformation_<task_name>.mrc` | MARC records that decoded OK but failed transformation (empty only if no failures) |
 
 Reports are created in `iterations/<iteration>/reports/`:
 

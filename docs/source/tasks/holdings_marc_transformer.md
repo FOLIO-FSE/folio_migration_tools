@@ -90,7 +90,8 @@ Review diagnostics in:
 
 - `reports/data_issues_log_<task_name>.tsv`
 - `reports/report_<task_name>.md`
-- Failed MARC output in the task results folder
+- `results/failed_records_decode_<task_name>.mrc` for records that fail MARC decoding
+- `results/failed_records_transformation_<task_name>.mrc` for records that fail transformation
 
 ### Reference Data Mapping Files
 
@@ -104,7 +105,7 @@ For MARC-based holdings, the legacy location values are extracted from the MFHD 
 
 ### Boundwith Relationship File (Optional)
 
-TFor Voyager-style boundwiths, provide a TSV file mapping MFHDs to multiple bibs:
+For Voyager-style boundwiths, provide a TSV file mapping MFHDs to multiple bibs:
 
 ```text
 MFHD_ID	BIB_ID
@@ -128,6 +129,8 @@ Files are created in `iterations/<iteration>/results/`:
 | `folio_srs_holdings_<task_name>.json` | SRS records (if `createSourceRecords: true`) |
 | `extradata_<task_name>.extradata` | Extra data including boundwith parts (when applicable) |
 | `boundwith_relationships_map.json` | Boundwith relationship mappings (when processing boundwiths) |
+| `failed_records_decode_<task_name>.mrc` | MARC records that failed to decode from MARC21 format |
+| `failed_records_transformation_<task_name>.mrc` | MARC records that decoded OK but failed transformation (empty only if no failures) |
 
 ## Examples
 

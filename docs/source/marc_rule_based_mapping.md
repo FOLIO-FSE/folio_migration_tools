@@ -32,7 +32,8 @@ the record is marked as failed and skipped from transformation output.
 
 - `reports/data_issues_log_<task_name>.tsv` for per-record warning and recovery messages.
 - `reports/report_<task_name>.md` for aggregate decoding statistics.
-- `results/failed_bib_records.mrc` (or corresponding failed MARC output) for unrecoverable records.
+- `results/failed_records_decode_<task_name>.mrc` for records that failed MARC decoding.
+- `results/failed_records_transformation_<task_name>.mrc` for records that failed transformation.
 
 ## The mapping rules
 FOLIO stores its MARC-to-FOLIO mapping rules as a JSON object that you can download and edit via:
