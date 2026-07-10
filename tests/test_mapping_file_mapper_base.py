@@ -4923,6 +4923,42 @@ def test_get_legacy_value_fallback_field():
     assert res == "billy@leifochbilly.se"
 
 
+def test_get_legacy_value_fallback_field_list_uses_first_non_empty_value():
+    legacy_object = {
+        "title": "",
+        "alternative_title": "",
+        "backup_title": "backup@leifochbilly.se",
+        "third_title": "third@leifochbilly.se",
+    }
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": ["alternative_title", "backup_title", "third_title"],
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "backup@leifochbilly.se"
+
+
+def test_get_legacy_value_fallback_field_list_then_fallback_value():
+    legacy_object = {"title": "", "alternative_title": "", "backup_title": ""}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": ["alternative_title", "backup_title"],
+        "fallback_value": "default@leifochbilly.se",
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "default@leifochbilly.se"
+
+
 def test_get_legacy_value_fallback_value():
     legacy_object = {"title": "", "alternative_title": ""}
     mapping_file_entry = {
@@ -5436,6 +5472,28 @@ def test_get_map_entries_by_folio_prop_name_with_partial_matches():
     result = list(MappingFileMapperBase.get_map_entries_by_folio_prop_name("title", data))
     assert len(result) == 1
     assert result[0]["value"] == "Valid Value"
+
+
+def test_get_map_entries_by_folio_prop_name_with_fallback_legacy_field_list():
+    data = [
+        {
+            "folio_field": "title",
+            "value": "",
+            "legacy_field": "",
+            "fallback_legacy_field": ["alternative_title", "backup_title"],
+            "fallback_value": "",
+        },
+        {
+            "folio_field": "author",
+            "value": "",
+            "legacy_field": "",
+            "fallback_legacy_field": "",
+            "fallback_value": "",
+        },
+    ]
+    result = list(MappingFileMapperBase.get_map_entries_by_folio_prop_name("title", data))
+    assert len(result) == 1
+    assert result[0]["fallback_legacy_field"] == ["alternative_title", "backup_title"]
 
 
 def test_map_array_object_array_string_with_delimiter_and_delimited_enum(

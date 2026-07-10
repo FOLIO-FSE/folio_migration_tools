@@ -169,6 +169,27 @@ def test_use_fallback_legacy_field_if_legacy_field_empty(mapper):
     assert organization["accounts"][0]["name"] == "Abby Books"
 
 
+def test_use_fallback_legacy_field_list_in_order(mapper):
+    data["name"] = "Abby Books"
+    data["code"] = "fallback_from_code"
+    data["account_number"] = "123"
+    data["account_status"] = "Active"
+    data["account_name"] = ""
+
+    account_name_entry = next(
+        entry for entry in organization_map["data"] if entry["folio_field"] == "accounts[0].name"
+    )
+    original_fallback = account_name_entry.get("fallback_legacy_field", "")
+
+    try:
+        account_name_entry["fallback_legacy_field"] = ["missing_field", "code"]
+        organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)
+    finally:
+        account_name_entry["fallback_legacy_field"] = original_fallback
+
+    assert organization["accounts"][0]["name"] == "fallback_from_code"
+
+
 def test_single_org_type_refdata_mapping(mapper):
     data["code"] = "ov9"
     organization, idx = mapper.do_map(data, data["code"], FOLIONamespaces.organizations)

@@ -342,6 +342,59 @@ def test_basic_fallback(mocked_folio_client):
     assert folio_user["externalSystemId"] == "externalid_2"
 
 
+def test_basic_fallback_list(mocked_folio_client):
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+                "fallback_legacy_field": ["ext_id2", "ext_id3"],
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "ext_id": "",
+        "ext_id2": "",
+        "ext_id3": "externalid_3",
+        "user_name": "user_name_1",
+        "id": "1",
+    }
+    mock_library_conf = mocked_classes.get_mocked_library_config()
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_task_config.remove_request_preferences = False
+    mock_task_config.remove_username = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["externalSystemId"] == "externalid_3"
+
+
 def test_basic_fallback_value(mocked_folio_client):
     user_map = {
         "data": [

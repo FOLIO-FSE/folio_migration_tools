@@ -59,7 +59,7 @@ There might be exceptions to this in some areas, but generally, this is the how 
 3. Then, the *legacy field* value gets extracted from the source record.
 4. If there is an entry for rules.replaceValues, the extracted value is run through this process
 5. If there is an entry for rules.regexGetFirstMatchOrEmpty, the extracted value is run through this process as well and then return the value
-6. If the above steps does not result in a value, and if there is a fallback field in the legacy data, mapped by the *fallback_legacy_field*, this field will be returned
+6. If the above steps does not result in a value, and if there is a fallback field in the legacy data, mapped by the *fallback_legacy_field*, this field will be returned. If *fallback_legacy_field* is an array, each field is evaluated in order and the first non-empty value is returned.
 7. If none of the above have resulted in a value, and there is an entry for *fallback_value* in the mapping entry, this value will be returned
 
 *If there are multiple mapping entries for the same FOLIO field, the results from the above process will get concatenated with a space between them, in the order that they appear in the mapping file.*
@@ -188,7 +188,35 @@ The value property is a way to add the same value to all records.
 The description field is used for your own notes.
 
 ### The fallback_legacy_field property
-The fallback_legacy_field is used as a falback, so when the legacy_field and the fallback_legacy_field is mapped and has a value, this value will be used.
+The fallback_legacy_field is used as a fallback, so when the legacy_field does not produce a value, fallback_legacy_field is checked.
+
+This property accepts either:
+- A string (backward-compatible behavior)
+- An array of strings for ordered fallback resolution
+
+Examples:
+
+Single fallback field:
+```
+{
+    "folio_field": "email",
+    "legacy_field": "PRIMARY EMAIL",
+    "fallback_legacy_field": "SECONDARY EMAIL"
+}
+```
+
+Ordered fallback fields:
+```
+{
+    "folio_field": "email",
+    "legacy_field": "PRIMARY EMAIL",
+    "fallback_legacy_field": [
+        "SECONDARY EMAIL",
+        "WORK EMAIL",
+        "RECORD #(PATRON)"
+    ]
+}
+```
 
 ### The fallback_value property
 The fallback_value is used as a last resort, so if no other mappings have returned a value, this value will be set.
