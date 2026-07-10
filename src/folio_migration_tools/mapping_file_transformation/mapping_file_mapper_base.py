@@ -439,16 +439,19 @@ class MappingFileMapperBase(MapperBase):
             )
             value = re.findall(my_pattern, value)[0]
         if not value and mapping_file_entry.get("fallback_legacy_field", ""):
-            migration_report.add(
-                "FieldMappingDetails",
-                (
-                    f"Added fallback value from {mapping_file_entry['fallback_legacy_field']} "
-                    f"instead of {mapping_file_entry['legacy_field']}"
-                ),
+            fallback_field, fallback_value = MappingFileMapperBase.get_fallback_legacy_value(
+                legacy_object,
+                mapping_file_entry.get("fallback_legacy_field", ""),
             )
-            value = legacy_object.get(
-                mapping_file_entry.get("fallback_legacy_field", ""), ""
-            ).strip()
+            if fallback_field and fallback_value not in ["", None]:
+                migration_report.add(
+                    "FieldMappingDetails",
+                    (
+                        f"Added fallback value from {fallback_field} "
+                        f"instead of {mapping_file_entry['legacy_field']}"
+                    ),
+                )
+                value = fallback_value
         if not value and mapping_file_entry.get("fallback_value", ""):
             migration_report.add(
                 "FieldMappingDetails",
@@ -459,6 +462,33 @@ class MappingFileMapperBase(MapperBase):
             )
             value = mapping_file_entry.get("fallback_value", "")
         return value
+
+    @staticmethod
+    def normalize_fallback_legacy_fields(fallback_legacy_field):
+        if isinstance(fallback_legacy_field, str):
+            return (
+                [fallback_legacy_field] if fallback_legacy_field.strip() not in empty_vals else []
+            )
+        if isinstance(fallback_legacy_field, list):
+            return [
+                field
+                for field in fallback_legacy_field
+                if isinstance(field, str) and field.strip() not in empty_vals
+            ]
+        return []
+
+    @staticmethod
+    def get_fallback_legacy_value(legacy_object: dict, fallback_legacy_field):
+        fallback_fields = MappingFileMapperBase.normalize_fallback_legacy_fields(
+            fallback_legacy_field
+        )
+        for fallback_field in fallback_fields:
+            fallback_value = legacy_object.get(fallback_field, "")
+            if isinstance(fallback_value, str):
+                fallback_value = fallback_value.strip()
+            if fallback_value not in ["", None]:
+                return fallback_field, fallback_value
+        return "", ""
 
     @staticmethod
     def get_legacy_vals(legacy_item, legacy_item_keys):
@@ -1232,6 +1262,8 @@ def in_deep(dictionary, keys):
 
 
 def is_set_or_bool_or_numeric(any_value):
+    if isinstance(any_value, list):
+        return any(is_set_or_bool_or_numeric(value) for value in any_value)
     return (isinstance(any_value, str) and (any_value.strip() not in empty_vals)) or isinstance(
         any_value, (int, float, complex)
     )
