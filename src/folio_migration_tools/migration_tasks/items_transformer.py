@@ -40,7 +40,7 @@ from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 
 logger = logging.getLogger(__name__)
 
-csv.field_size_limit(int(ctypes.c_ulong(-1).value // 2))
+csv.field_size_limit((ctypes.c_ulong(-1).value // 2))
 
 
 class ItemsTransformer(MigrationTaskBase):
@@ -183,7 +183,7 @@ class ItemsTransformer(MigrationTaskBase):
                     "formatted boundwith relationship file to be provided."
                 ),
             ),
-        ] = "voyager"
+        ] = IlsFlavour.voyager
         boundwith_relationship_file_path: Annotated[
             str,
             Field(
@@ -231,7 +231,7 @@ class ItemsTransformer(MigrationTaskBase):
         csv.register_dialect("tsv", delimiter="\t")
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.task_config = task_config
-        self.task_configuration = self.task_config
+        self.task_configuration: ItemsTransformer.TaskConfiguration = self.task_config
         self.check_source_files(
             self.folder_structure.legacy_records_folder, self.task_config.files
         )
