@@ -408,6 +408,11 @@ class MappingFileMapperBase(MapperBase):
             migration_report,
         )
 
+        if not MappingFileMapperBase.should_apply_rules_for_source(
+            source_field, mapping_file_entry
+        ):
+            return value
+
         return MappingFileMapperBase.apply_rules_to_resolved_value(
             value,
             source_field,
@@ -415,6 +420,20 @@ class MappingFileMapperBase(MapperBase):
             migration_report,
             multi_field_delimiter,
         )
+
+    @staticmethod
+    def should_apply_rules_for_source(source_field: str, mapping_file_entry: dict) -> bool:
+        # fallback_value is a literal fallback and should bypass rules, like value.
+        if source_field == "fallback_value":
+            return False
+
+        rules_apply_scope = mapping_file_entry.get("rules_apply_scope", "resolved_non_literal")
+        if rules_apply_scope == "none":
+            return False
+        if rules_apply_scope == "legacy_only":
+            return source_field == mapping_file_entry.get("legacy_field", "")
+
+        return True
 
     @staticmethod
     def resolve_mapped_legacy_value(
