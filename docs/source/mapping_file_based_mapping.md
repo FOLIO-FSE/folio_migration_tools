@@ -55,12 +55,15 @@ folio_field and legacy_field are mandatory. All other fields are optional.
 ### The priority of the mappings in the mapping entry:
 There might be exceptions to this in some areas, but generally, this is the how the mapping works:
 1. If there are reference data mappings or special cases for particular fields, then this has precedence
-2. Values added to the *value* field are returned immediately without any further manipulation
-3. Then, the *legacy field* value gets extracted from the source record.
-4. If there is an entry for rules.replaceValues, the extracted value is run through this process
-5. If there is an entry for rules.regexGetFirstMatchOrEmpty, the extracted value is run through this process as well and then return the value
-6. If the above steps does not result in a value, and if there is a fallback field in the legacy data, mapped by the *fallback_legacy_field*, this field will be returned. If *fallback_legacy_field* is an array, each field is evaluated in order and the first non-empty value is returned.
-7. If none of the above have resulted in a value, and there is an entry for *fallback_value* in the mapping entry, this value will be returned
+2. Values added to the *value* field are returned immediately without any further manipulation (rules are not applied)
+3. If *value* is not set, a source value is resolved in this order:
+    - *legacy_field*
+    - *fallback_legacy_field* (string or ordered array, first non-empty)
+    - *fallback_value*
+4. If a source value was resolved from *legacy_field*, *fallback_legacy_field*, or *fallback_value*, rules are applied once to that resolved value.
+5. If there is an entry for rules.regexGsub, it is applied first.
+6. If there is an entry for rules.replaceValues, it is applied next.
+7. If there is an entry for rules.regexGetFirstMatchOrEmpty, it is applied last.
 
 *If there are multiple mapping entries for the same FOLIO field, the results from the above process will get concatenated with a space between them, in the order that they appear in the mapping file.*
 
@@ -221,8 +224,14 @@ Ordered fallback fields:
 ### The fallback_value property
 The fallback_value is used as a last resort, so if no other mappings have returned a value, this value will be set.
 
+If rules are defined in the mapping entry, they are applied once to the resolved fallback_value in the same way as for legacy_field/fallback_legacy_field values.
+
 ### The rules mapping entry
-This is a placeHolder for more advanced mappings. 
+This is a placeHolder for more advanced mappings.
+
+Rules are applied once after a source value has been resolved (*legacy_field*, *fallback_legacy_field*, or *fallback_value*).
+
+If *value* is explicitly set in the mapping entry, that literal value is returned directly and rules are not applied.
 
 ### rules.regexGetFirstMatchOrEmpty
 This propety should contain a regular expression with a capturing group. The resulting string will be the first capturing group. Imagine the following mapping:

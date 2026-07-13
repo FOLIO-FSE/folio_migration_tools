@@ -402,19 +402,77 @@ class MappingFileMapperBase(MapperBase):
             )
             return value_mapped_value
 
-        # Value mapped from the Legacy field(s)
-        value = legacy_object.get(mapping_file_entry["legacy_field"], "")
+        value, source_field = MappingFileMapperBase.resolve_mapped_legacy_value(
+            legacy_object,
+            mapping_file_entry,
+            migration_report,
+        )
 
-        if value and mapping_file_entry.get("rules", {}).get("regexGsub", ""):
+        return MappingFileMapperBase.apply_rules_to_resolved_value(
+            value,
+            source_field,
+            mapping_file_entry,
+            migration_report,
+            multi_field_delimiter,
+        )
+
+    @staticmethod
+    def resolve_mapped_legacy_value(
+        legacy_object: dict, mapping_file_entry: dict, migration_report
+    ):
+        primary_field = mapping_file_entry["legacy_field"]
+        value = legacy_object.get(primary_field, "")
+        if value:
+            return value, primary_field
+
+        fallback_field, fallback_value = MappingFileMapperBase.get_fallback_legacy_value(
+            legacy_object,
+            mapping_file_entry.get("fallback_legacy_field", ""),
+        )
+        if fallback_field and fallback_value not in ["", None]:
+            migration_report.add(
+                "FieldMappingDetails",
+                (
+                    f"Added fallback value from {fallback_field} "
+                    f"instead of {mapping_file_entry['legacy_field']}"
+                ),
+            )
+            return fallback_value, fallback_field
+
+        fallback_value_literal = mapping_file_entry.get("fallback_value", "")
+        if fallback_value_literal:
+            migration_report.add(
+                "FieldMappingDetails",
+                (
+                    f"Added fallback value {fallback_value_literal} "
+                    f"instead of empty {mapping_file_entry['legacy_field']}"
+                ),
+            )
+            return fallback_value_literal, "fallback_value"
+
+        return value, primary_field
+
+    @staticmethod
+    def apply_rules_to_resolved_value(
+        value,
+        source_field,
+        mapping_file_entry: dict,
+        migration_report: MigrationReport,
+        multi_field_delimiter="",
+    ):
+        if not value:
+            return value
+
+        if mapping_file_entry.get("rules", {}).get("regexGsub", ""):
             gsub_rule = mapping_file_entry.get("rules", {}).get("regexGsub", "")
-
             if not isinstance(gsub_rule, dict):
                 raise ValueError("regexGsub must be a dictionary with 'pattern' and 'replacement'")
 
             pattern = gsub_rule.get("pattern", "")
             replacement = gsub_rule.get("replacement", "")
             value = re.sub(pattern, replacement, value)
-        if value and mapping_file_entry.get("rules", {}).get("replaceValues", {}):
+
+        if mapping_file_entry.get("rules", {}).get("replaceValues", {}):
             if multi_field_delimiter and multi_field_delimiter in value:
                 replaced_split_values = [
                     mapping_file_entry["rules"]["replaceValues"].get(sv, "")
@@ -427,40 +485,16 @@ class MappingFileMapperBase(MapperBase):
             if replaced_val or isinstance(replaced_val, bool):
                 migration_report.add(
                     "FieldMappingDetails",
-                    (
-                        f"Replaced {value} in {mapping_file_entry['legacy_field']} "
-                        f"with {replaced_val}"
-                    ),
+                    f"Replaced {value} in {source_field} with {replaced_val}",
                 )
                 value = replaced_val
-        if value and mapping_file_entry.get("rules", {}).get("regexGetFirstMatchOrEmpty", ""):
+
+        if mapping_file_entry.get("rules", {}).get("regexGetFirstMatchOrEmpty", ""):
             my_pattern = (
                 f"{mapping_file_entry.get('rules', {}).get('regexGetFirstMatchOrEmpty')}|$"
             )
             value = re.findall(my_pattern, value)[0]
-        if not value and mapping_file_entry.get("fallback_legacy_field", ""):
-            fallback_field, fallback_value = MappingFileMapperBase.get_fallback_legacy_value(
-                legacy_object,
-                mapping_file_entry.get("fallback_legacy_field", ""),
-            )
-            if fallback_field and fallback_value not in ["", None]:
-                migration_report.add(
-                    "FieldMappingDetails",
-                    (
-                        f"Added fallback value from {fallback_field} "
-                        f"instead of {mapping_file_entry['legacy_field']}"
-                    ),
-                )
-                value = fallback_value
-        if not value and mapping_file_entry.get("fallback_value", ""):
-            migration_report.add(
-                "FieldMappingDetails",
-                (
-                    f"Added fallback value {mapping_file_entry['fallback_value']} "
-                    f"instead of empty {mapping_file_entry['legacy_field']}"
-                ),
-            )
-            value = mapping_file_entry.get("fallback_value", "")
+
         return value
 
     @staticmethod

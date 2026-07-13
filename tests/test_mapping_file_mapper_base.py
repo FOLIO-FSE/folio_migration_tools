@@ -4959,6 +4959,54 @@ def test_get_legacy_value_fallback_field_list_then_fallback_value():
     assert res == "default@leifochbilly.se"
 
 
+def test_get_legacy_value_fallback_field_then_rules_applied_once():
+    legacy_object = {"title": "", "alternative_title": "0"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": "alternative_title",
+        "rules": {"replaceValues": {"0": "Graduate", "a": "Alumni"}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "Graduate"
+
+
+def test_get_legacy_value_fallback_value_then_rules_applied_once():
+    legacy_object = {"title": "", "alternative_title": ""}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": "alternative_title",
+        "fallback_value": "fallback@leifochbilly.se",
+        "rules": {"regexGetFirstMatchOrEmpty": "(.*)@.*"},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "fallback"
+
+
+def test_get_legacy_value_literal_value_still_bypasses_rules():
+    legacy_object = {"title": "0"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "Torsten",
+        "description": "",
+        "rules": {"replaceValues": {"Torsten": "Changed"}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "Torsten"
+
+
 def test_get_legacy_value_fallback_value():
     legacy_object = {"title": "", "alternative_title": ""}
     mapping_file_entry = {
