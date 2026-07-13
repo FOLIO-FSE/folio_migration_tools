@@ -60,10 +60,14 @@ There might be exceptions to this in some areas, but generally, this is the how 
     - *legacy_field*
     - *fallback_legacy_field* (string or ordered array, first non-empty)
     - *fallback_value*
-4. If a source value was resolved from *legacy_field*, *fallback_legacy_field*, or *fallback_value*, rules are applied once to that resolved value.
-5. If there is an entry for rules.regexGsub, it is applied first.
-6. If there is an entry for rules.replaceValues, it is applied next.
-7. If there is an entry for rules.regexGetFirstMatchOrEmpty, it is applied last.
+4. By default, if a source value was resolved from *legacy_field* or *fallback_legacy_field*, rules are applied once to that resolved value.
+5. If the resolved value came from *fallback_value*, rules are not applied (literal fallback behavior, same as *value*).
+
+#### Rule execution order
+The following order applies only when rules are applied (that is, when the resolved source is *legacy_field* or *fallback_legacy_field*):
+1. If there is an entry for rules.regexGsub, it is applied first.
+2. If there is an entry for rules.replaceValues, it is applied next.
+3. If there is an entry for rules.regexGetFirstMatchOrEmpty, it is applied last.
 
 *If there are multiple mapping entries for the same FOLIO field, the results from the above process will get concatenated with a space between them, in the order that they appear in the mapping file.*
 
@@ -224,14 +228,34 @@ Ordered fallback fields:
 ### The fallback_value property
 The fallback_value is used as a last resort, so if no other mappings have returned a value, this value will be set.
 
-If rules are defined in the mapping entry, they are applied once to the resolved fallback_value in the same way as for legacy_field/fallback_legacy_field values.
+The fallback_value is treated as a literal fallback (same behavior as *value*), so rules are not applied to it.
 
 ### The rules mapping entry
 This is a placeHolder for more advanced mappings.
 
-Rules are applied once after a source value has been resolved (*legacy_field*, *fallback_legacy_field*, or *fallback_value*).
+Rules are applied once after a source value has been resolved from *legacy_field* or *fallback_legacy_field*.
 
 If *value* is explicitly set in the mapping entry, that literal value is returned directly and rules are not applied.
+
+If *fallback_value* is set, it is only used after *legacy_field* and *fallback_legacy_field* resolution returns no value. When used, *fallback_value* is treated as a literal and rules are not applied.
+
+Optional: you can control this behavior with *rules_apply_scope* in a mapping entry:
+- *resolved_non_literal* (default): apply rules for *legacy_field* and *fallback_legacy_field* sources
+- *legacy_only*: apply rules only when the resolved source is *legacy_field*
+- *none*: do not apply rules for that mapping entry
+
+Example:
+```
+{
+    "folio_field": "email",
+    "legacy_field": "PRIMARY EMAIL",
+    "fallback_legacy_field": "SECONDARY EMAIL",
+    "rules_apply_scope": "legacy_only",
+    "rules": {
+        "regexGetFirstMatchOrEmpty": "(.*)@.*"
+    }
+}
+```
 
 ### rules.regexGetFirstMatchOrEmpty
 This propety should contain a regular expression with a capturing group. The resulting string will be the first capturing group. Imagine the following mapping:

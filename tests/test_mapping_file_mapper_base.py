@@ -4975,7 +4975,57 @@ def test_get_legacy_value_fallback_field_then_rules_applied_once():
     assert res == "Graduate"
 
 
-def test_get_legacy_value_fallback_value_then_rules_applied_once():
+def test_get_legacy_value_rules_apply_scope_legacy_only_skips_fallback_field_rules():
+    legacy_object = {"title": "", "alternative_title": "0"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": "alternative_title",
+        "rules_apply_scope": "legacy_only",
+        "rules": {"replaceValues": {"0": "Graduate", "a": "Alumni"}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "0"
+
+
+def test_get_legacy_value_rules_apply_scope_legacy_only_applies_primary_rules():
+    legacy_object = {"title": "0", "alternative_title": "a"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "fallback_legacy_field": "alternative_title",
+        "rules_apply_scope": "legacy_only",
+        "rules": {"replaceValues": {"0": "Graduate", "a": "Alumni"}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "Graduate"
+
+
+def test_get_legacy_value_rules_apply_scope_none_disables_rules():
+    legacy_object = {"title": "0"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "rules_apply_scope": "none",
+        "rules": {"replaceValues": {"0": "Graduate", "a": "Alumni"}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "0"
+
+
+def test_get_legacy_value_fallback_value_bypasses_rules():
     legacy_object = {"title": "", "alternative_title": ""}
     mapping_file_entry = {
         "folio_field": "title",
@@ -4989,7 +5039,7 @@ def test_get_legacy_value_fallback_value_then_rules_applied_once():
     res = MappingFileMapperBase.get_legacy_value(
         legacy_object, mapping_file_entry, MigrationReport(), ""
     )
-    assert res == "fallback"
+    assert res == "fallback@leifochbilly.se"
 
 
 def test_get_legacy_value_literal_value_still_bypasses_rules():
