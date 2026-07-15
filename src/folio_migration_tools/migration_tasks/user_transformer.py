@@ -291,15 +291,15 @@ class UserTransformer(MigrationTaskBase):
     @staticmethod
     def clean_user(folio_user, index_or_id):
         valid_addresses = remove_empty_addresses(folio_user)
+        valid_addresses = remove_addresses_missing_type_id(valid_addresses, index_or_id)
+        valid_addresses = remove_duplicate_address_types(valid_addresses, index_or_id)
         # Make sure the user has exactly one primary address
         if valid_addresses:
             primary_true = find_primary_addresses(valid_addresses)
             if len(primary_true) < 1:
                 valid_addresses[0]["primaryAddress"] = True
             elif len(primary_true) > 1:
-                logging.log(
-                    26,
-                    "DATA ISSUE\t%s\t%s\t%s",
+                Helper.log_data_issue(
                     index_or_id,
                     "Too many addresses mapped as primary. Setting first one to primary.",
                     primary_true,
@@ -324,6 +324,54 @@ def remove_empty_addresses(folio_user):
             if address_fields:
                 valid_addresses.append(address)
     return valid_addresses
+
+
+def normalize_address_type_id(address):
+    address_type_id = address.get("addressTypeId")
+    if isinstance(address_type_id, str):
+        address_type_id = address_type_id.strip()
+        return address_type_id if address_type_id else None
+    return address_type_id
+
+
+def remove_addresses_missing_type_id(addresses, index_or_id):
+    addresses_with_type = []
+    for address in addresses:
+        normalized_type_id = normalize_address_type_id(address)
+        if normalized_type_id is None:
+            Helper.log_data_issue(
+                index_or_id,
+                "personal.addresses.addressTypeId is required. Discarding address.",
+                address,
+            )
+            continue
+        address["addressTypeId"] = normalized_type_id
+        addresses_with_type.append(address)
+    return addresses_with_type
+
+
+def remove_duplicate_address_types(addresses, index_or_id):
+    seen_type_ids = {}
+    deduplicated_addresses = []
+    for address in addresses:
+        address_type_id = address.get("addressTypeId")
+        if address_type_id in seen_type_ids:
+            Helper.log_data_issue(
+                index_or_id,
+                (
+                    "Duplicate personal.addresses.addressTypeId detected. "
+                    "Discarding duplicate address."
+                ),
+                {
+                    "addressTypeId": address_type_id,
+                    "keptAddress": seen_type_ids[address_type_id],
+                    "discardedAddress": address,
+                },
+            )
+            continue
+        seen_type_ids[address_type_id] = address
+        deduplicated_addresses.append(address)
+    return deduplicated_addresses
 
 
 def find_primary_addresses(addresses):

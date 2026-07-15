@@ -19,8 +19,18 @@ def test_clean_user_all_false():
     folio_user = {
         "personal": {
             "addresses": [
-                {"id": "some id", "addressLine1": "addressLine1", "primaryAddress": False},
-                {"id": "some other id", "addressLine1": "addressLine1", "primaryAddress": False},
+                {
+                    "id": "some id",
+                    "addressLine1": "addressLine1",
+                    "addressTypeId": "home",
+                    "primaryAddress": False,
+                },
+                {
+                    "id": "some other id",
+                    "addressLine1": "addressLine1",
+                    "addressTypeId": "work",
+                    "primaryAddress": False,
+                },
             ],
             "metadata": "hm",
         }
@@ -38,8 +48,18 @@ def test_clean_user_all_false_one_string():
     folio_user = {
         "personal": {
             "addresses": [
-                {"id": "some id", "addressLine1": "addressLine1", "primaryAddress": False},
-                {"id": "some other id", "addressLine1": "addressLine1", "primaryAddress": "False"},
+                {
+                    "id": "some id",
+                    "addressLine1": "addressLine1",
+                    "addressTypeId": "home",
+                    "primaryAddress": False,
+                },
+                {
+                    "id": "some other id",
+                    "addressLine1": "addressLine1",
+                    "addressTypeId": "work",
+                    "primaryAddress": "False",
+                },
             ],
             "metadata": "hm",
         }
@@ -63,8 +83,18 @@ def test_clean_user_all_true():
     folio_user = {
         "personal": {
             "addresses": [
-                {"id": "some id", "addressLine1": "addressLine1", "primaryAddress": True},
-                {"id": "some other id", "addressLine1": "addressLine1", "primaryAddress": "True"},
+                {
+                    "id": "some id",
+                    "addressLine1": "addressLine1",
+                    "addressTypeId": "home",
+                    "primaryAddress": True,
+                },
+                {
+                    "id": "some other id",
+                    "addressLine1": "addressLine1",
+                    "addressTypeId": "work",
+                    "primaryAddress": "True",
+                },
             ]
         }
     }
@@ -81,8 +111,12 @@ def test_clean_user_no_primary_info():
     folio_user = {
         "personal": {
             "addresses": [
-                {"id": "some id", "addressLine1": "addressLine1"},
-                {"id": "some other id", "addressLine1": "addressLine1"},
+                {"id": "some id", "addressLine1": "addressLine1", "addressTypeId": "home"},
+                {
+                    "id": "some other id",
+                    "addressLine1": "addressLine1",
+                    "addressTypeId": "work",
+                },
             ]
         }
     }
@@ -99,7 +133,7 @@ def test_clean_user_no_real_address_data():
     folio_user = {
         "personal": {
             "addresses": [
-                {"id": "some id", "addressLine1": "addressLine1"},
+                {"id": "some id", "addressLine1": "addressLine1", "addressTypeId": "home"},
                 {"id": "some other id", "primaryAddress": True, "addressTypeId": "some type"},
             ]
         }
@@ -202,3 +236,86 @@ def test_find_primary_addresses_all_missing():
     assert len(primary) == 0
     for addr in addresses:
         assert addr["primaryAddress"] is False
+
+
+def test_clean_user_missing_address_type_discarded_and_logged(caplog):
+    caplog.set_level(26)
+    folio_user = {
+        "personal": {
+            "addresses": [
+                {"id": "missing-type", "addressLine1": "Address 1"},
+                {
+                    "id": "valid",
+                    "addressLine1": "Address 2",
+                    "addressTypeId": "home",
+                    "primaryAddress": False,
+                },
+            ]
+        }
+    }
+
+    UserTransformer.clean_user(folio_user, "u-1")
+
+    assert len(folio_user["personal"]["addresses"]) == 1
+    assert folio_user["personal"]["addresses"][0]["id"] == "valid"
+    assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
+    assert "personal.addresses.addressTypeId is required. Discarding address." in caplog.text
+
+
+def test_clean_user_blank_address_type_discarded_and_logged(caplog):
+    caplog.set_level(26)
+    folio_user = {
+        "personal": {
+            "addresses": [
+                {
+                    "id": "blank-type",
+                    "addressLine1": "Address 1",
+                    "addressTypeId": "   ",
+                },
+                {
+                    "id": "valid",
+                    "addressLine1": "Address 2",
+                    "addressTypeId": "work",
+                    "primaryAddress": False,
+                },
+            ]
+        }
+    }
+
+    UserTransformer.clean_user(folio_user, "u-2")
+
+    assert len(folio_user["personal"]["addresses"]) == 1
+    assert folio_user["personal"]["addresses"][0]["id"] == "valid"
+    assert "personal.addresses.addressTypeId is required. Discarding address." in caplog.text
+
+
+def test_clean_user_duplicate_address_type_discards_second_and_logs(caplog):
+    caplog.set_level(26)
+    folio_user = {
+        "personal": {
+            "addresses": [
+                {
+                    "id": "first",
+                    "addressLine1": "Address 1",
+                    "addressTypeId": "home",
+                    "primaryAddress": False,
+                },
+                {
+                    "id": "second",
+                    "addressLine1": "Address 2",
+                    "addressTypeId": "home",
+                    "primaryAddress": True,
+                },
+            ]
+        }
+    }
+
+    UserTransformer.clean_user(folio_user, "u-3")
+
+    assert len(folio_user["personal"]["addresses"]) == 1
+    assert folio_user["personal"]["addresses"][0]["id"] == "first"
+    assert folio_user["personal"]["addresses"][0]["primaryAddress"] is True
+    assert (
+        "Duplicate personal.addresses.addressTypeId detected. Discarding duplicate address."
+        in caplog.text
+    )
