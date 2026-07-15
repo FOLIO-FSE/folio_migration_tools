@@ -139,6 +139,23 @@ Map multiple addresses using array indexing:
 }
 ```
 
+## Address Validation Rules
+
+During cleanup, UserTransformer enforces the following rules for `personal.addresses`:
+
+- Addresses with no meaningful address content are removed.
+- `personal.addresses.addressTypeId` is required for every remaining address.
+- If `addressTypeId` is missing or blank, that address is discarded and logged as a data issue.
+- Only one address per `addressTypeId` is allowed.
+- If duplicate `addressTypeId` values are present, the first address is kept, later duplicates are discarded, and each discard is logged as a data issue.
+- Exactly one address is normalized to `primaryAddress=true`:
+    - If none are primary, the first remaining address is set to primary.
+    - If multiple are primary, only the first remains primary and the rest are set to false (also logged as a data issue).
+
+```{note}
+If your source data can contain multiple addresses, map a valid `addressTypeId` for each one to avoid unexpected address drops.
+```
+
 ## Mapping Multiple Departments
 
 To map multiple departments for a user, include all legacy values in the same column, sub-delimited with the `multi_field_delimiter` value from your `libraryConfiguration`:
