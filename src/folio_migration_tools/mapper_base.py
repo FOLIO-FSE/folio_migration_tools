@@ -248,7 +248,8 @@ class MapperBase:
             ) from exception
 
     def handle_transformation_field_mapping_error(self, index_or_id, error):
-        self.migration_report.add("FieldMappingErrors", error)
+        error_key = f"{error.message}\t{error.data_value}"
+        self.migration_report.add("FieldMappingErrors", error_key)
         error.index_or_id = error.index_or_id or index_or_id
         error.log_it()
         self.migration_report.add_general_statistics(i18n_t("Field Mapping Errors found"))

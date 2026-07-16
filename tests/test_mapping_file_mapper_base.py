@@ -1,6 +1,7 @@
 import csv
 import functools
 import io
+import json
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -9,6 +10,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
@@ -6323,4 +6325,21 @@ def test_validate_array_item_missing_required_log_it_output(
     assert "PO-12345" in log_msg
     assert "Required properties missing in poLines item" in log_msg
     assert "orderFormat" in log_msg
-    assert "source" in log_msg
+
+
+def test_field_mapping_errors_report_is_json_serializable(mocked_file_mapper):
+    err = TransformationFieldMappingError(
+        index_or_id="rec-1",
+        message="Required properties missing in poLines item",
+        data_value="orderFormat,source",
+    )
+
+    mocked_file_mapper.handle_transformation_field_mapping_error("rec-1", err)
+
+    output = io.StringIO()
+    mocked_file_mapper.migration_report.write_json_report(output)
+    payload = json.loads(output.getvalue())
+
+    assert "FieldMappingErrors" in payload
+    assert isinstance(payload["FieldMappingErrors"], dict)
+    assert payload["FieldMappingErrors"]["Required properties missing in poLines item\torderFormat,source"] == 1
