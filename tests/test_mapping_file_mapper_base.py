@@ -6343,3 +6343,62 @@ def test_field_mapping_errors_report_is_json_serializable(mocked_file_mapper):
     assert "FieldMappingErrors" in payload
     assert isinstance(payload["FieldMappingErrors"], dict)
     assert payload["FieldMappingErrors"]["Required properties missing in poLines item\torderFormat,source"] == 1
+
+
+def test_nested_object_fields_under_array_item_are_local_to_item(
+    mocked_folio_client, mocked_file_mapper
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "lines": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "source": {"type": "string"},
+                        "cost": {
+                            "type": "object",
+                            "properties": {
+                                "currency": {"type": "string"},
+                                "listUnitPrice": {"type": "number"},
+                            },
+                        },
+                    },
+                    "required": ["title", "source"],
+                },
+            },
+        },
+        "required": [],
+    }
+    record = {
+        "id": "rec-1",
+        "line_title": "Example title",
+        "line_source": "API",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "description": ""},
+            {"folio_field": "lines[0].title", "legacy_field": "line_title", "value": "", "description": ""},
+            {"folio_field": "lines[0].source", "legacy_field": "line_source", "value": "", "description": ""},
+            {"folio_field": "lines[0].cost.currency", "legacy_field": "", "value": "USD", "description": ""},
+            {"folio_field": "lines[0].cost.listUnitPrice", "legacy_field": "", "value": 10.5, "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.orders,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+
+    folio_rec, _ = mapper.do_map(record, record["id"], FOLIONamespaces.orders)
+
+    assert folio_rec["lines"][0]["cost"]["currency"] == "USD"
+    assert folio_rec["lines"][0]["cost"]["listUnitPrice"] == 10.5
