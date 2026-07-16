@@ -561,6 +561,12 @@ class MappingFileMapperBase(MapperBase):
         index_or_id,
         level: int,
     ):
+        def _normalize_local_object_path(path: str) -> str:
+            # When mapping nested object fields under an array item (for example,
+            # "poLines[0].cost.currency") into a temporary item object, keep only
+            # the local path segment ("cost.currency").
+            return path.split("].", 1)[1] if "]." in path else path
+
         temp_object: dict = {}
         for child_property_name, child_property in schema_property["properties"].items():
             sub_prop_path = f"{schema_property_name}.{child_property_name}"
@@ -607,12 +613,12 @@ class MappingFileMapperBase(MapperBase):
                 if p := self.get_prop(
                     legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
                 ):
-                    set_at_path(folio_object, sub_prop_path, p)
+                    set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
                 # temp_object[child_property_name] = p
             elif p := self.get_prop(
                 legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
             ):
-                set_at_path(folio_object, sub_prop_path, p)
+                set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
         if temp_object:
             set_deep(folio_object, schema_property_name, temp_object)
             # folio_object[schema_property_name] = temp_object
