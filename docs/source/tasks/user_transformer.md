@@ -35,6 +35,7 @@ Transform delimited (CSV/TSV) data into FOLIO User records with support for patr
 | `departmentsMapPath` | string | No | TSV file mapping user departments |
 | `addressTypeMapPath` | string | No | TSV file mapping address types |
 | `preferredContactTypeMapPath` | string | No | TSV file mapping preferred contact types |
+| `removeIdAndRequestPreferences` | boolean | No | Remove `id` and `requestPreference` from output. Leave this `false` when mapping user notes, because linked note creation depends on the transformed user `id`. |
 | `removeRequestPreferences` | boolean | No | Remove request preference data from output |
 | `userFile` | object | Yes | Source file definition with `file_name` |
 
@@ -99,6 +100,10 @@ Create a JSON mapping file in `mapping_files/`:
 
 ```{important}
 The `legacyIdentifier` field is required and must map to a unique value in your source data.
+```
+
+```{warning}
+If your user mapping includes `notes[...]` fields, do not enable `removeIdAndRequestPreferences`. User note records are linked using the transformed user `id`, so the transformed user output must retain `id` when notes are being mapped.
 ```
 
 ### Reference Data Mapping Files
@@ -230,6 +235,24 @@ Files are created in `iterations/<iteration>/results/`:
     }
 }
 ```
+
+### Remove ID And Request Preferences
+
+```json
+{
+    "name": "transform_users",
+    "migrationTaskType": "UserTransformer",
+    "userMappingFileName": "user_mapping.json",
+    "groupMapPath": "patron_groups.tsv",
+    "useGroupMap": true,
+    "removeIdAndRequestPreferences": true,
+    "userFile": {
+        "file_name": "patrons.tsv"
+    }
+}
+```
+
+Use this only when your transformed user records will not also be used to create linked user notes.
 
 ## Running the Task
 
