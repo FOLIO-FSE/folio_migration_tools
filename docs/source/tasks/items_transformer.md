@@ -202,7 +202,7 @@ Unlike BibsTransformer and the Holdings transformers, ItemsTransformer does not 
 The ItemsTransformer supports creating FOLIO `boundwithPart` records to link items to multiple holdings. The `boundwithFlavor` parameter determines how relationships are loaded and resolved. Supported values are `"voyager"` (default) and `"aleph"`.
 
 ```{note}
-For III/Sierra/Millennium-style boundwiths — where items link to multiple bibs directly in the source data — boundwith handling is performed at the holdings level by [HoldingsCsvTransformer](holdings_csv_transformer#boundwith-handling), not here. No `boundwithFlavor` or `boundwithRelationshipFilePath` is needed in that case.
+For III/Sierra/Millennium-style boundwiths — where items link to multiple bibs directly in the source data — boundwith handling is performed at the holdings level by [HoldingsCsvTransformer](holdings_csv_transformer.md#boundwith-handling), not here. No `boundwithFlavor` or `boundwithRelationshipFilePath` is needed in that case.
 ```
 
 #### Voyager-style boundwiths
