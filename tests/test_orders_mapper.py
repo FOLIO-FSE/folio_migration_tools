@@ -132,6 +132,18 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "description": "",
             },
             {
+                "folio_field": "compositePoLines[0].details.subscriptionFrom",
+                "legacy_field": "SUBSCRIPTION FROM",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].details.subscriptionTo",
+                "legacy_field": "SUBSCRIPTION TO",
+                "value": "",
+                "description": "",
+            },
+            {
                 "folio_field": "compositePoLines[0].source",
                 "legacy_field": "",
                 "value": "API",
@@ -363,6 +375,8 @@ def test_composite_order_with_one_pol_mapping(mapper):
         "copies": "2",
         "location": "order",
         "acqmethod": "p",
+        "SUBSCRIPTION FROM": "2026-01-01",
+        "SUBSCRIPTION TO": "2026-12-31",
     }
     composite_order_with_pol, idx = mapper.do_map(
         data, data["order_number"], FOLIONamespaces.orders
@@ -385,6 +399,8 @@ def test_composite_order_with_one_pol_mapping(mapper):
         == "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
     )
     assert composite_order_with_pol[pol_key][0]["locations"][0]["quantity"] == "2"
+    assert composite_order_with_pol[pol_key][0]["details"]["subscriptionFrom"] == "2026-01-01"
+    assert composite_order_with_pol[pol_key][0]["details"]["subscriptionTo"] == "2026-12-31"
 
 
 def test_one_order_one_pol_multiple_notes(mapper):
