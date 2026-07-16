@@ -604,16 +604,15 @@ class MappingFileMapperBase(MapperBase):
                     index_or_id,
                 )
             elif child_property.get("type", "") in ["string", "number", "integer"]:
-                path = sub_prop_path.split("].")[-1]
                 if p := self.get_prop(
                     legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
                 ):
-                    set_deep(folio_object, f"{path}", p)
+                    set_at_path(folio_object, sub_prop_path, p)
                 # temp_object[child_property_name] = p
             elif p := self.get_prop(
                 legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
             ):
-                set_deep(folio_object, sub_prop_path, p)
+                set_at_path(folio_object, sub_prop_path, p)
         if temp_object:
             set_deep(folio_object, schema_property_name, temp_object)
             # folio_object[schema_property_name] = temp_object
