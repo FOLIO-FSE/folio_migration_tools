@@ -1,4 +1,5 @@
 import logging
+from copy import deepcopy
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
@@ -498,6 +499,61 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
         str(mapper.extradata_writer.cache).count(composite_orders[1][pol_key][0]["id"])
         == 1
     )
+
+
+def test_composite_order_mapping_with_custom_fields(mapper):
+    custom_map = deepcopy(mapper.record_map)
+    pol_key = mapper.po_lines_key
+    custom_map["data"].extend(
+        [
+            {
+                "folio_field": "customFields.orderSource",
+                "legacy_field": "order_custom",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": f"{pol_key}[0].customFields.lineTag",
+                "legacy_field": "line_custom",
+                "value": "",
+                "description": "",
+            },
+        ]
+    )
+
+    custom_mapper = CompositeOrderMapper(
+        mapper.folio_client,
+        mapper.library_configuration,
+        mapper.task_configuration,
+        custom_map,
+        mapper.organizations_id_map,
+        mapper.instance_id_map,
+        mapper.acquisitions_methods_mapping.map,
+        "",
+        "",
+        "",
+        mapper.location_mapping.map,
+        "",
+        "",
+    )
+
+    data = {
+        "order_number": "o125",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Mapped with custom fields",
+        "bibnumber": "1",
+        "copies": "1",
+        "location": "order",
+        "acqmethod": "p",
+        "order_custom": "donation",
+        "line_custom": "rush",
+    }
+
+    mapped_order, _ = custom_mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+
+    assert mapped_order["customFields"]["orderSource"] == "donation"
+    assert mapped_order[pol_key][0]["customFields"]["lineTag"] == "rush"
 
 
 def test_perform_additional_mapping_get_org_from_folio(mapper):
