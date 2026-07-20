@@ -12,6 +12,7 @@ import re
 import sys
 import urllib.parse
 import uuid
+from typing import Any
 
 import httpx
 import i18n
@@ -105,6 +106,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
                         legacy_key, self.po_lines_key, 1
                     )
 
+        # customFields in orders schemas are typically open objects with
+        # additionalProperties and no explicit properties; add mapped keys so
+        # the generic object mapper can traverse and populate them.
+        self._inject_mapped_custom_fields_into_schema(composite_order_map)
+
         super().__init__(
             folio_client,
             self.composite_order_schema,
@@ -156,6 +162,82 @@ class CompositeOrderMapper(MappingFileMapperBase):
             True,
         )
         self.notes_mapper.migration_report = self.migration_report
+
+    @staticmethod
+    def _ensure_custom_fields_object_schema(
+        parent_schema: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        if not isinstance(parent_schema, dict):
+            return None
+        properties = parent_schema.get("properties")
+        if not isinstance(properties, dict):
+            return None
+        custom_fields_schema = properties.get("customFields")
+        if custom_fields_schema is None:
+            custom_fields_schema = {
+                "type": "object",
+                "description": "dynamically added custom fields",
+                "additionalProperties": True,
+                "properties": {},
+            }
+            properties["customFields"] = custom_fields_schema
+        elif "properties" not in custom_fields_schema or not isinstance(
+            custom_fields_schema.get("properties"), dict
+        ):
+            custom_fields_schema["properties"] = {}
+
+        return custom_fields_schema
+
+    @staticmethod
+    def _collect_order_custom_field_name(folio_field: str) -> str:
+        if not folio_field.startswith("customFields."):
+            return ""
+        field_name = folio_field.split(".", 1)[1]
+        return field_name if field_name and "." not in field_name else ""
+
+    def _collect_pol_custom_field_name(self, folio_field: str) -> str:
+        pol_pattern = re.compile(
+            rf"{re.escape(self.po_lines_key)}\[\d+\]\.customFields\.([^.]+)$"
+        )
+        pol_match = pol_pattern.match(folio_field)
+        return pol_match.group(1) if pol_match else ""
+
+    @staticmethod
+    def _inject_custom_fields_properties(
+        schema_root: dict[str, Any], custom_field_names: set[str]
+    ) -> None:
+        if not custom_field_names:
+            return
+        custom_fields_schema = CompositeOrderMapper._ensure_custom_fields_object_schema(
+            schema_root
+        )
+        if custom_fields_schema is None:
+            return
+        for field_name in custom_field_names:
+            custom_fields_schema["properties"][field_name] = {
+                "type": "string",
+                "description": "dynamically added custom prop",
+            }
+
+    def _inject_mapped_custom_fields_into_schema(self, composite_order_map: dict) -> None:
+        order_custom_fields = set()
+        pol_custom_fields = set()
+
+        for map_entry in composite_order_map.get("data", []):
+            folio_field = map_entry.get("folio_field", "")
+            if order_field := self._collect_order_custom_field_name(folio_field):
+                order_custom_fields.add(order_field)
+            if pol_field := self._collect_pol_custom_field_name(folio_field):
+                pol_custom_fields.add(pol_field)
+
+        self._inject_custom_fields_properties(self.composite_order_schema, order_custom_fields)
+
+        po_lines_schema = (
+            self.composite_order_schema.get("properties", {})
+            .get(self.po_lines_key, {})
+            .get("items", {})
+        )
+        self._inject_custom_fields_properties(po_lines_schema, pol_custom_fields)
 
     def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
         if folio_prop_name.endswith(".acquisitionMethod"):
