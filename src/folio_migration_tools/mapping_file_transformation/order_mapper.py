@@ -196,9 +196,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         return field_name if field_name and "." not in field_name else ""
 
     def _collect_pol_custom_field_name(self, folio_field: str) -> str:
-        pol_pattern = re.compile(
-            rf"{re.escape(self.po_lines_key)}\[\d+\]\.customFields\.([^.]+)$"
-        )
+        pol_pattern = re.compile(rf"{re.escape(self.po_lines_key)}\[\d+\]\.customFields\.([^.]+)$")
         pol_match = pol_pattern.match(folio_field)
         return pol_match.group(1) if pol_match else ""
 
