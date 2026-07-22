@@ -184,7 +184,7 @@ item_map = {
         {
             "folio_field": "notes[0].itemNoteTypeId",
             "legacy_field": "Not mapped",
-            "value": "7eaa4906-1aa8-46dc-b15d-fe5d96746929",
+            "value": "note",
             "description": "WMS Item Acquired Date",
         },
         {
@@ -712,9 +712,9 @@ def test_item_note_type_id_resolved_by_name(mapper: ItemMapper):
 def test_item_note_type_id_uuid_passthrough(mapper: ItemMapper):
     """A raw UUID in the 'value' field passes through unchanged."""
     item_data = {"barcode": "000000950000010", "note": "text", "lt": "ah", "mat": "oh"}
-    # item_map has value = "7eaa4906-1aa8-46dc-b15d-fe5d96746929" for notes[0].itemNoteTypeId
+    # item_map has value = "note" for notes[0].itemNoteTypeId, which maps to this UUID
     result = mapper.get_prop(item_data, "notes[0].itemNoteTypeId", item_data["barcode"], "")
-    assert result == "7eaa4906-1aa8-46dc-b15d-fe5d96746929"
+    assert result == "8d0a5eca-25de-4391-81a9-236eeefdd20b"
 
 
 def test_item_note_type_id_unknown_name_raises(mapper: ItemMapper):
