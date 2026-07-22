@@ -52,6 +52,7 @@ class ItemMapper(MappingFileMapperBase):
         temporary_location_mapping,
         library_configuration: LibraryConfiguration,
         task_configuration: AbstractTaskConfiguration,
+        item_note_type_map=None,
     ):
         """Initialize ItemMapper for item transformations.
 
@@ -69,6 +70,7 @@ class ItemMapper(MappingFileMapperBase):
             temporary_location_mapping: Mapping for temporary locations.
             library_configuration (LibraryConfiguration): Library configuration.
             task_configuration (AbstractTaskConfiguration): Task configuration.
+            item_note_type_map: Mapping of legacy to FOLIO item note types.
         """
         item_schema = folio_client.get_item_schema()
         super().__init__(
@@ -150,6 +152,26 @@ class ItemMapper(MappingFileMapperBase):
             "code",
             "LocationMapping",
         )
+        self._item_note_types: dict = {
+            nt["name"].lower(): nt["id"]
+            for nt in self.folio_client.folio_get_all(
+                "/item-note-types", "itemNoteTypes", "", 1000
+            )
+        }
+        self._item_note_type_mapping: RefDataMapping | None = (
+            RefDataMapping(
+                self.folio_client,
+                "/item-note-types",
+                "itemNoteTypes",
+                item_note_type_map,
+                "name",
+                "ItemNoteTypeMapping",
+            )
+            if item_note_type_map
+            else None
+        )
+        # Validate that all hardcoded note type values in the mapping are valid
+        self._validate_hardcoded_note_type_values(self._item_note_types, ".itemNoteTypeId")
 
     def apply_default_call_number_type(self, folio_rec: Dict):
         """Apply default call number type if call number parts exist but type is not set.
@@ -264,6 +286,15 @@ class ItemMapper(MappingFileMapperBase):
         elif folio_prop_name == "permanentLoanTypeId":
             return self.get_mapped_ref_data_value(
                 self.loan_type_mapping, legacy_item, folio_prop_name, index_or_id
+            )
+        elif folio_prop_name.endswith(".itemNoteTypeId"):
+            raw = super().get_prop(legacy_item, folio_prop_name, index_or_id, schema_default_value)
+            return self._resolve_note_type_id(
+                raw,
+                self._item_note_types,
+                folio_prop_name,
+                index_or_id,
+                self._item_note_type_mapping,
             )
 
         mapped_value = super().get_prop(

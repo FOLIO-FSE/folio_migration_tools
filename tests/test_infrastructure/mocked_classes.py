@@ -369,6 +369,46 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):  # noqa
             },
         ]
 
+    elif ref_data_path == "/item-note-types":
+        yield from [
+            {
+                "id": "8d0a5eca-25de-4391-81a9-236eeefdd20b",
+                "name": "Note",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.719+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.719+00:00",
+                },
+            },
+            {
+                "id": "1dde7141-ec8a-4dae-9825-49ce14c728e0",
+                "name": "Action note",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.722+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.722+00:00",
+                },
+            },
+            {
+                "id": "87c450be-2033-41fb-80ba-dd2409883681",
+                "name": "Binding",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.723+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.723+00:00",
+                },
+            },
+            {
+                "id": "f3ae3823-d096-4c65-8734-0c1efd2ffea9",
+                "name": "Provenance",
+                "source": "folio",
+                "metadata": {
+                    "createdDate": "2024-09-04T01:54:20.724+00:00",
+                    "updatedDate": "2024-09-04T01:54:20.724+00:00",
+                },
+            },
+        ]
+
     elif ref_data_path in super_schema:
         yield from super_schema.get(ref_data_path)
     else:

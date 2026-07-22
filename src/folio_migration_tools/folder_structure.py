@@ -157,6 +157,8 @@ class FolderStructure:
         self.temp_loan_type_map_path = self.mapping_files_folder / "temp_loan_types.tsv"
         self.statistical_codes_map_path = self.mapping_files_folder / "statcodes.tsv"
         self.item_statuses_map_path = self.mapping_files_folder / "item_statuses.tsv"
+        self.item_note_type_map_path = self.mapping_files_folder / "item_note_types.tsv"
+        self.holdings_note_type_map_path = self.mapping_files_folder / "holdings_note_types.tsv"
 
     def verify_folder(self, folder_path: Path):
         if folder_path.exists() and not folder_path.is_dir():

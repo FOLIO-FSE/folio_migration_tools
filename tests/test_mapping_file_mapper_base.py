@@ -6402,3 +6402,265 @@ def test_nested_object_fields_under_array_item_are_local_to_item(
 
     assert folio_rec["lines"][0]["cost"]["currency"] == "USD"
     assert folio_rec["lines"][0]["cost"]["listUnitPrice"] == 10.5
+
+
+def test_validate_hardcoded_note_type_values_valid_names(mocked_folio_client, mocked_file_mapper):
+    """Test validation passes when hardcoded values are valid note type names."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+        "public-note": "22222222-2222-2222-2222-222222222222",
+        "action-note": "33333333-3333-3333-3333-333333333333",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "staff-note", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[1].itemNoteTypeId", "legacy_field": "", "value": "public-note", "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    # Should not raise any exception
+    mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+
+
+def test_validate_hardcoded_note_type_values_valid_uuids(mocked_folio_client, mocked_file_mapper):
+    """Test validation passes when hardcoded values are valid UUIDs."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+        "public-note": "22222222-2222-2222-2222-222222222222",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "11111111-1111-1111-1111-111111111111", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[1].itemNoteTypeId", "legacy_field": "", "value": "", "fallback_value": "22222222-2222-2222-2222-222222222222", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    # Should not raise any exception
+    mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+
+
+
+def test_validate_hardcoded_note_type_values_mixed_valid(mocked_folio_client, mocked_file_mapper):
+    """Test validation passes with mixed valid UUID and name values."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+        "public-note": "22222222-2222-2222-2222-222222222222",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "staff-note", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[1].itemNoteTypeId", "legacy_field": "", "value": "11111111-1111-1111-1111-111111111111", "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    # Should not raise any exception
+    mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+
+
+def test_validate_hardcoded_note_type_values_invalid_name(mocked_folio_client, mocked_file_mapper):
+    """Test validation fails when hardcoded value is an invalid note type name."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+        "public-note": "22222222-2222-2222-2222-222222222222",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "invalid-type", "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationProcessError) as exc_info:
+        mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+    assert "Invalid note type values found" in str(exc_info.value)
+    assert "invalid-type" in str(exc_info.value)
+    assert "value) - name not found" in str(exc_info.value)
+
+
+def test_validate_hardcoded_note_type_values_invalid_uuid(mocked_folio_client, mocked_file_mapper):
+    """Test validation fails when hardcoded value is a UUID that doesn't exist in FOLIO."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+        "public-note": "22222222-2222-2222-2222-222222222222",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "99999999-9999-9999-9999-999999999999", "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationProcessError) as exc_info:
+        mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+    assert "Invalid note type values found" in str(exc_info.value)
+    assert "99999999-9999-9999-9999-999999999999" in str(exc_info.value)
+    assert "UUID not found" in str(exc_info.value)
+
+
+
+def test_validate_hardcoded_note_type_values_multiple_invalid(mocked_folio_client, mocked_file_mapper):
+    """Test validation collects all invalid values and reports them together."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+        "public-note": "22222222-2222-2222-2222-222222222222",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "invalid-type-1", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[1].itemNoteTypeId", "legacy_field": "", "value": "99999999-9999-9999-9999-999999999999", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[2].itemNoteTypeId", "legacy_field": "", "value": "", "fallback_value": "invalid-type-2", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationProcessError) as exc_info:
+        mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+    error_msg = str(exc_info.value)
+    assert "Invalid note type values found" in error_msg
+    assert "invalid-type-1" in error_msg
+    assert "99999999-9999-9999-9999-999999999999" in error_msg
+    assert "invalid-type-2" in error_msg
+    # Verify all three errors are listed
+    assert error_msg.count("'") >= 3  # At least three quoted values
+
+
+def test_validate_hardcoded_note_type_values_empty_values_skipped(mocked_folio_client, mocked_file_mapper):
+    """Test validation skips empty hardcoded values."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[1].itemNoteTypeId", "legacy_field": "", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[2].itemNoteTypeId", "legacy_field": "", "value": None, "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    # Should not raise any exception - all values are empty
+    mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+
+
+def test_validate_hardcoded_note_type_values_non_matching_fields_ignored(mocked_folio_client, mocked_file_mapper):
+    """Test validation ignores fields that don't match the suffix."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "staff-note", "fallback_value": "", "description": ""},
+            # This field has an invalid value but shouldn't be validated because it doesn't match .itemNoteTypeId
+            {"folio_field": "notes[0].content", "legacy_field": "", "value": "invalid-not-validated", "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    # Should not raise any exception - only itemNoteTypeId fields are validated
+    mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+
+
+def test_validate_hardcoded_note_type_values_holdings_note_type_id(mocked_folio_client, mocked_file_mapper):
+    """Test validation works with holdingsNoteTypeId suffix."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staff-note": "11111111-1111-1111-1111-111111111111",
+        "public-note": "22222222-2222-2222-2222-222222222222",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].holdingsNoteTypeId", "legacy_field": "", "value": "invalid-holdings-note", "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.holdings,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    with pytest.raises(TransformationProcessError) as exc_info:
+        mapper._validate_hardcoded_note_type_values(note_types_by_name, ".holdingsNoteTypeId")
+    assert "Invalid note type values found" in str(exc_info.value)
+    assert "invalid-holdings-note" in str(exc_info.value)
+
+
+

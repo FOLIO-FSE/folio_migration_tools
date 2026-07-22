@@ -494,6 +494,110 @@ def test_perform_additional_mappings_with_stat_codes(mapper: HoldingsMapper, cap
     assert "e10796e0-a594-47b7-b748-3a81b69b3d9b" not in unsuppressed_holdings["statisticalCodeIds"]
 
 
+def test_holdings_note_type_id_resolved_by_name(mapper: HoldingsMapper):
+    """A note type name in the 'value' field is resolved to a UUID."""
+    # "Note" -> "b160f13a-ddba-4053-b9c4-60ec5ea45d56" per mock
+    result = mapper._resolve_note_type_id(
+        "Note",
+        mapper._holdings_note_types,
+        "notes[0].holdingsNoteTypeId",
+        "test-id",
+    )
+    assert result == "b160f13a-ddba-4053-b9c4-60ec5ea45d56"
+
+
+def test_holdings_note_type_id_uuid_passthrough(mapper: HoldingsMapper):
+    """A raw UUID passes through unchanged (backward compatible)."""
+    uuid_val = "b160f13a-ddba-4053-b9c4-60ec5ea45d56"
+    result = mapper._resolve_note_type_id(
+        uuid_val,
+        mapper._holdings_note_types,
+        "notes[0].holdingsNoteTypeId",
+        "test-id",
+    )
+    assert result == uuid_val
+
+
+def test_holdings_note_type_id_case_insensitive(mapper: HoldingsMapper):
+    """Note type name lookup is case-insensitive."""
+    result = mapper._resolve_note_type_id(
+        "copy NOTE",
+        mapper._holdings_note_types,
+        "notes[0].holdingsNoteTypeId",
+        "test-id",
+    )
+    assert result == "c4407cc7-d79f-4609-95bd-1cefb2e2b5c5"
+
+
+def test_holdings_note_type_id_unknown_name_raises(mapper: HoldingsMapper):
+    """An unresolvable name raises TransformationRecordFailedError."""
+    with pytest.raises(TransformationRecordFailedError):
+        mapper._resolve_note_type_id(
+            "NonExistentNoteType",
+            mapper._holdings_note_types,
+            "notes[0].holdingsNoteTypeId",
+            "test-id",
+        )
+
+
+def test_holdings_note_type_id_via_mapping_file(mapper: HoldingsMapper):
+    """Legacy code is translated to UUID via a RefDataMapping (mapping-file path)."""
+    from folio_migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+    from .test_infrastructure import mocked_classes
+
+    note_type_map = [
+        {"legacy_note_type": "CN", "folio_name": "Copy note"},
+        {"legacy_note_type": "*", "folio_name": "Note"},
+    ]
+    mock_folio = mocked_classes.mocked_folio_client()
+    ref_mapping = RefDataMapping(
+        mock_folio,
+        "/holdings-note-types",
+        "holdingsNoteTypes",
+        note_type_map,
+        "name",
+        "HoldingsNoteTypeMapping",
+    )
+    # "Copy note" resolves to "c4407cc7-d79f-4609-95bd-1cefb2e2b5c5" in the mock
+    result = mapper._resolve_note_type_id(
+        "CN",
+        mapper._holdings_note_types,
+        "notes[0].holdingsNoteTypeId",
+        "test-id",
+        ref_mapping,
+    )
+    assert result == "c4407cc7-d79f-4609-95bd-1cefb2e2b5c5"
+
+
+def test_holdings_note_type_id_mapping_file_wildcard(mapper: HoldingsMapper):
+    """Unmatched legacy code falls through to the wildcard default."""
+    from folio_migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+    from .test_infrastructure import mocked_classes
+
+    note_type_map = [
+        {"legacy_note_type": "CN", "folio_name": "Copy note"},
+        {"legacy_note_type": "*", "folio_name": "Note"},
+    ]
+    mock_folio = mocked_classes.mocked_folio_client()
+    ref_mapping = RefDataMapping(
+        mock_folio,
+        "/holdings-note-types",
+        "holdingsNoteTypes",
+        note_type_map,
+        "name",
+        "HoldingsNoteTypeMapping",
+    )
+    # "UNKNOWN" not in map, falls back to * → "Note" → UUID
+    result = mapper._resolve_note_type_id(
+        "UNKNOWN",
+        mapper._holdings_note_types,
+        "notes[0].holdingsNoteTypeId",
+        "test-id",
+        ref_mapping,
+    )
+    assert result == "b160f13a-ddba-4053-b9c4-60ec5ea45d56"  # Note UUID in mock
+
+
 def test_apply_default_call_number_type_when_call_number_present_and_no_type():
     """Test that default call number type is applied when call number exists but type doesn't."""
     mocked_mapper = Mock(spec=HoldingsMapper)

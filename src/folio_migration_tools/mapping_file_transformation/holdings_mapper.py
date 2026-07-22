@@ -43,6 +43,7 @@ class HoldingsMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
         task_config: AbstractTaskConfiguration,
         statistical_codes_map=None,
+        holdings_note_type_map=None,
     ):
         """Initialize HoldingsMapper for holdings transformations.
 
@@ -55,6 +56,7 @@ class HoldingsMapper(MappingFileMapperBase):
             library_configuration (LibraryConfiguration): Library configuration.
             task_config (AbstractTaskConfiguration): Task configuration.
             statistical_codes_map: Mapping of legacy to FOLIO statistical codes.
+            holdings_note_type_map: Mapping of legacy to FOLIO holdings note types.
         """
         holdings_schema = folio_client.get_holdings_schema()
         self.instance_id_map = instance_id_map
@@ -95,6 +97,26 @@ class HoldingsMapper(MappingFileMapperBase):
                 self.folio_client, self.task_configuration.default_call_number_type_name
             )
         self.holdings_sources = self.get_holdings_sources()
+        self._holdings_note_types: dict = {
+            nt["name"].lower(): nt["id"]
+            for nt in self.folio_client.folio_get_all(
+                "/holdings-note-types", "holdingsNoteTypes", "", 1000
+            )
+        }
+        self._holdings_note_type_mapping: RefDataMapping | None = (
+            RefDataMapping(
+                self.folio_client,
+                "/holdings-note-types",
+                "holdingsNoteTypes",
+                holdings_note_type_map,
+                "name",
+                "HoldingsNoteTypeMapping",
+            )
+            if holdings_note_type_map
+            else None
+        )
+        # Validate that all hardcoded note type values in the mapping are valid
+        self._validate_hardcoded_note_type_values(self._holdings_note_types, ".holdingsNoteTypeId")
 
     def get_holdings_sources(self):
         res = {}
@@ -141,6 +163,15 @@ class HoldingsMapper(MappingFileMapperBase):
             return self.get_location_id(legacy_item, index_or_id, folio_prop_name)
         elif folio_prop_name == "callNumberTypeId":
             return self.get_call_number_type_id(legacy_item, folio_prop_name, index_or_id)
+        elif folio_prop_name.endswith(".holdingsNoteTypeId"):
+            raw = super().get_prop(legacy_item, folio_prop_name, index_or_id, schema_default_value)
+            return self._resolve_note_type_id(
+                raw,
+                self._holdings_note_types,
+                folio_prop_name,
+                index_or_id,
+                self._holdings_note_type_mapping,
+            )
         # elif folio_prop_name.startswith("statisticalCodeIds"):
         #     return self.get_statistical_code(legacy_item, folio_prop_name, index_or_id)
 

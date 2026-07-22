@@ -414,6 +414,8 @@ class MigrationTaskBase:
             or folio_property_name.startswith("statisticalCodeIds")
             or folio_property_name.startswith("locationMap")
             or folio_property_name.startswith("fundsMap")
+            or folio_property_name.endswith(".holdingsNoteTypeId")
+            or folio_property_name.endswith(".itemNoteTypeId")
         ) and map_file_path.is_file():
             try:
                 with open(map_file_path) as map_file:
