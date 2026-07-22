@@ -296,3 +296,50 @@ This rule allows you to map codes to strings. Given the following mapping:
 
 If the STATUS field contains *0*, then the resulting value in the note title will be *Graduate*.
 If no match is made, the original string will be returned. So if STATUS is *1*, then the note title will be *1*.
+
+## Validation of Hardcoded Note Type Values
+
+When mapping item or holdings note types (`itemNoteTypeId` or `holdingsNoteTypeId` fields), any hardcoded values specified in the `value` or `fallback_value` properties are validated at mapper initialization. This ensures that mapping files are correct before data transformation begins.
+
+### Validation Rules
+
+Each hardcoded note type value is validated against the FOLIO tenant's available note types:
+- **Empty values** are allowed and skipped
+- **UUID values** must exist in FOLIO's note type repository
+- **Name values** must match a valid FOLIO note type name (case-insensitive)
+
+### Error Handling
+
+If any hardcoded note type value is invalid, a comprehensive error is raised listing all invalid values with their locations in the mapping file:
+
+```
+Invalid note type values found in field mapping:
+  - 'invalid-type-1' (in field: notes[0].itemNoteTypeId, value) - name not found in FOLIO
+  - '99999999-9999-9999-9999-999999999999' (in field: notes[1].itemNoteTypeId, value) - UUID not found in FOLIO
+  - 'unknown-note' (in field: notes[2].holdingsNoteTypeId, fallback_value) - name not found in FOLIO
+
+Available note types: action-note, public-note, staff-note, ...
+
+Please update your mapping file with valid note type names or UUIDs.
+```
+
+### Example: Valid Configuration
+
+```json
+{
+    "folio_field": "notes[0].itemNoteTypeId",
+    "legacy_field": "",
+    "value": "staff-note",
+    "description": "Always use staff note type",
+    "fallback_value": ""
+},
+{
+    "folio_field": "notes[1].itemNoteTypeId",
+    "legacy_field": "NOTE_TYPE",
+    "value": "",
+    "description": "Map from legacy data, fallback to public-note",
+    "fallback_value": "public-note"
+}
+```
+
+This validation ensures that mapping configuration errors are caught immediately, rather than during data processing when iteration is more costly.

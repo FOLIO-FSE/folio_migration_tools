@@ -68,6 +68,8 @@ The FOLIO column name depends on the type of reference data being mapped:
 | Material Types | `folio_name` | Material type **name** |
 | Loan Types | `folio_name` | Loan type **name** |
 | Call Number Types | `folio_name` | Call number type **name** |
+| Item Note Types | `folio_name` | Item note type **name** |
+| Holdings Note Types | `folio_name` | Holdings note type **name** |
 | Patron Groups | `folio_name` | Patron group **name** (the `group` field) |
 | Departments | `folio_name` | Department **name** |
 | Statistical Codes | `folio_code` | Statistical code **code** |
