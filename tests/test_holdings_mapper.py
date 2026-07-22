@@ -223,7 +223,7 @@ def mapper(pytestconfig) -> HoldingsMapper:
             {
                 "folio_field": "notes[0].holdingsNoteTypeId",
                 "legacy_field": "holdings_note",
-                "value": "f453de0f-8b54-4e99-9180-52932529e3a6",
+                "value": "note",
                 "description": "",
             },
             {
