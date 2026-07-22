@@ -149,6 +149,19 @@ class ItemsTransformer(MigrationTaskBase):
                 description="File name for call number type map.",
             ),
         ]
+        item_note_type_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Item note type map file name",
+                description=(
+                    "Optional file name for an item note type mapping table. "
+                    "The file should be a TSV with legacy_note_type and folio_name columns. "
+                    "When present, legacy codes are translated to FOLIO note type names before "
+                    "UUID resolution. When absent, values are resolved directly as FOLIO names "
+                    "or UUIDs."
+                ),
+            ),
+        ] = ""
         reset_hrid_settings: Annotated[
             Optional[bool],
             Field(
@@ -332,6 +345,15 @@ class ItemsTransformer(MigrationTaskBase):
             temporary_location_mapping,
             self.library_configuration,
             self.task_configuration,
+            self.load_ref_data_mapping_file(
+                "itemNoteTypeId",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.item_note_type_map_file_name,
+                self.folio_keys,
+                False,
+            )
+            if self.task_config.item_note_type_map_file_name
+            else None,
         )
         self._validate_boundwith_relationships()
         if (

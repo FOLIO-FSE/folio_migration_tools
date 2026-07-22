@@ -989,6 +989,177 @@ class MappingFileMapperBase(MapperBase):
             return False
         return True
 
+    def _resolve_note_type_id(
+        self,
+        value: str,
+        note_types_by_name: dict,
+        folio_prop_name: str,
+        index_or_id: str,
+        note_type_mapping=None,
+    ) -> str:
+        """Resolve a note type value to a UUID.
+
+        Resolution order:
+        1. Empty value → returned as-is.
+        2. UUID value → returned unchanged (backward compatible).
+        3. If a RefDataMapping is provided (optional TSV file) → translated via
+           that mapping using the synthetic key ``legacy_note_type``, then
+           resolved to a UUID by RefDataMapping's ref-data lookup.
+        4. Otherwise → looked up case-insensitively by name in the FOLIO
+           note-types cache.
+
+        Args:
+            value: The raw value from the field mapping (UUID, FOLIO name, or
+                legacy code when a note_type_mapping is provided).
+            note_types_by_name: Mapping of lowercased note type name to UUID,
+                used when no note_type_mapping is provided.
+            folio_prop_name: The FOLIO property path, used in error messages.
+            index_or_id: Legacy record identifier, used in error messages.
+            note_type_mapping: Optional RefDataMapping (``legacy_note_type`` →
+                ``folio_name`` → UUID). When present, takes priority over the
+                direct name lookup.
+
+        Returns:
+            The resolved UUID string.
+
+        Raises:
+            TransformationRecordFailedError: When the name cannot be resolved.
+        """
+        if not value:
+            return value
+        if self.is_uuid(value):
+            return value
+        if note_type_mapping:
+            return self.get_mapped_ref_data_value(
+                note_type_mapping,
+                {"legacy_note_type": value},
+                index_or_id,
+                folio_prop_name,
+            )
+        resolved = note_types_by_name.get(value.lower().strip())
+        if resolved:
+            self.migration_report.add("MappedNoteTypes", f"{value} -> {resolved}")
+            return resolved
+        raise TransformationRecordFailedError(
+            index_or_id,
+            f"Note type name '{value}' not found in FOLIO for {folio_prop_name}",
+            f"Available note types: {', '.join(note_types_by_name.keys())}",
+        )
+
+    def _validate_hardcoded_note_type_values(
+        self,
+        note_types_by_name: dict,
+        field_suffix: str,
+    ) -> None:
+        """Validate all hardcoded note type values in field mapping JSON.
+
+        Iterates through the field mapping configuration and validates all
+        hardcoded note type values (both direct values and fallback values)
+        to ensure they are either valid UUIDs or valid FOLIO note type names.
+        Collects ALL invalid values before raising to provide comprehensive
+        feedback to the user.
+
+        Args:
+            note_types_by_name: Dict mapping lowercase note type names to
+                UUIDs, used to validate name-based values.
+            field_suffix: The field suffix to match (e.g., ".itemNoteTypeId"
+                or ".holdingsNoteTypeId").
+
+        Raises:
+            TransformationProcessError: If any hardcoded values are invalid.
+                The error message lists all invalid values with their field
+                locations and value types.
+        """
+        # Build reverse lookup: UUID -> name
+        note_types_by_id = {v: k for k, v in note_types_by_name.items()}
+
+        invalid_values: List[str] = []
+
+        for entry in self.record_map.get("data", []):
+            folio_field = entry.get("folio_field", "")
+
+            # Only validate entries for this note type field
+            if not folio_field.endswith(field_suffix):
+                continue
+
+            # Check hardcoded "value" field
+            if value := entry.get("value"):
+                invalid = self._check_note_type_value(
+                    value,
+                    note_types_by_name,
+                    note_types_by_id,
+                    folio_field,
+                    "value",
+                )
+                if invalid:
+                    invalid_values.append(invalid)
+
+            # Check hardcoded "fallback_value" field
+            if fallback := entry.get("fallback_value"):
+                invalid = self._check_note_type_value(
+                    fallback,
+                    note_types_by_name,
+                    note_types_by_id,
+                    folio_field,
+                    "fallback_value",
+                )
+                if invalid:
+                    invalid_values.append(invalid)
+
+        # If there are any invalid values, raise error with all of them
+        if invalid_values:
+            available_types = ", ".join(sorted(note_types_by_name.keys()))
+            error_lines = [
+                "Invalid note type values found in field mapping:",
+                *invalid_values,
+                f"Available note types: {available_types}",
+                "Please update your mapping file with valid note type names or UUIDs.",
+            ]
+            error_message = "\n".join(error_lines)
+            raise TransformationProcessError("", error_message)
+
+    def _check_note_type_value(
+        self,
+        value,
+        note_types_by_name: dict,
+        note_types_by_id: dict,
+        folio_field: str,
+        field_type: str,
+    ) -> str | None:
+        """Check if a note type value is valid.
+
+        Args:
+            value: The value to check.
+            note_types_by_name: Dict mapping lowercase names to UUIDs.
+            note_types_by_id: Dict mapping UUIDs to names (reverse lookup).
+            folio_field: The FOLIO field name for error messages.
+            field_type: Either "value" or "fallback_value" for error messages.
+
+        Returns:
+            Error message if value is invalid, None if valid.
+        """
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            return None
+
+        # UUID validation
+        if self.is_uuid(value):
+            if value not in note_types_by_id:
+                return (
+                    f"  - '{value}' (in field: {folio_field}, "
+                    f"{field_type}) - UUID not found in FOLIO"
+                )
+        # Name validation
+        else:
+            if value.lower() not in note_types_by_name:
+                return (
+                    f"  - '{value}' (in field: {folio_field}, "
+                    f"{field_type}) - name not found in FOLIO"
+                )
+
+        return None
+
     def validate_object_items_in_array(
         self,
         folio_object,

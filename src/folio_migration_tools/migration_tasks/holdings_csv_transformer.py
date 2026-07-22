@@ -175,6 +175,19 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
+        holdings_note_type_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Holdings note type map file name",
+                description=(
+                    "Optional file name for a holdings note type mapping table. "
+                    "The file should be a TSV with legacy_note_type and folio_name columns. "
+                    "When present, legacy codes are translated to FOLIO note type names before "
+                    "UUID resolution. When absent, values are resolved directly as FOLIO names "
+                    "or UUIDs."
+                ),
+            ),
+        ] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -219,6 +232,15 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 library_config,
                 task_config,
                 statcode_mapping,
+                self.load_ref_data_mapping_file(
+                    "holdingsNoteTypeId",
+                    self.folder_structure.mapping_files_folder
+                    / self.task_configuration.holdings_note_type_map_file_name,
+                    self.folio_keys,
+                    False,
+                )
+                if self.task_configuration.holdings_note_type_map_file_name
+                else None,
             )
             self.holdings = {}
             self.total_records = 0

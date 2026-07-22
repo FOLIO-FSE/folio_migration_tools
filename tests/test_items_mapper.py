@@ -11,8 +11,9 @@ from folio_migration_tools.library_configuration import (
     LibraryConfiguration,
 )
 from folio_migration_tools.mapping_file_transformation.item_mapper import ItemMapper
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
 from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
-from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.custom_exceptions import TransformationProcessError, TransformationRecordFailedError
 from folio_migration_tools.migration_report import MigrationReport
 from .test_infrastructure import mocked_classes
 from pathlib import Path
@@ -650,3 +651,130 @@ def test_get_prop_unmapped_returns_empty(mapper: ItemMapper):
     result = mapper.get_prop(item_data, "numberOfPieces", item_data["barcode"], "")
     # Should return empty string or schema default
     assert result == "" or result is None or isinstance(result, str)
+
+
+def test_item_note_type_id_resolved_by_name(mapper: ItemMapper):
+    """A note type name in the 'value' field is resolved to a UUID."""
+    item_data = {"barcode": "BARCODE_NOTE", "note": "some text", "lt": "ah", "mat": "oh"}
+    note_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "barcode", "value": "", "description": ""},
+            {"folio_field": "permanentLoanTypeId", "legacy_field": "lt", "value": "", "description": ""},
+            {"folio_field": "materialTypeId", "legacy_field": "mat", "value": "", "description": ""},
+            {"folio_field": "holdingsRecordId", "legacy_field": "barcode", "value": "", "description": ""},
+            {"folio_field": "barcode", "legacy_field": "barcode", "value": "", "description": ""},
+            {"folio_field": "status", "legacy_field": "code", "value": "Available", "description": ""},
+            {
+                "folio_field": "notes[0].itemNoteTypeId",
+                "legacy_field": "Not mapped",
+                "value": "Note",
+                "description": "Resolved by name",
+            },
+            {"folio_field": "notes[0].note", "legacy_field": "note", "value": "", "description": ""},
+            {"folio_field": "notes[0].staffOnly", "legacy_field": "", "value": True, "description": ""},
+        ]
+    }
+    mock_folio = mocked_classes.mocked_folio_client()
+    lib = LibraryConfiguration(
+        okapi_url="okapi_url",
+        tenant_id="tenant_id",
+        okapi_username="username",
+        okapi_password="password",  # noqa: S106
+        folio_release=FolioRelease.ramsons,
+        library_name="Note Type Test Library",
+        log_level_debug=False,
+        iteration_identifier="test",
+        base_folder="/",
+    )
+    task_config = create_autospec(ItemsTransformer.TaskConfiguration)
+    task_config.default_call_number_type_name = ""
+    task_config.prevent_permanent_location_map_default = False
+    name_mapper = ItemMapper(
+        mock_folio,
+        note_map,
+        [{"mat": "*", "folio_name": "book"}],
+        [{"lt": "*", "folio_name": "Can circulate"}],
+        [{"folio_code": "E", "PERM_LOCATION": "*"}],
+        None,
+        {"BARCODE_NOTE": ["BARCODE_NOTE", "9e840586-a641-5932-92ef-cfde8e84f9a1"]},
+        None,
+        None,
+        None,
+        None,
+        lib,
+        task_config,
+    )
+    result = name_mapper.get_prop(item_data, "notes[0].itemNoteTypeId", "BARCODE_NOTE", "")
+    # "Note" maps to this UUID in the mock
+    assert result == "8d0a5eca-25de-4391-81a9-236eeefdd20b"
+
+
+def test_item_note_type_id_uuid_passthrough(mapper: ItemMapper):
+    """A raw UUID in the 'value' field passes through unchanged."""
+    item_data = {"barcode": "000000950000010", "note": "text", "lt": "ah", "mat": "oh"}
+    # item_map has value = "7eaa4906-1aa8-46dc-b15d-fe5d96746929" for notes[0].itemNoteTypeId
+    result = mapper.get_prop(item_data, "notes[0].itemNoteTypeId", item_data["barcode"], "")
+    assert result == "7eaa4906-1aa8-46dc-b15d-fe5d96746929"
+
+
+def test_item_note_type_id_unknown_name_raises(mapper: ItemMapper):
+    """An unresolvable name raises TransformationRecordFailedError."""
+    with pytest.raises(TransformationRecordFailedError):
+        mapper._resolve_note_type_id(
+            "NonExistentNoteType",
+            mapper._item_note_types,
+            "notes[0].itemNoteTypeId",
+            "test-id",
+        )
+
+
+def test_item_note_type_id_via_mapping_file(mapper: ItemMapper):
+    """Legacy code is translated to UUID via a RefDataMapping (mapping-file path)."""
+    note_type_map = [
+        {"legacy_note_type": "GN", "folio_name": "Note"},
+        {"legacy_note_type": "*", "folio_name": "Note"},
+    ]
+    mock_folio = mocked_classes.mocked_folio_client()
+    ref_mapping = RefDataMapping(
+        mock_folio,
+        "/item-note-types",
+        "itemNoteTypes",
+        note_type_map,
+        "name",
+        "ItemNoteTypeMapping",
+    )
+    # "Note" resolves to "8d0a5eca-25de-4391-81a9-236eeefdd20b" in the mock
+    result = mapper._resolve_note_type_id(
+        "GN",
+        mapper._item_note_types,
+        "notes[0].itemNoteTypeId",
+        "test-id",
+        ref_mapping,
+    )
+    assert result == "8d0a5eca-25de-4391-81a9-236eeefdd20b"
+
+
+def test_item_note_type_id_mapping_file_wildcard(mapper: ItemMapper):
+    """Unmatched legacy code falls through to the wildcard default."""
+    note_type_map = [
+        {"legacy_note_type": "GN", "folio_name": "Note"},
+        {"legacy_note_type": "*", "folio_name": "Action note"},
+    ]
+    mock_folio = mocked_classes.mocked_folio_client()
+    ref_mapping = RefDataMapping(
+        mock_folio,
+        "/item-note-types",
+        "itemNoteTypes",
+        note_type_map,
+        "name",
+        "ItemNoteTypeMapping",
+    )
+    # "UNKNOWN" not in map, falls back to * → "Action note" → UUID
+    result = mapper._resolve_note_type_id(
+        "UNKNOWN",
+        mapper._item_note_types,
+        "notes[0].itemNoteTypeId",
+        "test-id",
+        ref_mapping,
+    )
+    assert result == "1dde7141-ec8a-4dae-9825-49ce14c728e0"  # Action note UUID in mock
