@@ -16,6 +16,8 @@ temp_loan_types.tsv  | no | no | no | optional |  no   |   no
 call_number_type_mapping.tsv  | no | no | optional | optional |  no   |   no
 statcodes.tsv  | optional | optional | optional | optional |  no   |   no
 item_statuses.tsv | no | no | no | optional    |  no   |   no
+item_note_types.tsv | no | no | no | optional    |  no   |   no
+holdings_note_types.tsv | no | optional | optional | no    |  no   |   no
 post_loan_migration_statuses.tsv | no | no | no | no    |  optional  |   no
 patron_types.tsv | no | no | no | no    |  no  |   yes
 user_mapping.json | no | no | no | no    |  no  |   yes
@@ -156,3 +158,30 @@ lost | Aged to lost
 ```{attention}
 If the item status you are mapping is the result of a circulation transaction (i.e. "Checked out", "Paged", "Aged to lost", "Declared lost", "Claimed returned"), we recommend using an item status mapping of Available for these items, instead. You can set the `next_item_status` in your loans data migration to ensure that loan-related statuses are appropriately set after the migrated loan is created.
 ```
+
+### 📄 item_note_types.tsv
+Optional mapping file for translating legacy item note type codes to FOLIO item note types. This file allows you to map custom or legacy note type codes to FOLIO note type names before they are resolved to their corresponding UUIDs.
+
+The file should be structured with `legacy_note_type` and `folio_name` columns:
+
+legacy_note_type | folio_name 
+------------ | -------------
+LOCAL_NOTE | Local note
+INTERNAL_NOTE | Staff note
+PUBLIC_NOTE | Public note
+*  | Public note
+
+When this file is not provided, note type values are resolved directly as FOLIO note type names or UUIDs. If a value cannot be resolved, an error is recorded.
+
+### 📄 holdings_note_types.tsv
+Optional mapping file for translating legacy holdings note type codes to FOLIO holdings note types. This file allows you to map custom or legacy note type codes to FOLIO note type names before they are resolved to their corresponding UUIDs.
+
+The file should be structured with `legacy_note_type` and `folio_name` columns:
+
+legacy_note_type | folio_name 
+------------ | -------------
+SUPPLEMENTAL_HOLDINGS | Binding information
+PRESERVATION_NOTE | Action note
+*  | Action note
+
+When this file is not provided, note type values are resolved directly as FOLIO note type names or UUIDs. If a value cannot be resolved, an error is recorded.
