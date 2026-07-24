@@ -182,6 +182,8 @@ Transforms vendor/organization data for acquisitions.
 #### OrdersTransformer
 Transforms purchase order data.
 
+For Orders-specific address mapping behavior and validation/error handling for `billTo`/`shipTo`, see [OrdersTransformer](tasks/orders_transformer#validation-and-error-reporting-for-billtoshipto).
+
 | Report Section | Description |
 |----------------|-------------|
 | GeneralStatistics | Order and order line counts |
