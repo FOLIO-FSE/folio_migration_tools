@@ -146,6 +146,59 @@ def folio_get_all_mocked(ref_data_path, array_name, query="", limit=10):  # noqa
     ):
         yield from []
 
+    elif (
+        ref_data_path == "/configurations/entries"
+        and query == '?query=(module=="TENANT" and configName=="tenant.addresses")'
+    ):
+        yield from [
+            {
+                "id": "70d6f0a4-19ac-4f37-b568-4f7af7af767a",
+                "module": "TENANT",
+                "configName": "tenant.addresses",
+                "code": "ADDRESS_1779995459792",
+                "enabled": True,
+                "value": json.dumps(
+                    {
+                        "name": "Main Billing Address",
+                        "address": (
+                            "Library Building\n"
+                            "123 University Ave\n"
+                            "City, ST 00000"
+                        ),
+                    }
+                ),
+                "metadata": {
+                    "createdDate": "2026-05-28T19:10:59.990+00:00",
+                    "createdByUserId": "34d21e0a-3991-42f3-b6bf-54206c7c7783",
+                    "updatedDate": "2026-05-28T19:10:59.990+00:00",
+                    "updatedByUserId": "34d21e0a-3991-42f3-b6bf-54206c7c7783",
+                },
+            },
+            {
+                "id": "1b1f66b5-feb5-49af-ae88-f78656ec622f",
+                "module": "TENANT",
+                "configName": "tenant.addresses",
+                "code": "ADDRESS_1779995459793",
+                "enabled": True,
+                "value": json.dumps(
+                    {
+                        "name": "Main Shipping Address",
+                        "address": (
+                            "Shipping Facility\n"
+                            "456 Campus Way\n"
+                            "City, ST 00001"
+                        ),
+                    }
+                ),
+                "metadata": {
+                    "createdDate": "2026-05-28T19:10:59.990+00:00",
+                    "createdByUserId": "34d21e0a-3991-42f3-b6bf-54206c7c7783",
+                    "updatedDate": "2026-05-28T19:10:59.990+00:00",
+                    "updatedByUserId": "34d21e0a-3991-42f3-b6bf-54206c7c7783",
+                },
+            }
+        ]
+
     elif ref_data_path == "/organizations-storage/organizations":
         yield from [
             {"id": "837d04b6-d81c-4c49-9efd-2f62515999b3", "code": "GOBI"},

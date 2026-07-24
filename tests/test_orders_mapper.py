@@ -556,6 +556,103 @@ def test_composite_order_mapping_with_custom_fields(mapper):
     assert mapped_order[pol_key][0]["customFields"]["lineTag"] == "rush"
 
 
+def test_composite_order_mapping_with_named_billto_shipto_addresses(mapper):
+    custom_map = deepcopy(mapper.record_map)
+    custom_map["data"].extend(
+        [
+            {
+                "folio_field": "billTo",
+                "legacy_field": "bill_to",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "shipTo",
+                "legacy_field": "ship_to",
+                "value": "",
+                "description": "",
+            },
+        ]
+    )
+
+    custom_mapper = CompositeOrderMapper(
+        mapper.folio_client,
+        mapper.library_configuration,
+        mapper.task_configuration,
+        custom_map,
+        mapper.organizations_id_map,
+        mapper.instance_id_map,
+        mapper.acquisitions_methods_mapping.map,
+        "",
+        "",
+        "",
+        mapper.location_mapping.map,
+        "",
+        "",
+    )
+
+    data = {
+        "order_number": "o126",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Address mapping",
+        "bibnumber": "1",
+        "acqmethod": "p",
+        "location": "order",
+        "copies": "1",
+        "bill_to": "Main Billing Address",
+        "ship_to": "Main Shipping Address",
+    }
+    mapped_order, _ = custom_mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+    mapped_order = custom_mapper.perform_additional_mapping(data["order_number"], mapped_order)
+
+    assert mapped_order["billTo"] == "70d6f0a4-19ac-4f37-b568-4f7af7af767a"
+    assert mapped_order["shipTo"] == "1b1f66b5-feb5-49af-ae88-f78656ec622f"
+
+
+def test_composite_order_mapping_with_unknown_billto_address_fails(mapper):
+    custom_map = deepcopy(mapper.record_map)
+    custom_map["data"].append(
+        {
+            "folio_field": "billTo",
+            "legacy_field": "bill_to",
+            "value": "",
+            "description": "",
+        }
+    )
+
+    custom_mapper = CompositeOrderMapper(
+        mapper.folio_client,
+        mapper.library_configuration,
+        mapper.task_configuration,
+        custom_map,
+        mapper.organizations_id_map,
+        mapper.instance_id_map,
+        mapper.acquisitions_methods_mapping.map,
+        "",
+        "",
+        "",
+        mapper.location_mapping.map,
+        "",
+        "",
+    )
+
+    data = {
+        "order_number": "o127",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Unknown address mapping",
+        "bibnumber": "1",
+        "acqmethod": "p",
+        "location": "order",
+        "copies": "1",
+        "bill_to": "Unknown Billing Address",
+    }
+
+    with pytest.raises(TransformationRecordFailedError):
+        custom_mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+
+
 def test_perform_additional_mapping_get_org_from_folio(mapper):
     pol_key = mapper.po_lines_key
     folio_po = {

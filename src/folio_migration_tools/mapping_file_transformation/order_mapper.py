@@ -20,7 +20,10 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 from httpx import HTTPError
 
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
@@ -35,6 +38,8 @@ logger = logging.getLogger(__name__)
 
 
 class CompositeOrderMapper(MappingFileMapperBase):
+    TENANT_ADDRESSES_QUERY = '?query=(module=="TENANT" and configName=="tenant.addresses")'
+
     def __init__(
         self,
         folio_client: FolioClient,
@@ -151,6 +156,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "code",
             "FundsMapping",
         )
+        self._order_addresses_by_name = self._load_order_addresses_by_name()
+        self._validate_hardcoded_order_address_values()
 
         self.folio_client: FolioClient = folio_client
         self.notes_mapper: NotesMapper = NotesMapper(
@@ -273,11 +280,125 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 False,
             )
 
+        if folio_prop_name in ("billTo", "shipTo"):
+            raw = super().get_prop(
+                legacy_order,
+                folio_prop_name,
+                index_or_id,
+                schema_default_value,
+            )
+            return self._resolve_order_address_id(raw, folio_prop_name, index_or_id)
+
         mapped_value = super().get_prop(
             legacy_order, folio_prop_name, index_or_id, schema_default_value
         )
 
         return mapped_value
+
+    @staticmethod
+    def _extract_address_name(address: dict[str, Any]) -> str:
+        for key in ("name", "addressName", "label"):
+            val = address.get(key)
+            if isinstance(val, str) and val.strip():
+                return val.strip()
+        return ""
+
+    @staticmethod
+    def _addresses_from_config_value(raw_value: Any) -> list[dict[str, Any]]:
+        value = raw_value
+        if isinstance(raw_value, str):
+            try:
+                value = json.loads(raw_value)
+            except json.JSONDecodeError:
+                return []
+
+        if isinstance(value, dict):
+            if isinstance(value.get("addresses"), list):
+                return [a for a in value["addresses"] if isinstance(a, dict)]
+            return [value] if value else []
+        if isinstance(value, list):
+            return [a for a in value if isinstance(a, dict)]
+        return []
+
+    def _load_order_addresses_by_name(self) -> dict[str, str]:
+        entries = list(
+            self.folio_client.folio_get_all(
+                "/configurations/entries",
+                "configs",
+                self.TENANT_ADDRESSES_QUERY,
+                1000,
+            )
+        )
+        addresses_by_name: dict[str, str] = {}
+        for entry in entries:
+            entry_id = entry.get("id", "")
+            if not isinstance(entry_id, str) or not entry_id.strip():
+                continue
+            entry_id = entry_id.strip()
+            addresses = self._addresses_from_config_value(entry.get("value"))
+            for address in addresses:
+                address_name = self._extract_address_name(address)
+                if address_name:
+                    addresses_by_name[address_name.lower()] = entry_id
+
+        if addresses_by_name:
+            logger.info(
+                "Loaded %s order addresses from tenant settings",
+                len(addresses_by_name),
+            )
+        else:
+            logger.warning(
+                "No order addresses found in tenant settings (%s)",
+                self.TENANT_ADDRESSES_QUERY,
+            )
+        return addresses_by_name
+
+    def _resolve_order_address_id(self, value: str, folio_prop_name: str, index_or_id: str) -> str:
+        if not value:
+            return value
+        if self.is_uuid(value):
+            return value
+
+        resolved = self._order_addresses_by_name.get(value.lower().strip())
+        if resolved:
+            self.migration_report.add("OrderAddressMapping", f"{value} -> {resolved}")
+            return resolved
+
+        raise TransformationRecordFailedError(
+            index_or_id,
+            (f"Order address name '{value}' not found in tenant settings for {folio_prop_name}"),
+            f"Available addresses: {', '.join(sorted(self._order_addresses_by_name.keys()))}",
+        )
+
+    def _validate_hardcoded_order_address_values(self) -> None:
+        invalid_values: list[str] = []
+
+        for entry in self.record_map.get("data", []):
+            folio_field = entry.get("folio_field", "")
+            if folio_field not in {"billTo", "shipTo"}:
+                continue
+
+            for value_key in ("value", "fallback_value"):
+                mapped_value = entry.get(value_key)
+                if not mapped_value:
+                    continue
+                if self.is_uuid(mapped_value):
+                    continue
+                if mapped_value.lower().strip() not in self._order_addresses_by_name:
+                    invalid_values.append(f"- {folio_field} ({value_key}): '{mapped_value}'")
+
+        if invalid_values:
+            available = ", ".join(sorted(self._order_addresses_by_name.keys()))
+            raise TransformationProcessError(
+                "",
+                "Invalid order address values found in field mapping",
+                "\n".join(
+                    [
+                        *invalid_values,
+                        f"Available addresses: {available}",
+                    ]
+                ),
+            )
 
     @staticmethod
     def get_latest_acq_schemas_from_github(owner, repo, module, object, release_tag=None):

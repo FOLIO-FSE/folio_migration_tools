@@ -135,6 +135,60 @@ Orders in FOLIO consist of a Purchase Order (header) with embedded Purchase Orde
 }
 ```
 
+## billTo and shipTo Address Mapping
+
+Orders support name-based mapping for `billTo` and `shipTo`.
+
+- In your orders field mapping file, map `billTo` and `shipTo` to legacy source fields that contain address names.
+- During transformation, the mapper resolves those names against tenant address settings from `/configurations/entries` where `module=="TENANT"` and `configName=="tenant.addresses"`.
+- The resulting FOLIO value written to `billTo`/`shipTo` is the address UUID from the configuration entry `id`.
+
+Example mapping entries:
+
+```json
+{
+    "folio_field": "billTo",
+    "legacy_field": "BILL_TO_NAME",
+    "value": ""
+},
+{
+    "folio_field": "shipTo",
+    "legacy_field": "SHIP_TO_NAME",
+    "value": ""
+}
+```
+
+Expected tenant configuration shape:
+
+```json
+{
+    "id": "e8532c88-ab56-461a-8ba8-ed18bf5e5c22",
+    "module": "TENANT",
+    "configName": "tenant.addresses",
+    "value": "{\"name\":\"Acquisitions\",\"address\":\"...\"}"
+}
+```
+
+In this example, if source data contains `Acquisitions`, the mapped UUID is `e8532c88-ab56-461a-8ba8-ed18bf5e5c22`.
+
+```{important}
+Address name matching is case-insensitive and trims surrounding whitespace. If a name cannot be resolved, the record fails with a data issue.
+```
+
+### Validation and Error Reporting for billTo/shipTo
+
+Both `value` and `fallback_value` are supported for name-based address mapping.
+
+- If `value` or `fallback_value` contains a UUID, it is accepted as-is.
+- If `value` or `fallback_value` contains a name, it is resolved against `tenant.addresses`.
+
+Validation happens at two stages:
+
+- **Startup validation (process-level):** hardcoded `value` and `fallback_value` entries for `billTo`/`shipTo` are validated when the mapper initializes. If any configured value is invalid, the task reports a transformation process error and halts.
+- **Per-record validation (record-level):** names coming from source data (for example from `legacy_field`) are validated during record transformation. If a name cannot be resolved, that record is marked as failed and logged as a data issue.
+
+The migration report includes record-level failures, and processing continues unless failure thresholds are exceeded by task configuration.
+
 ### Reference Data Mapping Files
 
 Reference data mapping files connect values from your legacy data to FOLIO reference data. See [Reference Data Mapping](../reference_data_mapping) for detailed documentation on how these files work.

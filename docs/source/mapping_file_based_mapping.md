@@ -343,3 +343,5 @@ Please update your mapping file with valid note type names or UUIDs.
 ```
 
 This validation ensures that mapping configuration errors are caught immediately, rather than during data processing when iteration is more costly.
+
+Record type-specific mapping behavior and validation (for example Orders-only fields) is documented in the corresponding task pages under [Tasks](tasks/index).
