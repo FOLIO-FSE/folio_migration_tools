@@ -179,7 +179,7 @@ Address name matching is case-insensitive and trims surrounding whitespace. If a
 
 Both `value` and `fallback_value` are supported for name-based address mapping.
 
-- If `value` or `fallback_value` contains a UUID, it is accepted as-is.
+- If `value` or `fallback_value` contains a UUID, it must match a valid tenant address configuration entry `id`.
 - If `value` or `fallback_value` contains a name, it is resolved against `tenant.addresses`.
 
 Validation happens at two stages:
