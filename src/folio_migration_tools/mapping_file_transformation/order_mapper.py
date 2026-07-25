@@ -304,21 +304,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
         return ""
 
     @staticmethod
-    def _addresses_from_config_value(raw_value: Any) -> list[dict[str, Any]]:
+    def _address_from_config_value(raw_value: Any) -> dict[str, Any] | None:
         value = raw_value
         if isinstance(raw_value, str):
             try:
                 value = json.loads(raw_value)
             except json.JSONDecodeError:
-                return []
+                return None
 
-        if isinstance(value, dict):
-            if isinstance(value.get("addresses"), list):
-                return [a for a in value["addresses"] if isinstance(a, dict)]
-            return [value] if value else []
-        if isinstance(value, list):
-            return [a for a in value if isinstance(a, dict)]
-        return []
+        return value if isinstance(value, dict) else None
 
     def _load_order_addresses_by_name(self) -> dict[str, str]:
         entries = list(
@@ -335,11 +329,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if not isinstance(entry_id, str) or not entry_id.strip():
                 continue
             entry_id = entry_id.strip()
-            addresses = self._addresses_from_config_value(entry.get("value"))
-            for address in addresses:
-                address_name = self._extract_address_name(address)
-                if address_name:
-                    addresses_by_name[address_name.lower()] = entry_id
+            address = self._address_from_config_value(entry.get("value"))
+            if not address:
+                continue
+            address_name = self._extract_address_name(address)
+            if address_name:
+                addresses_by_name[address_name.lower()] = entry_id
 
         if addresses_by_name:
             logger.info(
@@ -370,7 +365,37 @@ class CompositeOrderMapper(MappingFileMapperBase):
             f"Available addresses: {', '.join(sorted(self._order_addresses_by_name.keys()))}",
         )
 
+    def _check_order_address_value(
+        self,
+        value: Any,
+        address_names_by_name: dict[str, str],
+        address_ids: set[str],
+        folio_field: str,
+        field_type: str,
+    ) -> str | None:
+        if isinstance(value, str):
+            value = value.strip()
+        if not value:
+            return None
+
+        if self.is_uuid(value):
+            if value not in address_ids:
+                return (
+                    f"  - '{value}' (in field: {folio_field}, {field_type}) "
+                    "- UUID not found in tenant settings"
+                )
+            return None
+
+        if value.lower() not in address_names_by_name:
+            return (
+                f"  - '{value}' (in field: {folio_field}, {field_type}) "
+                "- name not found in tenant settings"
+            )
+
+        return None
+
     def _validate_hardcoded_order_address_values(self) -> None:
+        address_ids = set(self._order_addresses_by_name.values())
         invalid_values: list[str] = []
 
         for entry in self.record_map.get("data", []):
@@ -380,22 +405,26 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
             for value_key in ("value", "fallback_value"):
                 mapped_value = entry.get(value_key)
-                if not mapped_value:
-                    continue
-                if self.is_uuid(mapped_value):
-                    continue
-                if mapped_value.lower().strip() not in self._order_addresses_by_name:
-                    invalid_values.append(f"- {folio_field} ({value_key}): '{mapped_value}'")
+                invalid = self._check_order_address_value(
+                    mapped_value,
+                    self._order_addresses_by_name,
+                    address_ids,
+                    folio_field,
+                    value_key,
+                )
+                if invalid:
+                    invalid_values.append(invalid)
 
         if invalid_values:
             available = ", ".join(sorted(self._order_addresses_by_name.keys()))
             raise TransformationProcessError(
                 "",
-                "Invalid order address values found in field mapping",
+                "Invalid order address values found in field mapping:",
                 "\n".join(
                     [
                         *invalid_values,
                         f"Available addresses: {available}",
+                        "Please update your mapping file with valid address names or UUIDs.",
                     ]
                 ),
             )

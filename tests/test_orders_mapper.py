@@ -4,7 +4,10 @@ from copy import deepcopy
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
-from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.custom_exceptions import (
+    TransformationProcessError,
+    TransformationRecordFailedError,
+)
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     FolioRelease,
@@ -651,6 +654,82 @@ def test_composite_order_mapping_with_unknown_billto_address_fails(mapper):
 
     with pytest.raises(TransformationRecordFailedError):
         custom_mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+
+
+def test_order_address_prevalidation_rejects_unknown_hardcoded_uuid(mapper):
+    custom_map = deepcopy(mapper.record_map)
+    custom_map["data"].append(
+        {
+            "folio_field": "billTo",
+            "legacy_field": "",
+            "value": "99999999-9999-9999-9999-999999999999",
+            "description": "",
+        }
+    )
+
+    with pytest.raises(TransformationProcessError) as exc_info:
+        CompositeOrderMapper(
+            mapper.folio_client,
+            mapper.library_configuration,
+            mapper.task_configuration,
+            custom_map,
+            mapper.organizations_id_map,
+            mapper.instance_id_map,
+            mapper.acquisitions_methods_mapping.map,
+            "",
+            "",
+            "",
+            mapper.location_mapping.map,
+            "",
+            "",
+        )
+
+    assert exc_info.value.message == "Invalid order address values found in field mapping:"
+    assert "UUID not found in tenant settings" in str(exc_info.value.data_value)
+    assert "99999999-9999-9999-9999-999999999999" in str(exc_info.value.data_value)
+
+
+def test_order_address_prevalidation_accepts_known_hardcoded_uuid(mapper):
+    custom_map = deepcopy(mapper.record_map)
+    custom_map["data"].append(
+        {
+            "folio_field": "billTo",
+            "legacy_field": "",
+            "value": "70d6f0a4-19ac-4f37-b568-4f7af7af767a",
+            "description": "",
+        }
+    )
+
+    custom_mapper = CompositeOrderMapper(
+        mapper.folio_client,
+        mapper.library_configuration,
+        mapper.task_configuration,
+        custom_map,
+        mapper.organizations_id_map,
+        mapper.instance_id_map,
+        mapper.acquisitions_methods_mapping.map,
+        "",
+        "",
+        "",
+        mapper.location_mapping.map,
+        "",
+        "",
+    )
+
+    data = {
+        "order_number": "o128",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Hardcoded address uuid",
+        "bibnumber": "1",
+        "acqmethod": "p",
+        "location": "order",
+        "copies": "1",
+    }
+
+    mapped_order, _ = custom_mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+
+    assert mapped_order["billTo"] == "70d6f0a4-19ac-4f37-b568-4f7af7af767a"
 
 
 def test_perform_additional_mapping_get_org_from_folio(mapper):
