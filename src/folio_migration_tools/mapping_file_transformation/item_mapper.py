@@ -32,6 +32,7 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+from folio_migration_tools.utils import normalize_for_compare
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +154,7 @@ class ItemMapper(MappingFileMapperBase):
             "LocationMapping",
         )
         self._item_note_types: dict = {
-            nt["name"].lower(): nt["id"]
+            normalize_for_compare(nt["name"]): nt["id"]
             for nt in self.folio_client.folio_get_all(
                 "/item-note-types", "itemNoteTypes", "", 1000
             )

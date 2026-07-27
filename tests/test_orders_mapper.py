@@ -613,6 +613,60 @@ def test_composite_order_mapping_with_named_billto_shipto_addresses(mapper):
     assert mapped_order["shipTo"] == "1b1f66b5-feb5-49af-ae88-f78656ec622f"
 
 
+def test_composite_order_mapping_with_normalized_named_addresses(mapper):
+    custom_map = deepcopy(mapper.record_map)
+    custom_map["data"].extend(
+        [
+            {
+                "folio_field": "billTo",
+                "legacy_field": "bill_to",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "shipTo",
+                "legacy_field": "ship_to",
+                "value": "",
+                "description": "",
+            },
+        ]
+    )
+
+    custom_mapper = CompositeOrderMapper(
+        mapper.folio_client,
+        mapper.library_configuration,
+        mapper.task_configuration,
+        custom_map,
+        mapper.organizations_id_map,
+        mapper.instance_id_map,
+        mapper.acquisitions_methods_mapping.map,
+        "",
+        "",
+        "",
+        mapper.location_mapping.map,
+        "",
+        "",
+    )
+
+    data = {
+        "order_number": "o126b",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Address mapping normalized",
+        "bibnumber": "1",
+        "acqmethod": "p",
+        "location": "order",
+        "copies": "1",
+        "bill_to": "Main  Billing\x1dAddress",
+        "ship_to": "Main\tShipping Address",
+    }
+    mapped_order, _ = custom_mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+    mapped_order = custom_mapper.perform_additional_mapping(data["order_number"], mapped_order)
+
+    assert mapped_order["billTo"] == "70d6f0a4-19ac-4f37-b568-4f7af7af767a"
+    assert mapped_order["shipTo"] == "1b1f66b5-feb5-49af-ae88-f78656ec622f"
+
+
 def test_composite_order_mapping_with_unknown_billto_address_fails(mapper):
     custom_map = deepcopy(mapper.record_map)
     custom_map["data"].append(
@@ -721,6 +775,49 @@ def test_order_address_prevalidation_accepts_known_hardcoded_uuid(mapper):
         "vendor": "EBSCO",
         "type": "One-Time",
         "TITLE": "Hardcoded address uuid",
+        "bibnumber": "1",
+        "acqmethod": "p",
+        "location": "order",
+        "copies": "1",
+    }
+
+    mapped_order, _ = custom_mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+
+    assert mapped_order["billTo"] == "70d6f0a4-19ac-4f37-b568-4f7af7af767a"
+
+
+def test_order_address_prevalidation_accepts_normalized_hardcoded_name(mapper):
+    custom_map = deepcopy(mapper.record_map)
+    custom_map["data"].append(
+        {
+            "folio_field": "billTo",
+            "legacy_field": "",
+            "value": "Main\x1d Billing  Address",
+            "description": "",
+        }
+    )
+
+    custom_mapper = CompositeOrderMapper(
+        mapper.folio_client,
+        mapper.library_configuration,
+        mapper.task_configuration,
+        custom_map,
+        mapper.organizations_id_map,
+        mapper.instance_id_map,
+        mapper.acquisitions_methods_mapping.map,
+        "",
+        "",
+        "",
+        mapper.location_mapping.map,
+        "",
+        "",
+    )
+
+    data = {
+        "order_number": "o128b",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Hardcoded address normalized name",
         "bibnumber": "1",
         "acqmethod": "p",
         "location": "order",

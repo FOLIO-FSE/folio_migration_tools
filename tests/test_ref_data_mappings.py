@@ -108,7 +108,7 @@ def test_get_hybrid_mapping3():
     mock.cache = {}
     mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
     res = RefDataMapping.get_hybrid_mapping(mock, legacy_object)
-    assert res is None
+    assert res == mock.hybrid_mappings[0]
 
 
 def test_normal_refdata_mapping_strip():
@@ -124,6 +124,44 @@ def test_normal_refdata_mapping_strip():
     mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
     res = RefDataMapping.get_ref_data_mapping(mock, legacy_object)
     assert res == mappings[2]
+
+
+def test_normal_refdata_mapping_strips_internal_whitespace_and_group_separator():
+    mappings = [
+        {"location": "ABC", "loan_type": "lt1", "material_type": "mt2"},
+    ]
+    legacy_object = {
+        "location": "A B\x1dC",
+        "loan_type": "l t1",
+        "material_type": "m t 2",
+    }
+    mock = Mock(spec=RefDataMapping)
+    mock.regular_mappings = mappings
+    mock.cache = {}
+    mock.mapped_legacy_keys = ["location", "loan_type", "material_type"]
+    res = RefDataMapping.get_ref_data_mapping(mock, legacy_object)
+    assert res == mappings[0]
+
+
+def test_get_ref_data_tuple_uses_normalized_comparison():
+    mock = Mock(spec=RefDataMapping)
+    mock.cached_dict = {}
+    mock.key_type = "name"
+    mock.ref_data = [{"id": "uuid-1", "name": "Main Library"}]
+
+    res = RefDataMapping.get_ref_data_tuple(mock, "Main\x1d  Library")
+
+    assert res == ("uuid-1", "Main Library")
+
+
+def test_pre_validate_map_allows_normalized_folio_value_matches():
+    mock = Mock(spec=RefDataMapping)
+    mock.key_type = "name"
+    mock.name = "locations"
+    mock.map = [{"folio_name": "Main\x1dLibrary", "legacy_code": "MAIN"}]
+    mock.ref_data = [{"name": "Main Library"}]
+
+    RefDataMapping.pre_validate_map(mock)
 
 
 def test_mapping_for_multiple_fields():
