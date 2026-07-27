@@ -30,6 +30,7 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+from folio_migration_tools.utils import normalize_for_compare
 
 logger = logging.getLogger(__name__)
 
@@ -935,11 +936,12 @@ class MappingFileMapperBase(MapperBase):
 
     def get_ref_data_tuple(self, ref_data, ref_name, key_value, key_type):
         dict_key = f"{ref_name}{key_type}"
-        if ref_object := self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ()):
+        normalized_key = normalize_for_compare(key_value)
+        if ref_object := self.ref_data_dicts.get(dict_key, {}).get(normalized_key, ()):
             return ref_object
-        d = {r[key_type].lower(): (r["id"], r["name"]) for r in ref_data}
+        d = {normalize_for_compare(r[key_type]): (r["id"], r["name"]) for r in ref_data}
         self.ref_data_dicts[dict_key] = d
-        return self.ref_data_dicts.get(dict_key, {}).get(key_value.lower().strip(), ())
+        return self.ref_data_dicts.get(dict_key, {}).get(normalized_key, ())
 
     def validate_enums(
         self,
@@ -1036,7 +1038,7 @@ class MappingFileMapperBase(MapperBase):
                 index_or_id,
                 folio_prop_name,
             )
-        resolved = note_types_by_name.get(value.lower().strip())
+        resolved = note_types_by_name.get(normalize_for_compare(value))
         if resolved:
             self.migration_report.add("MappedNoteTypes", f"{value} -> {resolved}")
             return resolved
@@ -1152,7 +1154,7 @@ class MappingFileMapperBase(MapperBase):
                 )
         # Name validation
         else:
-            if value.lower() not in note_types_by_name:
+            if normalize_for_compare(value) not in note_types_by_name:
                 return (
                     f"  - '{value}' (in field: {folio_field}, "
                     f"{field_type}) - name not found in FOLIO"

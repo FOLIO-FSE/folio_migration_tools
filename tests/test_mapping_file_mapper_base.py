@@ -6432,6 +6432,33 @@ def test_validate_hardcoded_note_type_values_valid_names(mocked_folio_client, mo
     mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
 
 
+def test_validate_hardcoded_note_type_values_normalized_name_match(
+    mocked_folio_client, mocked_file_mapper
+):
+    """Validation accepts names that differ only by case/whitespace/control separators."""
+    schema = mocked_file_mapper.schema
+    note_types_by_name = {
+        "staffnote": "11111111-1111-1111-1111-111111111111",
+    }
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "", "fallback_value": "", "description": ""},
+            {"folio_field": "notes[0].itemNoteTypeId", "legacy_field": "", "value": "Sta ff\x1d Note", "fallback_value": "", "description": ""},
+        ]
+    }
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+
+    mapper._validate_hardcoded_note_type_values(note_types_by_name, ".itemNoteTypeId")
+
+
 def test_validate_hardcoded_note_type_values_valid_uuids(mocked_folio_client, mocked_file_mapper):
     """Test validation passes when hardcoded values are valid UUIDs."""
     schema = mocked_file_mapper.schema

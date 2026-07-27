@@ -33,6 +33,7 @@ from folio_migration_tools.mapping_file_transformation.notes_mapper import Notes
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
+from folio_migration_tools.utils import normalize_for_compare
 
 logger = logging.getLogger(__name__)
 
@@ -334,7 +335,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 continue
             address_name = self._extract_address_name(address)
             if address_name:
-                addresses_by_name[address_name.lower()] = entry_id
+                addresses_by_name[normalize_for_compare(address_name)] = entry_id
 
         if addresses_by_name:
             logger.info(
@@ -354,7 +355,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if self.is_uuid(value):
             return value
 
-        resolved = self._order_addresses_by_name.get(value.lower().strip())
+        resolved = self._order_addresses_by_name.get(normalize_for_compare(value))
         if resolved:
             self.migration_report.add("OrderAddressMapping", f"{value} -> {resolved}")
             return resolved
@@ -386,7 +387,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 )
             return None
 
-        if value.lower() not in address_names_by_name:
+        if normalize_for_compare(value) not in address_names_by_name:
             return (
                 f"  - '{value}' (in field: {folio_field}, {field_type}) "
                 "- name not found in tenant settings"

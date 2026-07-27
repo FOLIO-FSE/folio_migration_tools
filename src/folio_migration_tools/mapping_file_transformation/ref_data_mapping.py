@@ -12,6 +12,7 @@ import sys
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.utils import normalize_for_compare
 
 logger = logging.getLogger(__name__)
 
@@ -54,12 +55,14 @@ class RefDataMapping(object):
         logger.info("%s reference data mapping. Done init", self.name)
 
     def get_ref_data_tuple(self, key_value):
-        if ref_object := self.cached_dict.get(key_value.lower().strip(), ()):
+        normalized_key = normalize_for_compare(key_value)
+        if ref_object := self.cached_dict.get(normalized_key, ()):
             return ref_object
         self.cached_dict = {
-            r[self.key_type].lower(): (r["id"], r[self.key_type]) for r in self.ref_data
+            normalize_for_compare(r[self.key_type]): (r["id"], r[self.key_type])
+            for r in self.ref_data
         }
-        return self.cached_dict.get(key_value.lower().strip(), ())
+        return self.cached_dict.get(normalized_key, ())
 
     def setup_mappings(self):
         if not self.map:
@@ -118,20 +121,25 @@ class RefDataMapping(object):
         )
 
     def get_hybrid_mapping(self, legacy_object):
-        obj_key = "_".join(legacy_object[k].strip() for k in self.mapped_legacy_keys)
+        obj_key = "_".join(
+            normalize_for_compare(legacy_object[k]) for k in self.mapped_legacy_keys
+        )
         if obj_key in self.cache:
             return self.cache[obj_key]
         highest_match = None
         highest_match_number = 0
 
-        prepped_props = {k: legacy_object[k].strip() for k in self.mapped_legacy_keys}
+        prepped_props = {
+            k: normalize_for_compare(legacy_object[k]) for k in self.mapped_legacy_keys
+        }
         for mapping in self.hybrid_mappings:
             mismatch = 0
             match_numbers = []
             for k in self.mapped_legacy_keys:
-                if mapping[k] == prepped_props[k]:
+                normalized_map_value = normalize_for_compare(mapping[k])
+                if normalized_map_value == prepped_props[k]:
                     match_numbers.append(10)
-                elif mapping[k] == "*":
+                elif normalized_map_value == "*":
                     match_numbers.append(1)
                 else:
                     mismatch += 1
@@ -144,23 +152,38 @@ class RefDataMapping(object):
         return highest_match
 
     def get_ref_data_mapping(self, legacy_object):
-        obj_key = "_".join(legacy_object[k].strip() for k in self.mapped_legacy_keys)
+        obj_key = "_".join(
+            normalize_for_compare(legacy_object[k]) for k in self.mapped_legacy_keys
+        )
         if obj_key in self.cache:
             return self.cache[obj_key]
-        prepped_props = {k: legacy_object[k].strip() for k in self.mapped_legacy_keys}
+        prepped_props = {
+            k: normalize_for_compare(legacy_object[k]) for k in self.mapped_legacy_keys
+        }
         for mapping in self.regular_mappings:
-            match_number = sum(prepped_props[k] == mapping[k] for k in self.mapped_legacy_keys)
+            match_number = sum(
+                prepped_props[k] == normalize_for_compare(mapping[k])
+                for k in self.mapped_legacy_keys
+            )
             if match_number == len(self.mapped_legacy_keys):
                 self.cache[obj_key] = mapping
                 return mapping
         return None
 
     def is_hybrid_default_mapping(self, mapping):
-        legacy_values = [value for key, value in mapping.items() if key in self.mapped_legacy_keys]
+        legacy_values = [
+            normalize_for_compare(value)
+            for key, value in mapping.items()
+            if key in self.mapped_legacy_keys
+        ]
         return "*" in legacy_values and not self.is_default_mapping(mapping)
 
     def is_default_mapping(self, mapping):
-        legacy_values = [value for key, value in mapping.items() if key in self.mapped_legacy_keys]
+        legacy_values = [
+            normalize_for_compare(value)
+            for key, value in mapping.items()
+            if key in self.mapped_legacy_keys
+        ]
         return all(f == "*" for f in legacy_values)
 
     def pre_validate_map(self):
@@ -168,8 +191,10 @@ class RefDataMapping(object):
             raise TransformationProcessError(
                 "", f"Column folio_{self.key_type} missing from {self.name} map file"
             )
-        folio_values_from_map = [f[f"folio_{self.key_type}"] for f in self.map]
-        folio_values_from_folio = [r[self.key_type] for r in self.ref_data]
+        folio_values_from_map = [
+            normalize_for_compare(f[f"folio_{self.key_type}"]) for f in self.map
+        ]
+        folio_values_from_folio = [normalize_for_compare(r[self.key_type]) for r in self.ref_data]
         folio_values_not_in_map = list(
             {f for f in folio_values_from_folio if f not in folio_values_from_map}
         )
