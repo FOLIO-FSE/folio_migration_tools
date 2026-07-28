@@ -79,8 +79,41 @@ The FOLIO column name depends on the type of reference data being mapped:
 | Service Points | `folio_name` | Service point **name** |
 
 ```{important}
-The FOLIO column value must exactly match the value in your FOLIO tenant. Values are case-sensitive.
+The FOLIO column value must resolve to a value in your FOLIO tenant after normalization (see "Normalization Rules for Matching").
 ```
+
+## Normalization Rules for Matching
+
+Reference data matching and pre-validation use the same normalization strategy so that values are validated the same way they are matched at runtime.
+
+Before comparison, values are normalized by:
+
+- Lowercasing text
+- Removing all Unicode whitespace (`\s`)
+- Removing ASCII control separators `\x1c`-`\x1f`
+- Removing zero-width space (`\u200B`)
+- Removing byte-order mark (`\uFEFF`)
+
+This means the following are treated as equivalent when matching or validating:
+
+- `Main Library`
+- `main library`
+- `Main\x1d  Library`
+- `M\u200Bain\uFEFF Library`
+
+### Where This Applies
+
+Normalization is applied in these paths:
+
+- Reference data map row matching (including hybrid wildcard matching)
+- FOLIO value lookup when resolving mapped values to UUIDs
+- Pre-validation checks that confirm mapped FOLIO values exist
+- Note type name resolution and hardcoded note type pre-validation
+- Order bill-to / ship-to name resolution and hardcoded pre-validation
+
+### Wildcards
+
+Wildcard matching still uses `*`. Since matching values are normalized first, wildcard values with extra whitespace (for example `* `) are treated as `*`.
 
 ## Multi-Column Mapping
 
