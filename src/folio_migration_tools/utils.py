@@ -7,4 +7,4 @@ def normalize_for_compare(value):
     """Normalize values for case/whitespace-insensitive comparisons."""
     if value is None:
         return ""
-    return re.sub(r"[\s\x1c-\x1f]+", "", str(value)).lower()
+    return re.sub(r"[\s\x1c-\x1f\u200B\uFEFF]+", "", str(value)).lower()
