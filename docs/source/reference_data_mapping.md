@@ -93,6 +93,7 @@ Before comparison, values are normalized by:
 - Removing ASCII control separators `\x1c`-`\x1f`
 - Removing zero-width space (`\u200B`)
 - Removing byte-order mark (`\uFEFF`)
+- Removing quote characters (ASCII double quote and common Unicode "smart quotes")
 
 This means the following are treated as equivalent when matching or validating:
 
@@ -100,6 +101,7 @@ This means the following are treated as equivalent when matching or validating:
 - `main library`
 - `Main\x1d  Library`
 - `M\u200Bain\uFEFF Library`
+- `"Main" \u201CLibrary\u201D`
 
 ### Where This Applies
 
