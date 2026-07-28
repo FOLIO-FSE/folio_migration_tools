@@ -165,6 +165,17 @@ def test_get_ref_data_tuple_strips_zero_width_and_bom():
     assert res == ("uuid-1", "Main Library")
 
 
+def test_get_ref_data_tuple_strips_ascii_and_smart_quotes():
+    mock = Mock(spec=RefDataMapping)
+    mock.cached_dict = {}
+    mock.key_type = "name"
+    mock.ref_data = [{"id": "uuid-1", "name": "Main Library"}]
+
+    res = RefDataMapping.get_ref_data_tuple(mock, '"Main" \u201CLibrary\u201D')
+
+    assert res == ("uuid-1", "Main Library")
+
+
 def test_pre_validate_map_allows_normalized_folio_value_matches():
     mock = Mock(spec=RefDataMapping)
     mock.key_type = "name"
