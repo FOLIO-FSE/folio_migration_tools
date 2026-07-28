@@ -154,6 +154,17 @@ def test_get_ref_data_tuple_uses_normalized_comparison():
     assert res == ("uuid-1", "Main Library")
 
 
+def test_get_ref_data_tuple_strips_zero_width_and_bom():
+    mock = Mock(spec=RefDataMapping)
+    mock.cached_dict = {}
+    mock.key_type = "name"
+    mock.ref_data = [{"id": "uuid-1", "name": "Main Library"}]
+
+    res = RefDataMapping.get_ref_data_tuple(mock, "M\u200Bain\uFEFF Library")
+
+    assert res == ("uuid-1", "Main Library")
+
+
 def test_pre_validate_map_allows_normalized_folio_value_matches():
     mock = Mock(spec=RefDataMapping)
     mock.key_type = "name"
