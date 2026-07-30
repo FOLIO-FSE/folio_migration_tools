@@ -9,8 +9,12 @@ import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.loans_migrator import LoansMigrator
+from .test_infrastructure import mocked_classes
 
 
 def test_get_object_type():
@@ -53,6 +57,9 @@ def test_load_and_validate_legacy_loans_set_in_source():
         mock_migrator = Mock(spec=LoansMigrator)
         mock_migrator.tenant_timezone = ZoneInfo("UTC")
         mock_migrator.migration_report = MigrationReport()
+        mock_migrator.service_point_mapping = None
+        mock_migrator.failed = {}
+        mock_migrator.failed_and_not_dupe = {}
         a = LoansMigrator.load_and_validate_legacy_loans(
             mock_migrator, reader, "Set on file or config"
         )
@@ -93,6 +100,9 @@ def test_load_and_validate_legacy_loans_set_centrally():
         mock_migrator = Mock(spec=LoansMigrator)
         mock_migrator.migration_report = MigrationReport()
         mock_migrator.tenant_timezone = ZoneInfo("UTC")
+        mock_migrator.service_point_mapping = None
+        mock_migrator.failed = {}
+        mock_migrator.failed_and_not_dupe = {}
         a = LoansMigrator.load_and_validate_legacy_loans(
             mock_migrator, reader, "Set on file or config"
         )
@@ -135,6 +145,9 @@ def test_load_and_validate_legacy_loans_with_proxy():
         mock_migrator = Mock(spec=LoansMigrator)
         mock_migrator.migration_report = MigrationReport()
         mock_migrator.tenant_timezone = ZoneInfo("UTC")
+        mock_migrator.service_point_mapping = None
+        mock_migrator.failed = {}
+        mock_migrator.failed_and_not_dupe = {}
         a = LoansMigrator.load_and_validate_legacy_loans(
             mock_migrator, reader, "Set on file or config"
         )
@@ -599,3 +612,56 @@ def test_declare_lost_uses_fallback_service_point_id_without_cast(mock_i18n):
 
         assert result == []
         assert "I001" in m.failed
+
+
+class TestServicePointMappingInit:
+    """Test _init_service_point_mapping using real RefDataMapping and mocked FolioClient."""
+
+    def test_creates_ref_data_mapping_from_tsv_file(self, tmp_path):
+        """Integration: loads a real TSV mapping file and produces a RefDataMapping."""
+        import csv
+
+        csv.register_dialect("tsv", delimiter="\t")
+        map_file = tmp_path / "sp_map.tsv"
+        map_file.write_text("service_point_id\tfolio_code\nold_desk\tlmd\n*\tfo\n")
+
+        m = Mock(spec=LoansMigrator)
+        m.folio_client = mocked_classes.mocked_folio_client()
+        m.folder_structure = Mock()
+        m.folder_structure.mapping_files_folder = tmp_path
+        m.load_ref_data_mapping_file = LoansMigrator.load_ref_data_mapping_file
+
+        task_config = Mock()
+        task_config.service_point_map_file_name = "sp_map.tsv"
+
+        LoansMigrator._init_service_point_mapping(m, task_config)
+
+        assert isinstance(m.service_point_mapping, RefDataMapping)
+        assert m.service_point_mapping.default_id == "finance_office_uuid"
+        assert m.service_point_mapping.regular_mappings[0]["folio_id"] == "library_main_desk_uuid"
+
+    def test_skips_loading_when_no_map_file_configured(self):
+        m = Mock(spec=LoansMigrator)
+        m.load_ref_data_mapping_file = LoansMigrator.load_ref_data_mapping_file
+
+        task_config = Mock()
+        task_config.service_point_map_file_name = ""
+
+        LoansMigrator._init_service_point_mapping(m, task_config)
+
+        assert m.service_point_mapping is None
+
+    def test_sets_none_when_map_file_does_not_exist(self, tmp_path):
+        """When the configured file doesn't exist, service_point_mapping stays None."""
+        m = Mock(spec=LoansMigrator)
+        m.folio_client = mocked_classes.mocked_folio_client()
+        m.folder_structure = Mock()
+        m.folder_structure.mapping_files_folder = tmp_path
+        m.load_ref_data_mapping_file = LoansMigrator.load_ref_data_mapping_file
+
+        task_config = Mock()
+        task_config.service_point_map_file_name = "nonexistent.tsv"
+
+        LoansMigrator._init_service_point_mapping(m, task_config)
+
+        assert m.service_point_mapping is None

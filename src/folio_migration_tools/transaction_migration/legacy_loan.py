@@ -16,7 +16,11 @@ from dateutil.parser import ParserError, parse
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.utils import is_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +35,7 @@ class LegacyLoan(object):
         migration_report: MigrationReport,
         tenant_timezone=utc,
         row=0,
+        service_point_mapping: RefDataMapping | None = None,
     ):
         """Initialize LegacyLoan from legacy loan data.
 
@@ -40,6 +45,7 @@ class LegacyLoan(object):
             migration_report (MigrationReport): Report for tracking issues.
             tenant_timezone: Timezone of the tenant (default: UTC).
             row (int): Row number in source data for error reporting.
+            service_point_mapping: Optional RefDataMapping for service point code resolution.
         """
         self.migration_report: MigrationReport = migration_report
         # validate
@@ -139,11 +145,62 @@ class LegacyLoan(object):
         self.next_item_status = self.legacy_loan_dict.get("next_item_status", "").strip()
         if self.next_item_status not in legal_statuses:
             self.errors.append((f"Not an allowed status {row=}", self.next_item_status))
-        self.service_point_id = (
-            self.legacy_loan_dict["service_point_id"]
-            if self.legacy_loan_dict.get("service_point_id", "")
-            else fallback_service_point_id
+        self.service_point_id = self._get_service_point_value(
+            fallback_service_point_id, service_point_mapping
         )
+
+    def _get_service_point_value(
+        self, fallback_service_point_id: str, service_point_mapping: RefDataMapping | None
+    ):
+        """Resolve service point code or id from source data or mapping.
+
+        Args:
+            fallback_service_point_id (str): Fallback service point ID.
+            service_point_mapping: Optional RefDataMapping for service point code resolution.
+
+        Returns:
+            str: Resolved service point ID.
+        """
+        raw_value = self.legacy_loan_dict.get("service_point_id", "").strip()
+
+        # Empty value → use fallback
+        if not raw_value:
+            raw_value = fallback_service_point_id
+
+        # UUID value → pass through unchanged (will be validated later)
+        if is_uuid(raw_value):
+            return raw_value
+
+        # Code value with mapping
+        if service_point_mapping:
+            try:
+                mapping = service_point_mapping.get_ref_data_mapping(
+                    {"service_point_id": raw_value}
+                )
+                if mapping and "folio_id" in mapping:
+                    return mapping["folio_id"]
+                else:
+                    self.errors.append(
+                        (
+                            f"Service point code not found in mapping in row {self.row}",
+                            raw_value,
+                        )
+                    )
+                    return ""
+            except Exception as e:
+                logger.warning(
+                    f"Error resolving service point '{raw_value}' in row {self.row}: {e}"
+                )
+                self.errors.append(
+                    (
+                        f"Error resolving service point code in row {self.row}",
+                        raw_value,
+                    )
+                )
+                return ""
+
+        # Code value without mapping → return as-is (will be validated later)
+        return raw_value
 
     def set_renewal_count(self, loan: dict) -> int:
         if "renewal_count" in loan:

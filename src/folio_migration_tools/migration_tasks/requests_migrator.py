@@ -32,10 +32,14 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     get_from_path,
 )
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
+from folio_migration_tools.utils import is_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +91,27 @@ class RequestsMigrator(MigrationTaskBase):
                 ),
             ),
         ] = False
+        service_point_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Service point map file name",
+                description=(
+                    "Optional file name for service point mapping. Maps legacy service point "
+                    "codes to FOLIO service point codes."
+                ),
+            ),
+        ] = ""
+        fallback_service_point_id: Annotated[
+            str,
+            Field(
+                title="Fallback service point ID",
+                description=(
+                    "Fallback service point ID (UUID or code) to use when request "
+                    "does not specify a pickup service point."
+                ),
+                min_length=1,
+            ),
+        ]
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -114,6 +139,8 @@ class RequestsMigrator(MigrationTaskBase):
             "",
             self.migration_report,
         )
+        self._init_service_point_mapping(task_configuration)
+        self._validate_fallback_service_point(task_configuration.fallback_service_point_id)
         self.valid_patron_map = {}
         self.valid_item_barcodes = set()
         try:
@@ -231,6 +258,47 @@ class RequestsMigrator(MigrationTaskBase):
                 return values[0]
         return None
 
+    async def pre_validate_service_points(self):
+        """Validate all service point values exist in FOLIO, then resolve codes to UUIDs."""
+        if not self.semi_valid_legacy_requests:
+            return
+
+        service_point_values = {
+            r.pickup_servicepoint_id
+            for r in self.semi_valid_legacy_requests
+            if r.pickup_servicepoint_id
+        }
+        logger.info(f"Validating {len(service_point_values)} unique service point values")
+
+        service_point_ids = {sp["id"] for sp in self.folio_client.service_points}
+        service_points_by_code = {
+            sp["code"]: sp["id"] for sp in self.folio_client.service_points if sp.get("code")
+        }
+
+        missing = [
+            v
+            for v in service_point_values
+            if v not in service_point_ids and v not in service_points_by_code
+        ]
+        if missing:
+            missing_uuids = [v for v in missing if is_uuid(v)]
+            missing_codes = [v for v in missing if not is_uuid(v)]
+            if missing_uuids:
+                logger.critical("Service point UUIDs not found in FOLIO: %s", missing_uuids)
+            if missing_codes:
+                logger.critical("Service point codes not found in FOLIO: %s", missing_codes)
+            sys.exit(1)
+
+        # Resolve codes to UUIDs for the circulation API
+        for request in self.semi_valid_legacy_requests:
+            if (
+                request.pickup_servicepoint_id
+                and request.pickup_servicepoint_id in service_points_by_code
+            ):
+                request.pickup_servicepoint_id = service_points_by_code[
+                    request.pickup_servicepoint_id
+                ]
+
     async def _pre_validate_barcodes(self):
         if self.task_configuration.skip_barcode_prevalidation:
             logger.info("Barcode pre-validation is disabled by configuration. Skipping.")
@@ -296,6 +364,7 @@ class RequestsMigrator(MigrationTaskBase):
         return True, legacy_request
 
     async def do_work(self):
+        await self.pre_validate_service_points()
         await self._pre_validate_barcodes()
         logger.info("Starting")
         if self.task_configuration.starting_row > 1:
@@ -600,6 +669,78 @@ class RequestsMigrator(MigrationTaskBase):
                 f"Barcode: {barcode}",
             )
 
+    def _init_service_point_mapping(self, task_configuration: TaskConfiguration):
+        """Initialize the service point mapping from an optional TSV file.
+
+        Args:
+            task_configuration (TaskConfiguration): Task configuration with mapping file name.
+        """
+        self.service_point_mapping: RefDataMapping | None = None
+        if task_configuration.service_point_map_file_name:
+            service_point_map = self.load_ref_data_mapping_file(
+                "servicePointId",
+                self.folder_structure.mapping_files_folder
+                / task_configuration.service_point_map_file_name,
+                ["servicePointId"],
+                False,
+            )
+            if service_point_map:
+                self.service_point_mapping = RefDataMapping(
+                    self.folio_client,
+                    "/service-points",
+                    "servicepoints",
+                    service_point_map,
+                    "code",
+                    "ServicePointMapping",
+                )
+
+    def _validate_fallback_service_point(self, fallback_service_point_id: str):
+        """Validate that the fallback service point exists in FOLIO.
+
+        Args:
+            fallback_service_point_id (str): The fallback service point ID (UUID or code).
+
+        Raises:
+            SystemExit: If fallback service point is not found in FOLIO.
+        """
+        if not fallback_service_point_id or not fallback_service_point_id.strip():
+            logger.info("No fallback service point configured")
+            return
+
+        try:
+            logger.info(f"Validating fallback service point: {fallback_service_point_id}")
+
+            # Build lookup structures for both ID (UUID) and code
+            service_point_ids = {sp["id"] for sp in self.folio_client.service_points}
+            service_points_by_code = {
+                sp["code"]: sp["id"] for sp in self.folio_client.service_points if sp.get("code")
+            }
+
+            # Check if fallback exists as UUID or code
+            if (
+                fallback_service_point_id not in service_point_ids
+                and fallback_service_point_id not in service_points_by_code
+            ):
+                logger.critical(
+                    "Fallback service point '%s' does not exist in FOLIO",
+                    fallback_service_point_id,
+                )
+                logger.critical(
+                    "Task initialization failed. Please verify fallback service point."
+                )
+                sys.exit(1)
+
+            logger.info(
+                f"Successfully validated fallback service point: {fallback_service_point_id}"
+            )
+
+        except Exception as e:
+            logger.exception("Error validating fallback service point: %s", e)
+            logger.critical(
+                "Task initialization failed due to fallback service point validation error"
+            )
+            sys.exit(1)
+
     async def check_barcodes(self) -> AsyncGenerator[LegacyRequest, None]:
         self.pre_validate_item_barcodes()
         await self.pre_validate_patron_barcodes_async()
@@ -652,6 +793,8 @@ class RequestsMigrator(MigrationTaskBase):
                     legacy_request_dict,
                     self.tenant_timezone,
                     legacy_reques_count,
+                    self.service_point_mapping,
+                    self.task_configuration.fallback_service_point_id,
                 )
                 if any(legacy_request.errors):
                     num_bad += 1

@@ -14,6 +14,10 @@ from dateutil import tz
 from dateutil.parser import parse
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
+from folio_migration_tools.utils import is_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -21,13 +25,22 @@ utc = ZoneInfo("UTC")
 
 
 class LegacyRequest(object):
-    def __init__(self, legacy_request_dict, tenant_timezone=utc, row=0):
+    def __init__(
+        self,
+        legacy_request_dict,
+        tenant_timezone=utc,
+        row=0,
+        service_point_mapping: RefDataMapping | None = None,
+        fallback_service_point_id="",
+    ):
         """Initialize LegacyRequest from legacy request data.
 
         Args:
             legacy_request_dict: Dictionary containing legacy request data.
             tenant_timezone: Timezone of the tenant (default: UTC).
             row (int): Row number in source data for error reporting.
+            service_point_mapping: Optional RefDataMapping for service point code resolution.
+            fallback_service_point_id: Fallback service point ID to use if not in source data.
         """
         # validate
         correct_headers = [
@@ -37,9 +50,9 @@ class LegacyRequest(object):
             "request_expiration_date",
             "comment",
             "request_type",
-            "pickup_servicepoint_id",
         ]
         self.errors = []
+        self.row = row
 
         for prop in correct_headers:
             if prop not in legacy_request_dict:
@@ -56,7 +69,9 @@ class LegacyRequest(object):
         self.patron_barcode = legacy_request_dict["patron_barcode"].strip()
         self.comment = legacy_request_dict["comment"].strip()
         self.request_type = legacy_request_dict["request_type"].strip()
-        self.pickup_servicepoint_id = legacy_request_dict["pickup_servicepoint_id"].strip()
+        self.pickup_servicepoint_id = self._get_service_point_value(
+            legacy_request_dict, fallback_service_point_id, service_point_mapping
+        )
         self.fulfillment_preference = "Hold Shelf"
 
         if self.request_type not in ["Hold", "Recall", "Page"]:
@@ -84,6 +99,63 @@ class LegacyRequest(object):
         self.request_date: datetime.datetime = temp_request_date
         self.request_expiration_date: datetime.datetime = temp_expiration_date
         self.correct_for_1_day_requests()
+
+    def _get_service_point_value(
+        self,
+        legacy_request_dict,
+        fallback_service_point_id,
+        service_point_mapping: RefDataMapping | None,
+    ):
+        """Resolve service point ID from source data or mapping.
+
+        Args:
+            legacy_request_dict: Dictionary containing legacy request data.
+            fallback_service_point_id: Fallback service point ID to use if not in source data.
+            service_point_mapping: Optional RefDataMapping for service point code resolution.
+
+        Returns:
+            str: Resolved service point ID.
+        """
+        raw_value = legacy_request_dict.get("pickup_servicepoint_id", "").strip()
+
+        # Empty value → use fallback
+        if not raw_value:
+            raw_value = fallback_service_point_id
+
+        # UUID value → pass through unchanged (will be validated later)
+        if is_uuid(raw_value):
+            return raw_value
+
+        # Code value with mapping
+        if service_point_mapping:
+            try:
+                mapping = service_point_mapping.get_ref_data_mapping(
+                    {"service_point_id": raw_value}
+                )
+                if mapping and "folio_id" in mapping:
+                    return mapping["folio_id"]
+                else:
+                    self.errors.append(
+                        (
+                            f"Service point code not found in mapping in row {self.row}",
+                            raw_value,
+                        )
+                    )
+                    return ""
+            except Exception as e:
+                logger.warning(
+                    f"Error resolving service point '{raw_value}' in row {self.row}: {e}"
+                )
+                self.errors.append(
+                    (
+                        f"Error resolving service point code in row {self.row}",
+                        raw_value,
+                    )
+                )
+                return ""
+
+        # Code value without mapping → return as-is (will be validated later)
+        return raw_value
 
     def correct_for_1_day_requests(self):
         try:

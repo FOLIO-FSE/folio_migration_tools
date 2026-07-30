@@ -1,9 +1,13 @@
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, PropertyMock
 
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.migration_tasks.requests_migrator import RequestsMigrator
+from .test_infrastructure import mocked_classes
 
 
 def test_get_object_type():
@@ -15,9 +19,11 @@ class DummyLegacyRequest:
         self,
         item_barcode: str = "item-1",
         patron_barcode: str = "patron-1",
+        pickup_servicepoint_id: str = "",
     ):
         self.item_barcode = item_barcode
         self.patron_barcode = patron_barcode
+        self.pickup_servicepoint_id = pickup_servicepoint_id
         self.request_date = 1
 
     def to_source_dict(self):
@@ -195,3 +201,118 @@ class TestPreValidateBarcodesWorkflow:
         await RequestsMigrator._pre_validate_barcodes(m)
 
         assert m.valid_legacy_requests == [req1]
+
+
+class TestPreValidateServicePoints:
+    def _make_migrator(self, requests, folio_service_points=None):
+        m = Mock(spec=RequestsMigrator)
+        m.semi_valid_legacy_requests = requests
+        m.folio_client = Mock()
+        m.folio_client.service_points = folio_service_points or []
+        return m
+
+    @pytest.mark.asyncio
+    async def test_resolves_code_to_uuid(self):
+        req = DummyLegacyRequest(pickup_servicepoint_id="circ-desk")
+        folio_sps = [{"id": "sp-uuid-1", "code": "circ-desk"}]
+        m = self._make_migrator([req], folio_sps)
+
+        await RequestsMigrator.pre_validate_service_points(m)
+
+        assert req.pickup_servicepoint_id == "sp-uuid-1"
+
+    @pytest.mark.asyncio
+    async def test_uuid_passes_through_unchanged(self):
+        req = DummyLegacyRequest(pickup_servicepoint_id="sp-uuid-1")
+        folio_sps = [{"id": "sp-uuid-1", "code": "circ-desk"}]
+        m = self._make_migrator([req], folio_sps)
+
+        await RequestsMigrator.pre_validate_service_points(m)
+
+        assert req.pickup_servicepoint_id == "sp-uuid-1"
+
+    @pytest.mark.asyncio
+    async def test_exits_on_missing_uuid(self):
+        req = DummyLegacyRequest(
+            pickup_servicepoint_id="00000000-0000-0000-0000-000000000099"
+        )
+        folio_sps = [{"id": "sp-uuid-1", "code": "circ-desk"}]
+        m = self._make_migrator([req], folio_sps)
+
+        with pytest.raises(SystemExit):
+            await RequestsMigrator.pre_validate_service_points(m)
+
+    @pytest.mark.asyncio
+    async def test_exits_on_missing_code(self):
+        req = DummyLegacyRequest(pickup_servicepoint_id="bad-code")
+        folio_sps = [{"id": "sp-uuid-1", "code": "circ-desk"}]
+        m = self._make_migrator([req], folio_sps)
+
+        with pytest.raises(SystemExit):
+            await RequestsMigrator.pre_validate_service_points(m)
+
+    @pytest.mark.asyncio
+    async def test_no_requests_returns_early(self):
+        m = Mock(spec=RequestsMigrator)
+        m.semi_valid_legacy_requests = []
+        m.folio_client = Mock()
+        sp_mock = PropertyMock()
+        type(m.folio_client).service_points = sp_mock
+
+        await RequestsMigrator.pre_validate_service_points(m)
+
+        sp_mock.assert_not_called()
+
+
+class TestServicePointMappingInit:
+    """Test _init_service_point_mapping using real RefDataMapping and mocked FolioClient."""
+
+    def test_creates_ref_data_mapping_from_tsv_file(self, tmp_path):
+        """Integration: loads a real TSV mapping file and produces a RefDataMapping."""
+        import csv
+
+        csv.register_dialect("tsv", delimiter="\t")
+        # Create a TSV mapping file with legacy_code -> folio_code
+        map_file = tmp_path / "sp_map.tsv"
+        map_file.write_text("service_point_id\tfolio_code\nold_desk\tlmd\n*\tfo\n")
+
+        m = Mock(spec=RequestsMigrator)
+        m.folio_client = mocked_classes.mocked_folio_client()
+        m.folder_structure = Mock()
+        m.folder_structure.mapping_files_folder = tmp_path
+        m.load_ref_data_mapping_file = RequestsMigrator.load_ref_data_mapping_file
+
+        task_config = Mock()
+        task_config.service_point_map_file_name = "sp_map.tsv"
+
+        RequestsMigrator._init_service_point_mapping(m, task_config)
+
+        assert isinstance(m.service_point_mapping, RefDataMapping)
+        assert m.service_point_mapping.default_id == "finance_office_uuid"
+        assert m.service_point_mapping.regular_mappings[0]["folio_id"] == "library_main_desk_uuid"
+
+    def test_skips_loading_when_no_map_file_configured(self):
+        m = Mock(spec=RequestsMigrator)
+        m.load_ref_data_mapping_file = RequestsMigrator.load_ref_data_mapping_file
+
+        task_config = Mock()
+        task_config.service_point_map_file_name = ""
+
+        RequestsMigrator._init_service_point_mapping(m, task_config)
+
+        assert m.service_point_mapping is None
+
+    def test_sets_none_when_map_file_does_not_exist(self, tmp_path):
+        """When the configured file doesn't exist, service_point_mapping stays None."""
+        m = Mock(spec=RequestsMigrator)
+        m.folio_client = mocked_classes.mocked_folio_client()
+        m.folder_structure = Mock()
+        m.folder_structure.mapping_files_folder = tmp_path
+        m.load_ref_data_mapping_file = RequestsMigrator.load_ref_data_mapping_file
+
+        task_config = Mock()
+        task_config.service_point_map_file_name = "nonexistent.tsv"
+
+        RequestsMigrator._init_service_point_mapping(m, task_config)
+
+        assert m.service_point_mapping is None
