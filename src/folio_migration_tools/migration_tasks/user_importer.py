@@ -148,6 +148,14 @@ class UserImportTask(MigrationTaskBase):
             ),
         ] = False
 
+        handle_permissions_user_objects: Annotated[
+            bool,
+            Field(
+                title="Handle permission user objects",
+                description="Whether to handle permission user objects when updating users.",
+            ),
+        ] = True
+
     task_configuration: TaskConfiguration
 
     @staticmethod
@@ -198,6 +206,7 @@ class UserImportTask(MigrationTaskBase):
             limit_simultaneous_requests=self.task_configuration.limit_simultaneous_requests,
             user_file_paths=file_paths,
             no_progress=self.task_configuration.no_progress,
+            handle_permissions_user_objects=self.task_configuration.handle_permissions_user_objects,
         )
 
     async def do_work(self) -> None:
