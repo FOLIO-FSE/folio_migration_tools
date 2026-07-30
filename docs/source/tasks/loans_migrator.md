@@ -35,8 +35,9 @@ This task creates real circulation transactions and **can generate thousands of 
 |-----------|------|----------|-------------|
 | `name` | string | Yes | The name of this task. |
 | `migrationTaskType` | string | Yes | Must be `"LoansMigrator"` |
-| `fallbackServicePointId` | string | Yes | UUID of service point for check-out transactions |
+| `fallbackServicePointId` | string | Yes | Service point UUID or code for check-out transactions when not specified per-loan |
 | `openLoansFiles` | array | Yes | List of loan data files with optional per-file service point |
+| `servicePointMapFileName` | string | No | Filename of a TSV mapping file for translating legacy service point codes to FOLIO codes |
 | `startingRow` | integer | No | Row number to start processing (for resuming). Default: 1 |
 | `skipBarcodePrevalidation` | boolean | No | Skip pre-validation of patron and item barcodes against FOLIO. Default: false |
 | `itemFiles` | array | No | **Deprecated.** No longer used for pre-validation. |
@@ -63,7 +64,33 @@ This task creates real circulation transactions and **can generate thousands of 
 | `proxy_patron_barcode` | Barcode of proxy borrower (if applicable) |
 | `renewal_count` | Number of times the loan has been renewed |
 | `next_item_status` | Item status to set after loan is created |
-| `service_point_id` | Override service point for this specific loan |
+| `service_point_id` | Override service point for this specific loan (UUID or code) |
+
+### Service Point Values
+
+The `service_point_id` column and `fallbackServicePointId` parameter accept either:
+
+- A **UUID** of a FOLIO service point (e.g., `a77b55e7-f9f3-40a1-83e0-241bc606a826`)
+- A **code** of a FOLIO service point (e.g., `circ-desk`)
+
+All service point values are validated against FOLIO before loan processing begins. If any value cannot be resolved, the task halts with an error.
+
+### Service Point Mapping File
+
+When `servicePointMapFileName` is provided, the task loads a TSV file from the `mapping_files` folder that maps legacy service point codes to FOLIO service point codes. This is useful when your legacy system uses different codes than FOLIO.
+
+**Format**: Tab-separated with headers `service_point_id` and `folio_code`:
+
+```text
+service_point_id	folio_code
+MAIN_CIRC	circ-desk
+BRANCH1	branch-desk
+*	circ-desk
+```
+
+- `service_point_id` — The legacy code that appears in your source data
+- `folio_code` — The corresponding FOLIO service point code
+- `*` — Required wildcard row (must be present for file validation, but is not used as a runtime fallback; unmatched codes will produce an error)
 
 ### Example Data
 
@@ -81,6 +108,14 @@ Dates should be in ISO 8601 format:
 - `2024-12-15T10:30:00-05:00` (with timezone)
 
 ## Pre-validation
+
+The task performs several validation steps before creating loans.
+
+### Service point validation
+
+All unique service point values (from source data and the fallback) are validated against FOLIO before any barcode checking occurs. Both UUIDs and codes are verified to exist. If any service point cannot be found, the task halts immediately. Service point codes are resolved to UUIDs for the circulation API.
+
+### Barcode validation
 
 By default, the task validates patron and item barcodes directly against the FOLIO tenant before attempting to create loans. This can be disabled by setting `skipBarcodePrevalidation` to `true`.
 
@@ -191,6 +226,24 @@ Files are created in `iterations/<iteration>/results/`:
     ]
 }
 ```
+
+### Using Service Point Codes with a Mapping File
+
+```json
+{
+    "name": "migrate_loans",
+    "migrationTaskType": "LoansMigrator",
+    "fallbackServicePointId": "circ-desk",
+    "servicePointMapFileName": "service_point_map.tsv",
+    "openLoansFiles": [
+        {
+            "file_name": "loans.tsv"
+        }
+    ]
+}
+```
+
+In this example, both the `fallbackServicePointId` and values in the source data's `service_point_id` column can be FOLIO service point codes. The `service_point_map.tsv` file translates legacy codes to FOLIO codes.
 
 ## Running the Task
 
