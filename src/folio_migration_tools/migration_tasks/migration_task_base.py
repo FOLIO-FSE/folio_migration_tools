@@ -42,6 +42,10 @@ from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import 
     DEFAULT_MARC_RECORD_PREPROCESSORS,
     MARCReaderWrapper,
 )
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
+from folio_migration_tools.utils import is_uuid
 
 logger = logging.getLogger(__name__)
 
@@ -453,6 +457,115 @@ class MigrationTaskBase:
                 map_file_path,
             )
             return None
+
+    def _init_service_point_mapping(self, task_configuration):
+        """Initialize the service point mapping from an optional TSV file.
+
+        Args:
+            task_configuration: Task configuration with service_point_map_file_name attribute.
+        """
+        self.service_point_mapping: RefDataMapping | None = None
+        if task_configuration.service_point_map_file_name:
+            service_point_map = self.load_ref_data_mapping_file(
+                "servicePointId",
+                self.folder_structure.mapping_files_folder
+                / task_configuration.service_point_map_file_name,
+                ["servicePointId"],
+                False,
+            )
+            if service_point_map:
+                self.service_point_mapping = RefDataMapping(
+                    self.folio_client,
+                    "/service-points",
+                    "servicepoints",
+                    service_point_map,
+                    "code",
+                    "ServicePointMapping",
+                )
+
+    def _validate_fallback_service_point(self, fallback_service_point_id: str):
+        """Validate that the fallback service point exists in FOLIO.
+
+        Args:
+            fallback_service_point_id (str): The fallback service point ID (UUID or code).
+
+        Raises:
+            SystemExit: If fallback service point is not found in FOLIO.
+        """
+        if not fallback_service_point_id or not fallback_service_point_id.strip():
+            logger.info("No fallback service point configured")
+            return
+
+        try:
+            logger.info(f"Validating fallback service point: {fallback_service_point_id}")
+
+            service_point_ids = {sp["id"] for sp in self.folio_client.service_points}
+            service_points_by_code = {
+                sp["code"]: sp["id"] for sp in self.folio_client.service_points if sp.get("code")
+            }
+
+            if (
+                fallback_service_point_id not in service_point_ids
+                and fallback_service_point_id not in service_points_by_code
+            ):
+                logger.critical(
+                    "Fallback service point '%s' does not exist in FOLIO",
+                    fallback_service_point_id,
+                )
+                logger.critical(
+                    "Task initialization failed. Please verify fallback service point."
+                )
+                sys.exit(1)
+
+            logger.info(
+                f"Successfully validated fallback service point: {fallback_service_point_id}"
+            )
+
+        except Exception as e:
+            logger.exception("Error validating fallback service point: %s", e)
+            logger.critical(
+                "Task initialization failed due to fallback service point validation error"
+            )
+            sys.exit(1)
+
+    def _pre_validate_service_points(self, records, service_point_attr: str):
+        """Validate service point values exist in FOLIO and resolve codes to UUIDs.
+
+        Args:
+            records: List of legacy record objects.
+            service_point_attr: Attribute name on each record holding the service point value.
+        """
+        if not records:
+            return
+
+        service_point_values = {
+            getattr(r, service_point_attr) for r in records if getattr(r, service_point_attr, None)
+        }
+        logger.info(f"Validating {len(service_point_values)} unique service point values")
+
+        service_point_ids = {sp["id"] for sp in self.folio_client.service_points}
+        service_points_by_code = {
+            sp["code"]: sp["id"] for sp in self.folio_client.service_points if sp.get("code")
+        }
+
+        missing = [
+            v
+            for v in service_point_values
+            if v not in service_point_ids and v not in service_points_by_code
+        ]
+        if missing:
+            missing_uuids = [v for v in missing if is_uuid(v)]
+            missing_codes = [v for v in missing if not is_uuid(v)]
+            if missing_uuids:
+                logger.critical("Service point UUIDs not found in FOLIO: %s", missing_uuids)
+            if missing_codes:
+                logger.critical("Service point codes not found in FOLIO: %s", missing_codes)
+            sys.exit(1)
+
+        for record in records:
+            val = getattr(record, service_point_attr, None)
+            if val and val in service_points_by_code:
+                setattr(record, service_point_attr, service_points_by_code[val])
 
 
 class MarcTaskConfigurationBase(task_configuration.AbstractTaskConfiguration):

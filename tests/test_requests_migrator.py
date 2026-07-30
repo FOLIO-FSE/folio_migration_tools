@@ -6,6 +6,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
+from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.migration_tasks.requests_migrator import RequestsMigrator
 from .test_infrastructure import mocked_classes
 
@@ -211,28 +212,29 @@ class TestPreValidateServicePoints:
         m.folio_client.service_points = folio_service_points or []
         return m
 
-    @pytest.mark.asyncio
-    async def test_resolves_code_to_uuid(self):
+    def test_resolves_code_to_uuid(self):
         req = DummyLegacyRequest(pickup_servicepoint_id="circ-desk")
         folio_sps = [{"id": "sp-uuid-1", "code": "circ-desk"}]
         m = self._make_migrator([req], folio_sps)
 
-        await RequestsMigrator.pre_validate_service_points(m)
+        MigrationTaskBase._pre_validate_service_points(
+            m, [req], "pickup_servicepoint_id"
+        )
 
         assert req.pickup_servicepoint_id == "sp-uuid-1"
 
-    @pytest.mark.asyncio
-    async def test_uuid_passes_through_unchanged(self):
+    def test_uuid_passes_through_unchanged(self):
         req = DummyLegacyRequest(pickup_servicepoint_id="sp-uuid-1")
         folio_sps = [{"id": "sp-uuid-1", "code": "circ-desk"}]
         m = self._make_migrator([req], folio_sps)
 
-        await RequestsMigrator.pre_validate_service_points(m)
+        MigrationTaskBase._pre_validate_service_points(
+            m, [req], "pickup_servicepoint_id"
+        )
 
         assert req.pickup_servicepoint_id == "sp-uuid-1"
 
-    @pytest.mark.asyncio
-    async def test_exits_on_missing_uuid(self):
+    def test_exits_on_missing_uuid(self):
         req = DummyLegacyRequest(
             pickup_servicepoint_id="00000000-0000-0000-0000-000000000099"
         )
@@ -240,26 +242,29 @@ class TestPreValidateServicePoints:
         m = self._make_migrator([req], folio_sps)
 
         with pytest.raises(SystemExit):
-            await RequestsMigrator.pre_validate_service_points(m)
+            MigrationTaskBase._pre_validate_service_points(
+                m, [req], "pickup_servicepoint_id"
+            )
 
-    @pytest.mark.asyncio
-    async def test_exits_on_missing_code(self):
+    def test_exits_on_missing_code(self):
         req = DummyLegacyRequest(pickup_servicepoint_id="bad-code")
         folio_sps = [{"id": "sp-uuid-1", "code": "circ-desk"}]
         m = self._make_migrator([req], folio_sps)
 
         with pytest.raises(SystemExit):
-            await RequestsMigrator.pre_validate_service_points(m)
+            MigrationTaskBase._pre_validate_service_points(
+                m, [req], "pickup_servicepoint_id"
+            )
 
-    @pytest.mark.asyncio
-    async def test_no_requests_returns_early(self):
+    def test_no_requests_returns_early(self):
         m = Mock(spec=RequestsMigrator)
-        m.semi_valid_legacy_requests = []
         m.folio_client = Mock()
         sp_mock = PropertyMock()
         type(m.folio_client).service_points = sp_mock
 
-        await RequestsMigrator.pre_validate_service_points(m)
+        MigrationTaskBase._pre_validate_service_points(
+            m, [], "pickup_servicepoint_id"
+        )
 
         sp_mock.assert_not_called()
 
