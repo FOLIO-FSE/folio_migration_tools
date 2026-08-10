@@ -5,11 +5,13 @@ using configured mapping files. Handles material types, loan types, statuses, an
 circulation notes.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import sys
 from datetime import datetime, timezone
-from typing import Dict, List, Set
+from typing import TYPE_CHECKING, Dict, List, Set
 from uuid import uuid4
 
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -31,13 +33,17 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.utils import normalize_for_compare
+
+if TYPE_CHECKING:
+    from folio_migration_tools.migration_tasks.items_transformer import ItemsTransformer
 
 logger = logging.getLogger(__name__)
 
 
 class ItemMapper(MappingFileMapperBase):
+    task_configuration: ItemsTransformer.TaskConfiguration
+
     def __init__(
         self,
         folio_client: FolioClient,
@@ -52,7 +58,7 @@ class ItemMapper(MappingFileMapperBase):
         temporary_loan_type_mapping,
         temporary_location_mapping,
         library_configuration: LibraryConfiguration,
-        task_configuration: AbstractTaskConfiguration,
+        task_configuration: ItemsTransformer.TaskConfiguration,
         item_note_type_map=None,
     ):
         """Initialize ItemMapper for item transformations.

@@ -49,6 +49,8 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
         feefines_type_map: Optional[str] = None
         service_point_map: Optional[str] = None
 
+    task_configuration: TaskConfiguration
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.fees_fines

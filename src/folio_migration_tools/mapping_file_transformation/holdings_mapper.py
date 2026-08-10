@@ -5,9 +5,12 @@ records using configured mapping files. Handles locations, call numbers, notes, 
 bound-with relationships.
 """
 
+from __future__ import annotations
+
 import ast
 import json
 import logging
+from typing import TYPE_CHECKING
 
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
@@ -27,13 +30,19 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
-from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.utils import normalize_for_compare
+
+if TYPE_CHECKING:
+    from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
+        HoldingsCsvTransformer,
+    )
 
 logger = logging.getLogger(__name__)
 
 
 class HoldingsMapper(MappingFileMapperBase):
+    task_configuration: HoldingsCsvTransformer.TaskConfiguration
+
     def __init__(
         self,
         folio_client: FolioClient,
@@ -42,7 +51,7 @@ class HoldingsMapper(MappingFileMapperBase):
         call_number_type_map,
         instance_id_map,
         library_configuration: LibraryConfiguration,
-        task_config: AbstractTaskConfiguration,
+        task_config: HoldingsCsvTransformer.TaskConfiguration,
         statistical_codes_map=None,
         holdings_note_type_map=None,
     ):
@@ -71,6 +80,7 @@ class HoldingsMapper(MappingFileMapperBase):
             task_config,
         )
         self.holdings_map = holdings_map
+        self.call_number_mapping: RefDataMapping | None = None
 
         self.location_mapping = RefDataMapping(
             self.folio_client,
@@ -217,7 +227,7 @@ class HoldingsMapper(MappingFileMapperBase):
         )
 
     def get_call_number_type_id(self, legacy_item, folio_prop_name: str, id_or_index):
-        if self.call_number_mapping:
+        if self.call_number_mapping is not None:
             return self.get_mapped_ref_data_value(
                 self.call_number_mapping, legacy_item, id_or_index, folio_prop_name
             )

@@ -14,7 +14,6 @@ import uuid
 from functools import reduce
 from pathlib import Path
 from typing import Any, Dict, List, Set
-from uuid import UUID
 
 import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
@@ -45,7 +44,7 @@ class MappingFileMapperBase(MapperBase):
         schema,
         record_map,
         statistical_codes_map,
-        uuid_namespace: UUID,
+        uuid_namespace: FOLIONamespaces,
         library_configuration: LibraryConfiguration,
         task_config: AbstractTaskConfiguration,
         ignore_legacy_identifier=False,
@@ -157,7 +156,7 @@ class MappingFileMapperBase(MapperBase):
                 raise TransformationProcessError(
                     "",
                     f"property legacyIdentifier not setup in map: "
-                    f"{field_map.get('legacyIdentifier', '')({exception})}",
+                    f"{field_map.get('legacyIdentifier', '')} ({exception})",
                 ) from exception
             del field_map["legacyIdentifier"]
         return field_map

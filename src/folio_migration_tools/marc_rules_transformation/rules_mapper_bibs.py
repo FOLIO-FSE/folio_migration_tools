@@ -1,12 +1,14 @@
 """MARC21 to FOLIO Instance mapper using community specifications."""
 
+from __future__ import annotations
+
 import logging
 import sys
 import time
 import typing
 import uuid
 from pathlib import Path
-from typing import Dict, Generator, List
+from typing import TYPE_CHECKING, Dict, Generator, List
 
 import i18n
 from defusedxml.ElementTree import fromstring
@@ -34,11 +36,17 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
 )
 from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase
 
+if TYPE_CHECKING:
+    from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
+
 logger = logging.getLogger(__name__)
 
 
 class BibsRulesMapper(RulesMapperBase):
     """Map MARC records to FOLIO inventory instance format."""
+
+    task_configuration: BibsTransformer.TaskConfiguration
+    conditions: Conditions
 
     def __init__(
         self,
@@ -83,7 +91,7 @@ class BibsRulesMapper(RulesMapperBase):
             FolioUUID(
                 self.base_string_for_folio_uuid,
                 FOLIONamespaces.instances,
-                str(legacy_ids[-1]),
+                legacy_ids[-1],
             )
         )
         if (
@@ -543,8 +551,9 @@ class BibsRulesMapper(RulesMapperBase):
         return ["81a3a0e2-b8e5-4a7a-875d-343035b4e4d7"]
 
     def get_languages_008(self, marc_record: Record):
-        if "008" in marc_record and len(marc_record["008"].data) > 38:
-            return "".join(marc_record["008"].data[35:38])
+        f008_field = marc_record["008"]
+        if f008_field and f008_field.data and len(f008_field.data) > 38:
+            return "".join(f008_field.data[35:38])
         return ""
 
     def get_languages_041(self, marc_record: Record, legacy_id: List[str]) -> Dict[str, None]:
@@ -561,7 +570,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
             lang_codes = lang_tag.get_subfields(*list(subfields))
             for lang_code in lang_codes:
-                lang_code = str(lang_code).lower().replace(" ", "")
+                lang_code = lang_code.lower().replace(" ", "")
                 langlength = len(lang_code)
                 if langlength == 3:
                     languages[lang_code.replace(" ", "")] = None
@@ -607,7 +616,8 @@ class BibsRulesMapper(RulesMapperBase):
         name_space = "{info:lc/xmlns/codelist-v1}"
         xpath_expr = "{0}languages/{0}language/{0}code".format(name_space)
         for code in tree.findall(xpath_expr):
-            yield code.text
+            if code.text is not None:
+                yield code.text
 
     def filter_langs(
         self, language_values: List[str], marc_record: Record, index_or_legacy_id: List[str]
