@@ -5,17 +5,19 @@ rules-based mapping. Handles holdings-specific fields including locations, call 
 holdings statements, and notes.
 """
 
+from __future__ import annotations
+
 import copy
 import json
 import logging
 import re
-from typing import Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
-from pymarc.field import Field
+from pymarc.field import Field, Indicators
 from pymarc.record import Record
 
 from folio_migration_tools.custom_exceptions import (
@@ -39,15 +41,23 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 
+if TYPE_CHECKING:
+    from folio_migration_tools.migration_tasks.holdings_marc_transformer import (
+        HoldingsMarcTransformer,
+    )
+
 logger = logging.getLogger(__name__)
 
 
 class RulesMapperHoldings(RulesMapperBase):
+    task_configuration: HoldingsMarcTransformer.TaskConfiguration
+    conditions: Conditions
+
     def __init__(
         self,
         folio_client: FolioClient,
         location_map,
-        task_configuration,
+        task_configuration: HoldingsMarcTransformer.TaskConfiguration,
         library_configuration: LibraryConfiguration,
         parent_id_map: dict,
         boundwith_relationship_map_rows: List[Dict],
@@ -94,7 +104,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.setup_holdings_sources()
         logger.info("Fetching mapping rules from the tenant")
         rules_endpoint = "/mapping-rules/marc-holdings"
-        self.mappings = self.folio_client.folio_get_single_object(rules_endpoint)
+        self.mappings = self.folio_client.folio_get_single_object(rules_endpoint) or {}
 
     def fix_853_bug_in_rules(self):
         f852_mappings = self.mappings["852"]
@@ -129,7 +139,7 @@ class RulesMapperHoldings(RulesMapperBase):
     def prep_852_notes(self, marc_record: Record):
         for field in marc_record.get_fields("852"):
             field.subfields.sort(key=lambda x: x[0])
-            new_952 = Field(tag="952", indicators=["f", "f"], subfields=field.subfields)
+            new_952 = Field(tag="952", indicators=Indicators("f", "f"), subfields=field.subfields)
             marc_record.add_ordered_field(new_952)
 
     def parse_record(
@@ -220,7 +230,11 @@ class RulesMapperHoldings(RulesMapperBase):
                 "More than one linked bib (004) found in record. Using the first one",
                 [str(x) for x in marc_record.get_fields("004")],
             )
-        legacy_instance_id = marc_record["004"].data.strip()
+        f004_field = marc_record["004"]
+        if f004_field and (f004_data := f004_field.data):
+            legacy_instance_id = f004_data.strip()
+        else:
+            legacy_instance_id = ""
         folio_holding["formerIds"].append(f"{self.bib_id_template}{legacy_instance_id}")
         if legacy_instance_id in self.parent_id_map:
             folio_holding["instanceId"] = self.parent_id_map[legacy_instance_id][1]

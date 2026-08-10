@@ -92,6 +92,8 @@ class CoursesMigrator(MigrationTaskBase):
             ),
         ] = False
 
+    task_configuration: TaskConfiguration
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.course

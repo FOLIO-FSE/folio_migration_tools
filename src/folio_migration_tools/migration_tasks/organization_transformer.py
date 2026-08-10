@@ -110,6 +110,8 @@ class OrganizationTransformer(MigrationTaskBase):
             ),
         ] = ""
 
+    task_configuration: TaskConfiguration
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.organizations

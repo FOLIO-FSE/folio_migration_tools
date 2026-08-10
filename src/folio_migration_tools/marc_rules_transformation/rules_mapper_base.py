@@ -5,6 +5,8 @@ Handles loading transformation rules from JSON, applying rules with conditions,
 and managing the transformation workflow for MARC-to-FOLIO conversions.
 """
 
+from __future__ import annotations
+
 import datetime
 import json
 import logging
@@ -13,14 +15,14 @@ import urllib.parse
 import uuid
 from abc import abstractmethod
 from textwrap import wrap
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import i18n
 import pymarc
 from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
-from pymarc import Field, Record, Subfield
+from pymarc import Field, Indicators, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
@@ -36,19 +38,25 @@ from folio_migration_tools.library_configuration import (
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.marc_rules_transformation.hrid_handler import HRIDHandler
 
+if TYPE_CHECKING:
+    from folio_migration_tools.marc_rules_transformation.conditions import Conditions
+    from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase
+
 logger = logging.getLogger(__name__)
 
 
 class RulesMapperBase(MapperBase):
+    task_configuration: MarcTaskConfigurationBase
+
     def __init__(
         self,
         folio_client: FolioClient,
         library_configuration: LibraryConfiguration,
-        task_configuration,
+        task_configuration: MarcTaskConfigurationBase,
         statistical_codes_map: Optional[Dict],
         schema: dict,
-        conditions=None,
-        parent_id_map: dict[str, tuple] = None,
+        conditions: Conditions | None = None,
+        parent_id_map: dict[str, tuple] | None = None,
     ):
         """Initialize base mapper for MARC rules-based transformations.
 
@@ -68,7 +76,7 @@ class RulesMapperBase(MapperBase):
         self.last_batch_time = time.time()
         self.folio_client: FolioClient = folio_client
         self.schema: dict = schema
-        self.conditions = conditions
+        self.conditions: Conditions | None = conditions
         self.item_json_schema = ""
         self.mappings: dict = {}
         self.schema_properties = None
@@ -170,7 +178,10 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def set_005_as_updated_date(marc_record: Record, folio_object: dict, legacy_ids):
         try:
-            f005 = marc_record["005"].data[:14]
+            f005_field = marc_record["005"]
+            if not f005_field or not f005_field.data:
+                return
+            f005 = f005_field.data[:14]
             parsed_date = datetime.datetime.strptime(f005, "%Y%m%d%H%M%S").isoformat()
             if "metadata" in folio_object:
                 folio_object["metadata"]["updatedDate"] = parsed_date
@@ -191,7 +202,10 @@ class RulesMapperBase(MapperBase):
     @staticmethod
     def use_008_for_dates(marc_record: Record, folio_object: dict, legacy_ids):
         try:
-            first_six = "".join(marc_record["008"].data[:6])
+            f008_field = marc_record["008"]
+            if not f008_field or not f008_field.data:
+                return
+            first_six = "".join(f008_field.data[:6])
             date_str = f"19{first_six}" if int(first_six[:2]) > 69 else f"20{first_six}"
             date_str_parsed = datetime.datetime.strptime(date_str, "%Y%m%d")
             if "title" in folio_object:  # only instance has titles
@@ -209,8 +223,8 @@ class RulesMapperBase(MapperBase):
         legacy_id: str,
         mapping,
         marc_field: pymarc.Field,
-        condition_types: List[str] = None,
-        parameter: dict = None,
+        condition_types: List[str] | None = None,
+        parameter: dict | None = None,
     ):
         values: List[str] = []
         if mapping.get("subfield") and (custom_delimiters := mapping.get("subFieldDelimiter")):
@@ -318,7 +332,7 @@ class RulesMapperBase(MapperBase):
                 raise ee
 
     def perform_proxy_mapping(self, marc_field):
-        proxy_mapping = next(iter(self.mappings.get("880", [])), [])
+        proxy_mapping = next(iter(self.mappings.get("880", [])), None)
         if "6" not in marc_field:
             self.migration_report.add("Field880Mappings", i18n_t("Records without $6"))
             return None
@@ -454,6 +468,10 @@ class RulesMapperBase(MapperBase):
                 if target in sc_prop:  # property is on this level
                     sc_prop = sc_prop[target]  # set current property
                 else:  # next level. take the properties from the items
+                    if schema_parent is None:
+                        raise TransformationProcessError(
+                            "", f"Schema parent not set when descending into {target_string}"
+                        )
                     sc_prop = schema_parent["items"]["properties"][target]
                 if target not in rec and not schema_parent:  # have we added this already?
                     if is_array_of_strings(sc_prop):
@@ -474,8 +492,9 @@ class RulesMapperBase(MapperBase):
                         raise TransformationProcessError("", s)
                         # break
                     else:
-                        if schema_parent["type"] == "array":
-                            parent.append({})
+                        if schema_parent and schema_parent["type"] == "array":
+                            if parent is not None:
+                                parent.append({})
                         else:
                             raise TransformationProcessError(
                                 "",
@@ -512,7 +531,7 @@ class RulesMapperBase(MapperBase):
         sch = self.schema["properties"]
         if (
             self.task_configuration.migration_task_type == "BibsTransformer"
-            and self.task_configuration.parse_cataloged_date
+            and getattr(self.task_configuration, "parse_cataloged_date", False)
             and target_string == "catalogedDate"
         ):
             try:
@@ -735,6 +754,8 @@ class RulesMapperBase(MapperBase):
 
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):
         v = value
+        if self.conditions is None:
+            raise TransformationProcessError(legacy_id, "conditions not initialized")
         for condition_type in iter(condition_types):
             try:
                 v = self.conditions.get_condition(
@@ -831,7 +852,7 @@ class RulesMapperBase(MapperBase):
         marc_record.add_ordered_field(
             Field(
                 tag="999",
-                indicators=["f", "f"],
+                indicators=Indicators("f", "f"),
                 subfields=[
                     Subfield(code="i", value=folio_record["id"]),
                 ],
@@ -839,7 +860,7 @@ class RulesMapperBase(MapperBase):
         )
         # Since they all should be UTF encoded, make the leader align.
         try:
-            marc_record.leader[9] = "a"
+            marc_record.leader[9] = "a"  # type: ignore[index]
         except Exception as ee:
             logger.exception(
                 "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
@@ -850,7 +871,7 @@ class RulesMapperBase(MapperBase):
         self,
         folio_record: dict,
         file_def: FileDefinition,
-        marc_record: Record,
+        legacy_record: Record | dict | None = None,
     ):
         """Map statistical codes to FOLIO instance.
 
@@ -869,13 +890,15 @@ class RulesMapperBase(MapperBase):
             file_def (FileDefinition): The file definition object from which marc_record was read
         """
         super().map_statistical_codes(folio_record, file_def)
-        if self.task_configuration.statistical_code_mapping_fields:
+        if self.task_configuration.statistical_code_mapping_fields and isinstance(
+            legacy_record, Record
+        ):
             stat_code_marc_fields = []
             for mapping in self.task_configuration.statistical_code_mapping_fields:
                 stat_code_marc_fields.append(mapping.split("$"))
             for field_map in stat_code_marc_fields:
                 mapped_codes = self.map_stat_codes_from_marc_field(
-                    field_map, marc_record, self.library_configuration.multi_field_delimiter
+                    field_map, legacy_record, self.library_configuration.multi_field_delimiter
                 )
                 folio_record["statisticalCodeIds"] = (
                     folio_record.get("statisticalCodeIds", []) + mapped_codes
@@ -950,7 +973,7 @@ class RulesMapperBase(MapperBase):
         marc_record.add_ordered_field(
             Field(
                 tag="999",
-                indicators=["f", "f"],
+                indicators=Indicators("f", "f"),
                 subfields=[
                     Subfield(code="i", value=folio_record["id"]),
                     Subfield(code="s", value=srs_id),
@@ -959,7 +982,7 @@ class RulesMapperBase(MapperBase):
         )
         # Since they all should be UTF encoded, make the leader align.
         try:
-            marc_record.leader[9] = "a"
+            marc_record.leader[9] = "a"  # type: ignore[index]
         except Exception as ee:
             logger.exception(
                 "Something is wrong with the marc record's leader: %s, %s", marc_record.leader, ee
@@ -980,9 +1003,10 @@ class RulesMapperBase(MapperBase):
             FOLIONamespaces.edifact: FOLIONamespaces.srs_records_edifact,
         }
 
-        return str(
-            FolioUUID(self.base_string_for_folio_uuid, srs_types.get(record_type), legacy_id)
-        )
+        srs_type = srs_types.get(record_type)
+        if srs_type is None:
+            raise TransformationProcessError("", f"Unknown SRS record type: {record_type}")
+        return str(FolioUUID(self.base_string_for_folio_uuid, srs_type, legacy_id))
 
     @staticmethod
     def get_bib_id_from_907y(marc_record: Record, index_or_legacy_id):
