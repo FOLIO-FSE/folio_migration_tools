@@ -459,73 +459,70 @@ class RulesMapperBase(MapperBase):
         targets = target_string.split(".")
         if len(targets) == 1:
             self.add_value_to_first_level_target(rec, target_string, value)
+            return
+
+        schema_parent = None
+        parent = None
+        sc_prop = self.schema["properties"]
+        for target in targets:  # Iterate over names in hierarchy
+            sc_prop = self._get_schema_property(sc_prop, schema_parent, target, target_string)
+
+            if target not in rec and not schema_parent:
+                self._initialize_nested_target(rec, target, sc_prop, target_string)
+            elif self._should_append_array_object(rec, target, sc_prop):
+                rec[target].append({})
+            elif schema_parent and target in rec[parent][-1]:
+                self._set_nested_string_value(rec, parent, target, value[0], add_parent=True)
+            elif self._is_string_in_array_object(schema_parent, sc_prop):
+                self._set_nested_string_value(rec, parent, target, value[0], add_parent=False)
+
+            schema_parent = sc_prop
+            parent = target
+
+    def _get_schema_property(self, sc_prop, schema_parent, target, target_string):
+        if target in sc_prop:
+            return sc_prop[target]
+        if schema_parent is None:
+            raise TransformationProcessError(
+                "", f"Schema parent not set when descending into {target_string}"
+            )
+        return schema_parent["items"]["properties"][target]
+
+    def _initialize_nested_target(self, rec, target, sc_prop, target_string):
+        if is_array_of_strings(sc_prop):
+            rec[target] = []
+            return
+        if is_array_of_objects(sc_prop):
+            rec[target] = [{}]
+            return
+
+        schema_properties = self.schema["properties"]
+        raise TransformationProcessError(
+            "",
+            f"Edge! Something in the schemas has changed. "
+            "The mapping of this needs to be investigated "
+            f"{target_string} {schema_properties[target_string]}",
+        )
+
+    def _should_append_array_object(self, rec, target, sc_prop):
+        return is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
+            sc_prop["items"]["properties"]
+        )
+
+    def _is_string_in_array_object(self, schema_parent, sc_prop):
+        return (
+            schema_parent
+            and is_array_of_objects(schema_parent)
+            and sc_prop.get("type", "string") == "string"
+        )
+
+    def _set_nested_string_value(self, rec, parent, target, value, add_parent=False):
+        if add_parent:
+            rec[parent].append({})
+        if len(rec[parent][-1]) > 0:
+            rec[parent][-1][target] = value
         else:
-            schema_parent = None
-            parent = None
-            schema_properties = self.schema["properties"]
-            sc_prop = schema_properties
-            for target in targets:  # Iterate over names in hierarcy
-                if target in sc_prop:  # property is on this level
-                    sc_prop = sc_prop[target]  # set current property
-                else:  # next level. take the properties from the items
-                    if schema_parent is None:
-                        raise TransformationProcessError(
-                            "", f"Schema parent not set when descending into {target_string}"
-                        )
-                    sc_prop = schema_parent["items"]["properties"][target]
-                if target not in rec and not schema_parent:  # have we added this already?
-                    if is_array_of_strings(sc_prop):
-                        rec[target] = []
-                        # break
-                        # prop[target].append({})
-                    elif is_array_of_objects(sc_prop):
-                        rec[target] = [{}]
-                        # break
-                    elif (
-                        schema_parent
-                        and is_array_of_objects(schema_parent)
-                        and sc_prop.get("type", "string") == "string"
-                    ):
-                        s = "This should be unreachable code. Check schema for changes"
-                        logger.error(s)
-                        logger.error(parent)
-                        raise TransformationProcessError("", s)
-                        # break
-                    else:
-                        if schema_parent and schema_parent["type"] == "array":
-                            if parent is not None:
-                                parent.append({})
-                        else:
-                            raise TransformationProcessError(
-                                "",
-                                f"Edge! Something in the schemas has changed. "
-                                "The mapping of this needs to be investigated "
-                                f"{target_string} {schema_properties[target_string]}",
-                            )
-                elif is_array_of_objects(sc_prop) and len(rec[target][-1]) == len(
-                    sc_prop["items"]["properties"]
-                ):
-                    rec[target].append({})
-                elif schema_parent and target in rec[parent][-1]:
-                    rec[parent].append({})
-                    if len(rec[parent][-1]) > 0:
-                        rec[parent][-1][target] = value[0]
-                    else:
-                        rec[parent][-1] = {target: value[0]}
-                elif (
-                    schema_parent
-                    and is_array_of_objects(schema_parent)
-                    and sc_prop.get("type", "string") == "string"
-                ):
-                    if len(rec[parent][-1]) > 0:
-                        rec[parent][-1][target] = value[0]
-                    else:
-                        rec[parent][-1] = {target: value[0]}
-                # if target == targets[-1]:
-                # prop[target] = value[0]
-                # prop = rec[target]
-                schema_parent = sc_prop
-                parent = target
+            rec[parent][-1] = {target: value}
 
     def add_value_to_first_level_target(self, rec, target_string, value):
         sch = self.schema["properties"]
@@ -884,10 +881,9 @@ class RulesMapperBase(MapperBase):
         Finally, it adds the mapped codes to the folio_record's statisticalCodeIds.
 
         Args:
-            legacy_ids (List[str]): The legacy IDs of the folio record
             folio_record (dict): The Dictionary representation of the FOLIO record
-            marc_record (Record): The pymarc Record object
             file_def (FileDefinition): The file definition object from which marc_record was read
+            legacy_record (Record | dict | None): The legacy MARC record
         """
         super().map_statistical_codes(folio_record, file_def)
         if self.task_configuration.statistical_code_mapping_fields and isinstance(

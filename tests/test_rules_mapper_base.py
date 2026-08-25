@@ -23,7 +23,10 @@ from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import 
 from folio_migration_tools.marc_rules_transformation.conditions import Conditions
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
+    is_array_of_strings,
+    is_array_of_objects,
 )
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.migration_tasks.migration_task_base import MarcTaskConfigurationBase
 from .test_infrastructure import mocked_classes
 
@@ -572,3 +575,189 @@ def test_map_field_according_to_mapping_exception_logging(mapper_base, caplog):
 
     # Restore
     mapper.handle_entity_mapping = original_method
+
+
+def test_set_005_as_updated_date_missing_005():
+    """005 field absent should not modify the record."""
+    record = Record()
+    instance = {
+        "metadata": {
+            "createdDate": "2024-01-01T00:00:00",
+            "updatedDate": "2024-01-01T00:00:00",
+        }
+    }
+    RulesMapperBase.set_005_as_updated_date(record, instance, "some_id")
+    assert instance["metadata"]["updatedDate"] == "2024-01-01T00:00:00"
+
+
+def test_set_005_as_updated_date_empty_data():
+    """005 field with empty data should not modify the record."""
+    record = Record()
+    record.add_field(Field(tag="005", data=""))
+    instance = {
+        "metadata": {
+            "createdDate": "2024-01-01T00:00:00",
+            "updatedDate": "2024-01-01T00:00:00",
+        }
+    }
+    RulesMapperBase.set_005_as_updated_date(record, instance, "some_id")
+    assert instance["metadata"]["updatedDate"] == "2024-01-01T00:00:00"
+
+
+def test_use_008_for_dates_missing_008():
+    """008 field absent should not modify the record."""
+    record = Record()
+    instance = {
+        "title": "some title",
+        "metadata": {
+            "createdDate": "2024-01-01T00:00:00",
+            "updatedDate": "2024-01-01T00:00:00",
+        },
+    }
+    RulesMapperBase.use_008_for_dates(record, instance, "some_id")
+    assert "catalogedDate" not in instance
+
+
+def test_use_008_for_dates_empty_data():
+    """008 field with empty data should not modify the record."""
+    record = Record()
+    record.add_field(Field(tag="008", data=""))
+    instance = {
+        "title": "some title",
+        "metadata": {
+            "createdDate": "2024-01-01T00:00:00",
+            "updatedDate": "2024-01-01T00:00:00",
+        },
+    }
+    RulesMapperBase.use_008_for_dates(record, instance, "some_id")
+    assert "catalogedDate" not in instance
+
+
+def test_apply_rule_raises_when_conditions_none(mapper_base):
+    """apply_rule should raise TransformationProcessError when conditions is None."""
+    mapper_base.conditions = None
+    with pytest.raises(TransformationProcessError, match="conditions not initialized"):
+        mapper_base.apply_rule("legacy-1", "value", ["trim"], None, {})
+
+
+def test_create_srs_id_unknown_record_type(mapper_base):
+    """create_srs_id should raise TransformationProcessError for unknown record type."""
+    with pytest.raises(TransformationProcessError, match="Unknown SRS record type"):
+        mapper_base.create_srs_id(FOLIONamespaces.items, "id_1")
+
+
+def test_get_schema_property_found(mapper_base):
+    """_get_schema_property returns the property when it exists at current level."""
+    sc_prop = {"title": {"type": "string"}}
+    result = mapper_base._get_schema_property(sc_prop, None, "title", "title")
+    assert result == {"type": "string"}
+
+
+def test_get_schema_property_from_parent(mapper_base):
+    """_get_schema_property descends into schema_parent items when target not at top level."""
+    sc_prop = {}
+    schema_parent = {"items": {"properties": {"uri": {"type": "string"}}}}
+    result = mapper_base._get_schema_property(sc_prop, schema_parent, "uri", "ea.uri")
+    assert result == {"type": "string"}
+
+
+def test_get_schema_property_raises_without_parent(mapper_base):
+    """_get_schema_property raises when target not found and schema_parent is None."""
+    sc_prop = {}
+    with pytest.raises(TransformationProcessError, match="Schema parent not set"):
+        mapper_base._get_schema_property(sc_prop, None, "missing", "missing")
+
+
+def test_initialize_nested_target_array_of_strings(mapper_base):
+    rec = {}
+    sc_prop = {"type": "array", "items": {"type": "string"}}
+    mapper_base._initialize_nested_target(rec, "tags", sc_prop, "tags")
+    assert rec["tags"] == []
+
+
+def test_initialize_nested_target_array_of_objects(mapper_base):
+    rec = {}
+    sc_prop = {"type": "array", "items": {"type": "object", "properties": {}}}
+    mapper_base._initialize_nested_target(rec, "identifiers", sc_prop, "identifiers")
+    assert rec["identifiers"] == [{}]
+
+
+def test_initialize_nested_target_raises_on_unexpected_type(mapper_base):
+    mapper_base.schema = {"properties": {"foo": {"type": "integer"}}}
+    rec = {}
+    sc_prop = {"type": "integer"}
+    with pytest.raises(TransformationProcessError, match="Edge"):
+        mapper_base._initialize_nested_target(rec, "foo", sc_prop, "foo")
+
+
+def test_should_append_array_object_true(mapper_base):
+    rec = {"items": [{"a": "1", "b": "2"}]}
+    sc_prop = {"type": "array", "items": {"type": "object", "properties": {"a": {}, "b": {}}}}
+    assert mapper_base._should_append_array_object(rec, "items", sc_prop) is True
+
+
+def test_should_append_array_object_false_incomplete(mapper_base):
+    rec = {"items": [{"a": "1"}]}
+    sc_prop = {"type": "array", "items": {"type": "object", "properties": {"a": {}, "b": {}}}}
+    assert mapper_base._should_append_array_object(rec, "items", sc_prop) is False
+
+
+def test_is_string_in_array_object(mapper_base):
+    schema_parent = {"type": "array", "items": {"type": "object", "properties": {}}}
+    sc_prop = {"type": "string"}
+    assert mapper_base._is_string_in_array_object(schema_parent, sc_prop) is True
+
+
+def test_is_string_in_array_object_no_parent(mapper_base):
+    sc_prop = {"type": "string"}
+    assert not mapper_base._is_string_in_array_object(None, sc_prop)
+
+
+def test_set_nested_string_value_without_add_parent(mapper_base):
+    rec = {"ea": [{}]}
+    mapper_base._set_nested_string_value(rec, "ea", "uri", "http://example.com", add_parent=False)
+    assert rec["ea"][-1]["uri"] == "http://example.com"
+
+
+def test_set_nested_string_value_with_add_parent(mapper_base):
+    rec = {"ea": [{"uri": "http://old.com"}]}
+    mapper_base._set_nested_string_value(rec, "ea", "uri", "http://new.com", add_parent=True)
+    assert len(rec["ea"]) == 2
+    assert rec["ea"][-1]["uri"] == "http://new.com"
+
+
+def test_add_value_to_target_nested(mapper_base):
+    """Test the refactored add_value_to_target with a nested schema target."""
+    mapper_base.schema = schema_ea
+    rec = {}
+    mapper_base.add_value_to_target(rec, "electronicAccess.uri", ["http://example.com"])
+    assert rec == {"electronicAccess": [{"uri": "http://example.com"}]}
+
+
+def test_add_value_to_target_nested_appends_second_property(mapper_base):
+    """Second property on existing nested object is added in-place."""
+    mapper_base.schema = schema_ea
+    rec = {"electronicAccess": [{"uri": "http://example.com"}]}
+    mapper_base.add_value_to_target(rec, "electronicAccess.linkText", ["Click here"])
+    assert rec["electronicAccess"][-1]["linkText"] == "Click here"
+
+
+def test_map_statistical_codes_with_non_record(mapper_base):
+    """map_statistical_codes should skip MARC field mapping when legacy_record is not a Record."""
+    mapper_base.task_configuration.statistical_code_mapping_fields = ["099$a"]
+    folio_record = {}
+    from folio_migration_tools.library_configuration import FileDefinition
+    file_def = FileDefinition(file_name="test.mrc", suppressed=False)
+    # Passing a dict instead of Record should not attempt MARC field mapping
+    mapper_base.map_statistical_codes(folio_record, file_def, legacy_record={"not": "a record"})
+    assert "statisticalCodeIds" not in folio_record
+
+
+def test_map_statistical_codes_with_none(mapper_base):
+    """map_statistical_codes should skip MARC field mapping when legacy_record is None."""
+    mapper_base.task_configuration.statistical_code_mapping_fields = ["099$a"]
+    folio_record = {}
+    from folio_migration_tools.library_configuration import FileDefinition
+    file_def = FileDefinition(file_name="test.mrc", suppressed=False)
+    mapper_base.map_statistical_codes(folio_record, file_def, legacy_record=None)
+    assert "statisticalCodeIds" not in folio_record
