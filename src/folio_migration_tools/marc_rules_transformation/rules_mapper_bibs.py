@@ -716,7 +716,7 @@ def get_custom_bib_id(marc_record: Record, field_string: str):
             if len(field_keys) == 2:
                 return [marc_record[field_keys[0]][field_keys[1]]]
             else:
-                return [marc_record[field_keys[0]]]
+                return [marc_record[field_keys[0]].value()]
         except Exception as e:
             raise TransformationRecordFailedError(
                 "unknown identifier",
