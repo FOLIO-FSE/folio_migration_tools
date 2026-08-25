@@ -15,6 +15,7 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.propagate = True
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.library_configuration import HridHandling
@@ -22,6 +23,9 @@ from folio_migration_tools.library_configuration import IlsFlavour
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
     BibsRulesMapper,
+)
+from folio_migration_tools.marc_rules_transformation.rules_mapper_bibs import (
+    get_custom_bib_id,
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.bibs_transformer import BibsTransformer
@@ -556,3 +560,58 @@ def test_required_properties_classification_missing_a(mapper: BibsRulesMapper, c
         mapping_082 = mapper.mappings["082"][0]
         folio_record: dict = {}
         mapper.handle_entity_mapping(bad_082, mapping_082, folio_record, ["reqprop_entity_1"])
+
+
+def test_get_custom_bib_id_field_value_no_subfield():
+    record = pymarc.Record()
+    record.add_field(pymarc.Field(tag="001", data="legacy_id_99"))
+    res = get_custom_bib_id(record, "001")
+    assert res == ["legacy_id_99"]
+
+
+def test_get_custom_bib_id_with_subfield():
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="035",
+            indicators=[" ", " "],
+            subfields=[Subfield(code="a", value="legacy_id_99")],
+        )
+    )
+    res = get_custom_bib_id(record, "035$a")
+    assert res == ["legacy_id_99"]
+
+
+def test_get_custom_bib_id_field_missing_raises():
+    record = pymarc.Record()
+    with pytest.raises(TransformationRecordFailedError) as exception_info:
+        get_custom_bib_id(record, "035$a")
+    assert "035$a is missing from record but is required in all records" in str(
+        exception_info.value
+    )
+
+
+def test_get_custom_bib_id_subfield_missing_raises():
+    record = pymarc.Record()
+    record.add_field(
+        pymarc.Field(
+            tag="035",
+            indicators=[" ", " "],
+            subfields=[Subfield(code="b", value="not the right subfield")],
+        )
+    )
+    with pytest.raises(TransformationRecordFailedError) as exception_info:
+        get_custom_bib_id(record, "035$a")
+    assert "035$a is missing from record but is required in all records" in str(
+        exception_info.value
+    )
+
+
+def test_get_custom_bib_id_empty_field_string_raises():
+    # An empty field_string still yields a truthy split result (['']), so this
+    # takes the "field missing from record" path rather than the "no
+    # customBibIdField configured" path.
+    record = pymarc.Record()
+    with pytest.raises(TransformationRecordFailedError) as exception_info:
+        get_custom_bib_id(record, "")
+    assert "is missing from record but is required in all records" in str(exception_info.value)
