@@ -3584,6 +3584,71 @@ def test_map_booleans_with_replace_values(mocked_folio_client: FolioClient, mock
     assert isinstance(folio_recs[1]["trueOrFalse"], bool) and folio_recs[1]["trueOrFalse"] is False
 
 
+def test_map_string_with_replace_values_to_empty_string(
+    mocked_folio_client: FolioClient, mocked_file_mapper
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "description": "A generic record",
+        "type": "object",
+        "properties": {
+            "id": {
+                "description": "The unique UUID for this organization",
+                "$ref": "../../common/schemas/uuid.json",
+                "type": "string",
+            },
+            "note": {
+                "id": "note",
+                "description": "A note field that may be cleared via replaceValues",
+                "type": "string",
+            },
+        },
+    }
+    records = [
+        {"id": "test_map_empty_string_with_replace_values1", "note": "N/A"},
+        {"id": "test_map_empty_string_with_replace_values2", "note": "unmapped value"},
+    ]
+
+    the_map = {
+        "data": [
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "note",
+                "legacy_field": "note",
+                "value": "",
+                "description": "",
+                "rules": {"replaceValues": {"N/A": ""}},
+            },
+        ]
+    }
+
+    mapper = MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
+    )
+    folio_recs = []
+
+    for record in records:
+        folio_rec, folio_id = mapper.do_map(record, record["id"], FOLIONamespaces.organizations)
+        folio_recs.append(folio_rec)
+
+    # map_basic_props intentionally drops properties resolved to "" (see comment there),
+    # so the replaced empty string never reaches the output record. What matters here is
+    # that it does not fall back to the original, unreplaced legacy value ("N/A") either.
+    assert "note" not in folio_recs[0]
+    assert folio_recs[1].get("note") == "unmapped value"
+
+
 def test_map_booeleans_set_schema_default(mocked_folio_client: FolioClient, mocked_file_mapper):
     schema_default_false = {
         "properties": {
@@ -4893,6 +4958,51 @@ def test_get_legacy_value_replace_value():
         legacy_object, mapping_file_entry, MigrationReport(), ""
     )
     assert res == "Graduate"
+
+
+def test_get_legacy_value_replace_value_with_empty_string():
+    legacy_object = {"title": "N/A"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "rules": {"replaceValues": {"N/A": ""}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == ""
+
+
+def test_get_legacy_value_replace_value_unmapped_falls_back_to_original():
+    legacy_object = {"title": "unmapped value"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "rules": {"replaceValues": {"N/A": ""}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), ""
+    )
+    assert res == "unmapped value"
+
+
+def test_get_legacy_value_replace_value_multi_value_empty_string_and_unmapped():
+    legacy_object = {"title": "N/A<delimiter>unmapped value"}
+    mapping_file_entry = {
+        "folio_field": "title",
+        "legacy_field": "title",
+        "value": "",
+        "description": "",
+        "rules": {"replaceValues": {"N/A": ""}},
+    }
+    res = MappingFileMapperBase.get_legacy_value(
+        legacy_object, mapping_file_entry, MigrationReport(), "", "<delimiter>"
+    )
+    assert res == "<delimiter>unmapped value"
 
 
 def test_get_legacy_value_regex():

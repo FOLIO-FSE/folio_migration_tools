@@ -297,6 +297,26 @@ This rule allows you to map codes to strings. Given the following mapping:
 If the STATUS field contains *0*, then the resulting value in the note title will be *Graduate*.
 If no match is made, the original string will be returned. So if STATUS is *1*, then the note title will be *1*.
 
+You can also map a code to an empty string, which is useful for clearing out unwanted filler values
+in the legacy data (like *N/A* or *0*) without having to preprocess the source data first:
+
+```
+{
+    "folio_field": "notes[0].title",
+    "legacy_field": "STATUS",
+    "value": "",
+    "description": "",
+    "fallback_legacy_field": "",
+    "rules": {
+        "replaceValues": {
+            "N/A": ""
+        }
+    }
+},
+```
+
+If STATUS is *N/A*, the resulting value will be an empty string, not the original *N/A*.
+
 ## Validation of Hardcoded Note Type Values
 
 When mapping item or holdings note types (`itemNoteTypeId` or `holdingsNoteTypeId` fields), any hardcoded values specified in the `value` or `fallback_value` properties are validated at mapper initialization. This ensures that mapping files are correct before data transformation begins.

@@ -36,6 +36,10 @@ logger = logging.getLogger(__name__)
 
 empty_vals = ["Not mapped", None, ""]
 
+# Sentinel used to distinguish "no replaceValues rule matched" from a rule that
+# intentionally maps a value to a falsy replacement (e.g. "").
+_REPLACE_VALUE_MISSING = object()
+
 
 class MappingFileMapperBase(MapperBase):
     def __init__(
@@ -492,21 +496,29 @@ class MappingFileMapperBase(MapperBase):
             value = re.sub(pattern, replacement, value)
 
         if mapping_file_entry.get("rules", {}).get("replaceValues", {}):
+            replace_map = mapping_file_entry["rules"]["replaceValues"]
             if multi_field_delimiter and multi_field_delimiter in value:
-                replaced_split_values = [
-                    mapping_file_entry["rules"]["replaceValues"].get(sv, "")
-                    for sv in value.split(multi_field_delimiter)
-                ]
+                # Fall back to the original sub-value (not "") when a sub-value has no
+                # matching rule, so unmapped sub-values are left untouched.
+                replaced_split_values = []
+                for sv in value.split(multi_field_delimiter):
+                    rv = replace_map.get(sv, _REPLACE_VALUE_MISSING)
+                    replaced_split_values.append(sv if rv is _REPLACE_VALUE_MISSING else rv)
                 replaced_val = multi_field_delimiter.join(replaced_split_values)
             else:
-                replaced_val = mapping_file_entry["rules"]["replaceValues"].get(value, "")
+                # Use a sentinel default instead of "" so a rule that intentionally maps
+                # a value to "" isn't mistaken for "no rule matched" and discarded.
+                replaced_val = replace_map.get(value, _REPLACE_VALUE_MISSING)
+                replaced_val = value if replaced_val is _REPLACE_VALUE_MISSING else replaced_val
 
-            if replaced_val or isinstance(replaced_val, bool):
+            # Compare to the original value, not truthiness, so replacements to/from
+            # falsy values (e.g. "") are applied and reported correctly.
+            if replaced_val != value:
                 migration_report.add(
                     "FieldMappingDetails",
                     f"Replaced {value} in {source_field} with {replaced_val}",
                 )
-                value = replaced_val
+            value = replaced_val
 
         if mapping_file_entry.get("rules", {}).get("regexGetFirstMatchOrEmpty", ""):
             my_pattern = (
@@ -812,6 +824,10 @@ class MappingFileMapperBase(MapperBase):
             mapped_prop = self.get_prop(
                 legacy_object, property_name, index_or_id, schema_property.get("default", "")
             )
+            # Implementation note: a property resolved to "" (e.g. via a replaceValues rule
+            # that intentionally clears a value) is not written to the output record here.
+            # get_prop() can't distinguish "a rule cleared it" from "nothing was mapped",
+            # so we drop it in both cases rather than risk writing spurious empty strings.
             if mapped_prop or isinstance(mapped_prop, bool):
                 self.validate_enums(
                     mapped_prop,
