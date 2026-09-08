@@ -130,6 +130,9 @@ class MapperBase:
             # Gets the first line in the map satisfying all legacy mapping values.
             # Case insensitive, strips away whitespace
             right_mapping = ref_data_mapping.get_ref_data_mapping(legacy_object)
+            if not right_mapping:
+                # Not all fields matched. Could it be a hybrid wildcard map?
+                right_mapping = ref_data_mapping.get_hybrid_mapping(legacy_object)
 
             if not right_mapping:
                 raise StopIteration()
