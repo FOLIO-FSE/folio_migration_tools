@@ -1118,6 +1118,78 @@ def test_ref_data_group_mapping(mocked_folio_client):
     assert folio_user["patronGroup"] == "FOLIO group name"
 
 
+def test_ref_data_group_mapping_multi_column_hybrid_wildcard(mocked_folio_client):
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+            {
+                "folio_field": "patronGroup",
+                "legacy_field": "patron_group",
+                "value": "",
+                "description": "",
+            },
+        ]
+    }
+    legacy_user_record = {
+        "patron_group": "GROUP_A",
+        "stat_code_copy": "some_code_not_in_map",
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "1",
+    }
+    groups_map = [
+        {
+            "patron_group": "GROUP_B",
+            "stat_code_copy": "CODE_1",
+            "folio_group": "FOLIO group name",
+        },
+        {
+            "patron_group": "GROUP_A",
+            "stat_code_copy": "*",
+            "folio_group": "FOLIO fallback group name",
+        },
+        {"patron_group": "*", "stat_code_copy": "*", "folio_group": "FOLIO group name"},
+    ]
+    mock_library_conf = mocked_classes.get_mocked_library_config()
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_task_config.remove_request_preferences = False
+    mock_task_config.remove_username = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    mock_folio = mocked_folio_client
+    user_mapper = UserMapper(
+        mock_folio, mock_task_config, mock_library_conf, user_map, None, groups_map
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    folio_user = user_mapper.perform_additional_mapping(
+        legacy_user_record, folio_user, index_or_id
+    )
+    assert folio_user["patronGroup"] == "FOLIO fallback group name"
+
+
 def test_ref_data_departments_mapping(mocked_folio_client):
     user_map = {
         "data": [
