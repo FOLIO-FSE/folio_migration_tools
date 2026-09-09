@@ -62,33 +62,31 @@ A typical migration workflow involves running tasks in sequence:
 Tasks are run using the `folio-migration-tools` command:
 
 ```shell
-folio-migration-tools <configuration_file> <task_name> --base_folder <path>
+folio-migration-tools <configuration_file> <task_name> --base_folder_path <path>
 ```
 
 Example:
 ```shell
-folio-migration-tools mapping_files/config.json transform_bibs --base_folder ./
+folio-migration-tools mapping_files/config.json transform_bibs --base_folder_path ./
 ```
 
 The `<task_name>` must match the `"name"` property in the task configuration within your configuration file.
 
 ## Task Configuration
 
-Each task is configured in the main configuration JSON file. A configuration file contains a `libraryConfiguration` object and a `tasks` array:
+Each task is configured in the main configuration JSON file. A configuration file contains a `libraryInformation` object and a `migrationTasks` array:
 
 ```json
 {
-    "libraryConfiguration": {
-        "gateway_url": "https://folio-snapshot-okapi.dev.folio.org",
-        "tenant_id": "diku",
-        "folio_username": "diku_admin",
-        "folio_password": "admin",
-        "base_folder": ".",
-        "library_name": "My Library",
-        "folio_release": "sunflower",
-        "iteration_identifier": "test_iteration"
+    "libraryInformation": {
+        "gatewayUrl": "https://folio-etesting-snapshot-kong.ci.folio.org",
+        "tenantId": "diku",
+        "folioUsername": "diku_admin",
+        "libraryName": "My Library",
+        "folioRelease": "sunflower",
+        "iterationIdentifier": "test_iteration"
     },
-    "tasks": [
+    "migrationTasks": [
         {
             "name": "transform_bibs",
             "migrationTaskType": "BibsTransformer"
@@ -101,7 +99,7 @@ Each task is configured in the main configuration JSON file. A configuration fil
 }
 ```
 
-Note: Task configurations have additional properties beyond `name` and `migrationTaskType`. See individual task documentation for complete configuration options.
+Note: Task configurations have additional properties beyond `name` and `migrationTaskType`. See individual task documentation for complete configuration options, and [Configuration files](../configuration_files.md) for the shared settings and for how one configuration file can [inherit from another](../configuration_files.md#inheriting-from-other-configuration-files).
 
 ```{toctree}
 :maxdepth: 1

@@ -11,6 +11,7 @@ quick_tutorial.md
 :hidden:
 :caption: Using the Tools
 migration_process.md
+configuration_files.md
 tasks/index.md
 migration_reports.md
 logging.md
