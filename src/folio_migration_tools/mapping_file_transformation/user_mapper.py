@@ -4,10 +4,13 @@ Provides the UserMapper class for mapping legacy patron data to FOLIO User recor
 using configured mapping files.
 """
 
+from __future__ import annotations
+
 import csv
 import json
 import logging
 import sys
+from typing import TYPE_CHECKING
 
 import i18n
 from dateutil.parser import parse
@@ -26,10 +29,15 @@ from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
 
+if TYPE_CHECKING:
+    from folio_migration_tools.migration_tasks.user_transformer import UserTransformer
+
 logger = logging.getLogger(__name__)
 
 
 class UserMapper(MappingFileMapperBase):
+    task_config: "UserTransformer.TaskConfiguration"
+
     def __init__(
         self,
         folio_client: FolioClient,
@@ -67,7 +75,7 @@ class UserMapper(MappingFileMapperBase):
                 library_config,
                 task_config,
             )
-            self.task_config = self.task_configuration
+            self.task_config = task_config
             self.notes_mapper: NotesMapper = NotesMapper(
                 self.library_configuration,
                 None,
