@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sys
 import time
 import typing
@@ -76,8 +77,7 @@ class BibsRulesMapper(RulesMapperBase):
         self.mappings = self.folio_client.folio_get_single_object(rules_endpoint) or {}
         logger.info("Fetching valid language codes...")
         self.language_codes = list(self.fetch_language_codes())
-        self.instance_relationships: dict = {}
-        self.instance_relationship_types: dict = {}
+        self.bib_relationship_records: list = []
         self.other_mode_of_issuance_id = get_unspecified_mode_of_issuance(self.folio_client)
         if getattr(self.task_configuration, "data_import_marc", False):
             self.hrid_handler.deactivate035_from001 = True
@@ -244,6 +244,8 @@ class BibsRulesMapper(RulesMapperBase):
         if succ_titles := folio_instance.get("succeedingTitles", []):
             del folio_instance["succeedingTitles"]
             self.migration_report.add("PrecedingSuccedingTitles", f"{len(succ_titles)}")
+        if getattr(self.task_configuration, "capture_bib_level_relationships", True):
+            self.extract_bib_relationship_fields(marc_record, legacy_ids, folio_instance)
 
     def handle_languages(self, folio_instance: Dict, marc_record: Record, legacy_ids: List[str]):
         if "languages" in folio_instance:
@@ -291,6 +293,66 @@ class BibsRulesMapper(RulesMapperBase):
                     "HoldingsGenerationFromBibs",
                     i18n.t("Records without %{has_no}s but with %{has}", has="86X", has_no="852"),
                 )
+
+    def extract_bib_relationship_fields(
+        self, marc_record: Record, legacy_ids: List[str], folio_instance: dict
+    ) -> None:
+        """Capture raw 773/774 bib-level relationship data for later analysis.
+
+        The related record's FOLIO instance may not exist yet (or ever, e.g. for
+        $w values that are OCLC numbers rather than IDs we maintain a map for), so
+        this only records what is present in the field rather than attempting to
+        resolve it. The captured data is meant to support a later, separate task
+        that builds FOLIO instance relationships.
+
+        Args:
+            marc_record (Record): The source MARC record.
+            legacy_ids (List[str]): Legacy identifiers for the record.
+            folio_instance (dict): The (in-progress) FOLIO instance record.
+        """
+        relationship_fields = marc_record.get_fields("773", "774")
+        if not relationship_fields:
+            return
+        self.migration_report.add(
+            "BibLevelRelationships773774", "Records with at least one 773 or 774 field"
+        )
+        for field in relationship_fields:
+            direction = (
+                "773 - this record links up to a host record"
+                if field.tag == "773"
+                else "774 - this record links down to a constituent record"
+            )
+            self.migration_report.add("BibLevelRelationships773774", f"{field.tag} field found")
+            w_values = field.get_subfields("w")
+            if not w_values:
+                self.migration_report.add(
+                    "BibLevelRelationships773774", f"{field.tag} field missing $w"
+                )
+            for w_value in w_values:
+                match = re.match(r"^\((?P<prefix>[^)]+)\)", w_value)
+                prefix = match.group("prefix") if match else "no parenthetical prefix"
+                self.migration_report.add(
+                    "BibLevelRelationships773774",
+                    f"{field.tag} $w identifier prefix: {prefix}",
+                )
+            self.bib_relationship_records.append(
+                {
+                    # hrid is often unset here (only assigned for source-records/SRS
+                    # or preserve001 handling); instance_id is always present and is
+                    # the reliable correlation key. Bibs have exactly one legacy_id.
+                    "instance_id": folio_instance.get("id"),
+                    "hrid": folio_instance.get("hrid"),
+                    "legacy_id": legacy_ids[0],
+                    "marc_tag": field.tag,
+                    "direction": direction,
+                    "indicator1": field.indicator1,
+                    "indicator2": field.indicator2,
+                    "subfields": [
+                        {"code": subfield.code, "value": subfield.value}
+                        for subfield in field.subfields
+                    ],
+                }
+            )
 
     def wrap_up(self):
         logger.info("Mapper wrapping up")

@@ -293,6 +293,8 @@
   "blurbs.AcquisitionMethodMapping.title": "Correspondance des méthodes d'acquisition des lignes de commande",
   "blurbs.AddedValueFromParameter.description": "",
   "blurbs.AddedValueFromParameter.title": "Valeur ajoutée depuis le paramètre car la valeur est vide",
+  "blurbs.BibLevelRelationships773774.description": "",
+  "blurbs.BibLevelRelationships773774.title": "Relations au niveau de la notice bibliographique (773/774)",
   "blurbs.BoundWithMappings.description": "",
   "blurbs.BoundWithMappings.title": "Correspondance des reliures",
   "blurbs.CallNumberTypeMapping.description": "Les types de cotes dans les MFHD sont mappés depuis le 852, indicateur 1 selon un schéma spécifique. (Documentation LOC)[https://www.loc.gov/marc/holdings/hd852.html]",

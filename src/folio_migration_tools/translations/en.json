@@ -293,6 +293,8 @@
   "blurbs.AcquisitionMethodMapping.title": "POL Acquisition Method Mapping",
   "blurbs.AddedValueFromParameter.description": "",
   "blurbs.AddedValueFromParameter.title": "Added value from parameter since value is empty",
+  "blurbs.BibLevelRelationships773774.description": "Prevalence and raw content of 773 (Host Item Entry) and 774 (Constituent Unit Entry) fields, captured for analysis. Does not create FOLIO instance relationships.",
+  "blurbs.BibLevelRelationships773774.title": "Bib-level relationships (773/774)",
   "blurbs.BoundWithMappings.description": "",
   "blurbs.BoundWithMappings.title": "Bound-with mapping",
   "blurbs.CallNumberTypeMapping.description": "Call number types in MFHDs are mapped from 852, Indicator 1 according to a certain scheme. (LOC documentation)[https://www.loc.gov/marc/holdings/hd852.html]",
