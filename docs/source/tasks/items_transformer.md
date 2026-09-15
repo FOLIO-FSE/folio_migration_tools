@@ -44,9 +44,8 @@ Transform delimited (CSV/TSV) data into FOLIO Item records with support for mate
 | `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
 | `damagedStatusMapFileName` | string | No | TSV file mapping damaged statuses |
 | `preventPermanentLocationMapDefault` | boolean | No | If `true`, don't use fallback for permanent location mapping |
-| `boundwithFlavor` | string | No | ILS flavor for boundwith handling. Supported: `"voyager"` (default), `"aleph"` |
-| `boundwithRelationshipFilePath` | string | No | TSV file for boundwith relationships (required when `boundwithFlavor` is set) |
-| `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith items |
+| `boundwithFlavor` | string | No | Shape of the legacy boundwith data. Supported: `"voyager"` (default), `"aleph"`. See [Boundwith Handling](../boundwith_handling) |
+| `boundwithRelationshipFilePath` | string | No | Enables boundwith part creation. See [Boundwith Handling](../boundwith_handling) |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -199,46 +198,12 @@ Unlike BibsTransformer and the Holdings transformers, ItemsTransformer does not 
 
 ### With Boundwith Support
 
-The ItemsTransformer supports creating FOLIO `boundwithPart` records to link items to multiple holdings. The `boundwithFlavor` parameter determines how relationships are loaded and resolved. Supported values are `"voyager"` (default) and `"aleph"`.
+The ItemsTransformer creates FOLIO `boundwithPart` records to link a single item to the holdings records of every instance it is bound with. `boundwithFlavor` selects how the relationships are supplied, and `boundwithRelationshipFilePath` switches the handling on — if it is empty, no relationships are loaded and no parts are created.
 
-```{note}
-For III/Sierra/Millennium-style boundwiths — where items link to multiple bibs directly in the source data — boundwith handling is performed at the holdings level by [HoldingsCsvTransformer](holdings_csv_transformer.md#boundwith-handling), not here. No `boundwithFlavor` or `boundwithRelationshipFilePath` is needed in that case.
-```
-
-#### Voyager-style boundwiths
-
-For Voyager migrations, the ItemsTransformer reads the `boundwith_relationships_map.json` file produced by [HoldingsMarcTransformer](holdings_marc_transformer) during its `wrap_up` phase. You must still specify the `boundwithRelationshipFilePath` — if it is not set, the transformer will skip loading boundwith relationships entirely. The map links holdings UUIDs to lists of instance UUIDs, and the transformer creates `boundwithPart` records for each relationship.
-
-```json
-{
-    "name": "transform_items",
-    "migrationTaskType": "ItemsTransformer",
-    "itemsMappingFileName": "item_mapping.json",
-    "locationMapFileName": "locations.tsv",
-    "materialTypesMapFileName": "material_types.tsv",
-    "loanTypesMapFileName": "loan_types.tsv",
-    "boundwithFlavor": "voyager",
-    "boundwithRelationshipFilePath": "boundwith_map.tsv",
-    "files": [
-        {
-            "file_name": "items.tsv"
-        }
-    ]
-}
-```
-
-#### Aleph-style boundwiths
-
-For Aleph migrations, the item-level boundwith relationships are described in a separate TSV file with columns `LKR_HOL` (holdings legacy ID) and `ITEM_REC_KEY` (item legacy ID). This file is placed in `source_data/items/` and referenced via `boundwithRelationshipFilePath`.
-
-Unlike Voyager mode (which maps holdings UUIDs to instance UUIDs), Aleph mode maps **item legacy IDs** to **holdings legacy IDs** using the `holdings_id_map` produced by the holdings transformation to resolve FOLIO UUIDs at runtime.
-
-```text
-LKR_HOL	ITEM_REC_KEY
-000123456	ITEM001
-000123457	ITEM001
-000789012	ITEM002
-```
+| `boundwithFlavor` | Relationships come from | Notes |
+|---|---|---|
+| `"voyager"` (default) | `results/boundwith_relationships_map.json`, written by [HoldingsMarcTransformer](holdings_marc_transformer) | `boundwithRelationshipFilePath` is only an opt-in switch here; the file itself is not read by this task |
+| `"aleph"` | A TSV in `source_data/items/` with `LKR_HOL` and `ITEM_REC_KEY` columns, named by `boundwithRelationshipFilePath` | Links item legacy IDs to holdings legacy IDs, resolved through `holdings_id_map` |
 
 ```json
 {
@@ -258,89 +223,11 @@ LKR_HOL	ITEM_REC_KEY
 }
 ```
 
-Extract the LKR boundwith relationships via SQL from the database using a query like this:
-
-```sql
--- Note: You will need to replace "XXX" or "xxx" in this query with the appropriate collection table prefix
--- Note: You may need to adjust enumeration and chronology matching to account for local practices
--- Credit: Aaron Bales and the team at University of Notre Dame Libraries for developing this example
-WITH ITEM AS (
-    SELECT item.Z30_REC_KEY AS ITEM_REC_KEY, item.z30_barcode AS BARCODE,
-      LPAD(MAP.Z103_LKR_DOC_NUMBER ,9,'0') AS ITM_ADM ,
-      item.Z30_SUB_LIBRARY AS sublib, item.Z30_COLLECTION AS collection ,
-      item.Z30_HOL_DOC_NUMBER_X AS ITEM_HOL ,
-      SUBSTR(MAP.Z103_REC_KEY_1 ,6,9) AS LKR_BIB ,
-      MAP.Z103_ENUMERATION_A AS LKR_ENUM_A, ITEM.Z30_ENUMERATION_A AS ENUM_A,
-      MAP.Z103_ENUMERATION_B AS LKR_ENUM_B, ITEM.Z30_ENUMERATION_B AS ENUM_B,
-      MAP.Z103_ENUMERATION_C AS LKR_ENUM_C, ITEM.Z30_ENUMERATION_C AS ENUM_C
-    FROM xxx01.z103 MAP INNER JOIN XXX50.Z30 item ON
-        SUBSTR(MAP.Z103_REC_KEY_1 ,1,5) = 'XXX01'
-        AND MAP.Z103_LKR_TYPE = 'ITM'
-        AND SUBSTR(item.Z30_REC_KEY ,1,9) = LPAD(MAP.Z103_LKR_DOC_NUMBER ,9,'0')
-        AND COALESCE(MAP.Z103_ENUMERATION_A,'null') = COALESCE(item.Z30_ENUMERATION_A ,'null')
-        AND COALESCE(MAP.Z103_ENUMERATION_B,'null') = COALESCE(item.Z30_ENUMERATION_B ,'null')
-        AND COALESCE(MAP.Z103_ENUMERATION_C,'null') = COALESCE(item.Z30_ENUMERATION_C ,'null')
-), BIB AS (
-    SELECT ITEM.ITEM_REC_KEY , ITEM.BARCODE , ITEM.ITM_ADM , ITEM.SUBLIB , ITEM.COLLECTION ,
-        bib.Z13_REC_KEY AS ITEM_BIB, item.ITEM_HOL ,
-        ITEM.ENUM_A , ITEM.ENUM_B , ITEM.ENUM_C ,
-        item.LKR_BIB
-    FROM ITEM LEFT JOIN xxx01.z103
-        ON ITEM.ITM_ADM = SUBSTR(z103_rec_key,6,9)
-        AND SUBSTR(z103_rec_key,1,5) = 'XXX50'
-    LEFT JOIN xxx01.z13 BIB
-        ON SUBSTR(z103_rec_key_1,6.9) = z13_rec_key
-), DATA AS (
-    SELECT bib.*, hol.Z00R_DOC_NUMBER AS LKR_HOL, loc.Z00R_DOC_NUMBER LOC_HOL
-    FROM BIB
-    LEFT JOIN XXX60.Z00R hol ON (
-        SUBSTR(hol.Z00R_FIELD_CODE ,1,3) = 'LKR'
-        AND lpad(REPLACE(REGEXP_SUBSTR(hol.Z00R_TEXT ,'\$\$b[^$]*'),'$$b'),9,'0') = bib.LKR_BIB
-    )
-    LEFT JOIN XXX60.Z00R loc ON (
-        SUBSTR(loc.Z00R_FIELD_CODE ,1,3) = '852'
-        AND hol.Z00R_DOC_NUMBER = loc.Z00R_DOC_NUMBER
-        AND bib.sublib = REPLACE(REGEXP_SUBSTR(loc.Z00R_TEXT ,'\$\$b[^$]*'),'$$b')
-        AND bib.COLLECTION = REPLACE(REGEXP_SUBSTR(loc.Z00R_TEXT ,'\$\$c[^$]*'),'$$c')
-    )
-    ORDER BY ITEM_REC_KEY , LKR_BIB
-)
-SELECT ITEM_REC_KEY , ITEM_BIB , ITEM_HOL , LKR_BIB , LKR_HOL FROM DATA ;
+```{note}
+For Sierra/III/Millennium-style boundwiths — where the item row itself names several bibs — the whole boundwith structure is built by [HoldingsCsvTransformer](holdings_csv_transformer.md#boundwith-handling), and this task needs **no** boundwith settings at all.
 ```
 
-Once you have the data, you can use a dataframe library to select the needed data and export an appropriate file:
-
-```python
-# Example python script (using polars dataframe library) to generate the actual boundwith_data file
-import polars as pl
-from pathlib import Path
-
-relationship_file = Path("../iterations/iteration_1/source_data/items/raw_boundwith_data.tsv")
-
-# Create the initial lazyframe for the raw data
-boundwiths_df = pl.scan_csv(
-    relationship_file, separator="\t", infer_schema=False, null_values=["", "[NULL]"]
-)
-
-# We need to capture all item->holdings relationships, so we will concatenate two sub-selections
-prepped_df = pl.concat(
-    [
-        boundwiths_df.select(["ITEM_REC_KEY", "ITEM_HOL"]).rename({"ITEM_HOL": "LKR_HOL"}),
-        boundwiths_df.select(["ITEM_REC_KEY", "LKR_HOL"]),
-    ]
-)
-
-# Now, we need to export to a TSV file that can be included in the items transformer task configuration
-prepped_df.filter(
-    pl.col(
-        "LKR_HOL"
-    ).is_not_null()  # We can't link an item to a holdings record that doesn't exist
-).unique().sink_csv(relationship_file.parent.joinpath("item_holdings_links.tsv", separator="\t"))
-```
-
-```{important}
-When using Aleph-style boundwiths, any `LKR_HOL` value that cannot be found in the `holdings_id_map` will be logged as a data issue and skipped. Ensure the holdings transformation has completed successfully before running the items transformation.
-```
+See [Boundwith Handling](../boundwith_handling) for the full source-data requirements of each flavor, including how to extract the Aleph LKR relationships, and for how to post the resulting `boundwithPart` records.
 
 ### Multiple Files with Different Settings
 
@@ -419,4 +306,5 @@ folio-migration-tools mapping_files/config.json transform_items --base_folder ./
 
 - [Mapping File Based Mapping](../mapping_file_based_mapping) - Mapping file syntax
 - [Mapping Files for Inventory](../mapping_files_inventory) - Required mapping files
+- [Boundwith Handling](../boundwith_handling) - All supported boundwith patterns and their source data
 - [Statistical Code Mapping](../statistical_codes) - Mapping statistical codes

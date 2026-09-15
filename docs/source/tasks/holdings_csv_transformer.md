@@ -192,16 +192,17 @@ When you have both MFHD-derived holdings and need additional holdings from items
 
 ## Boundwith Handling
 
-The HoldingsCsvTransformer handles boundwith relationships automatically when an item maps to **multiple instance IDs** (i.e., the source data row resolves to more than one bib). You may see these referred to as "Sierra-style boundwiths" or "Millenium-style boundwiths". This differs from the MFHD-based approach used by [HoldingsMarcTransformer](holdings_marc_transformer), which requires a separate boundwith relationship file.
+The HoldingsCsvTransformer handles boundwith relationships automatically when a source data row resolves to **multiple instance IDs** — that is, the column mapped to `instanceId` contains a stringified list of bib IDs such as `['b1000001', 'b1000002']`. You may see these referred to as "Sierra-style" or "Millennium-style" boundwiths. This differs from the MFHD-based approach used by [HoldingsMarcTransformer](holdings_marc_transformer), which requires a separate boundwith relationship file.
 
 ### How It Works
 
 When a source data row maps to multiple instances:
 
-1. A primary holdings record is created for the first instance.
-2. Additional holdings records are generated for each subsequent instance, with their `holdingsTypeId` set to `holdingsTypeUuidForBoundwiths`.
-3. A `boundwithPart` record is written to the extradata file linking the item to each holdings record.
-4. Boundwith holdings are excluded from the normal `holdingsMergeCriteria` merge process. Instead, they are de-duplicated using their own composite key (instance ID + location + call number + the full set of bound instance IDs). If a subsequent row produces the same boundwith key, it is merged into the existing boundwith holdings record rather than creating a duplicate.
+1. One holdings record is generated per instance, each with its `holdingsTypeId` set to `holdingsTypeUuidForBoundwiths` — including the first one.
+2. A `boundwithPart` record is written to the extradata file linking the item to each of those holdings records.
+3. Boundwith holdings are excluded from the normal `holdingsMergeCriteria` merge process. Instead, they are de-duplicated using their own composite key (instance ID + location + call number + the full set of bound instance IDs). If a subsequent row produces the same boundwith key, it is merged into the existing boundwith holdings record rather than creating a duplicate.
+
+Because this task creates both the holdings records and the `boundwithPart` records, the following [ItemsTransformer](items_transformer) run needs no boundwith configuration.
 
 ### Configuration
 
@@ -228,6 +229,8 @@ To enable boundwith handling, set the `holdingsTypeUuidForBoundwiths` parameter 
 No `boundwithFlavor` or `boundwithRelationshipFilePath` is needed for the CSV transformer. Boundwith detection is automatic based on multiple instance IDs in the source data.
 ```
 
+See [Boundwith Handling](../boundwith_handling) for the full source-data requirements — including per-instance call numbers and former ID handling — and for how to post the resulting `boundwithPart` records.
+
 ## Running the Task
 
 ```shell
@@ -242,5 +245,6 @@ folio-migration-tools mapping_files/config.json transform_csv_holdings --base_fo
 ## See Also
 
 - [Mapping File Based Mapping](../mapping_file_based_mapping) - Mapping file syntax
+- [Boundwith Handling](../boundwith_handling) - All supported boundwith patterns and their source data
 - [HoldingsMarcTransformer](holdings_marc_transformer) - Alternative for MFHD records
 - [ItemsTransformer](items_transformer) - Transforming items from the same data

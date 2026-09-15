@@ -84,6 +84,26 @@ def test_generate_bound_with_holding_default_no_callnumbers(mocked_mapper):
     assert res[1]["id"] != hold_1_id
 
 
+def test_generate_bound_with_holding_hrid_only_on_first(mocked_mapper):
+    mocked_mapper.migration_report = MigrationReport()
+    hold_1_id = "66db04ef-fbfb-5c45-9ed7-65a1f2495eaf"
+    inst_1_id = "ae0c833c-e76f-53aa-975a-7ac4c2be7972"
+    inst_2_id = "fae73ef8-b546-5310-b4ee-c2d68fed48c5"
+    bw_rel_map = {hold_1_id: [inst_1_id, inst_2_id]}
+    holding = {
+        "id": hold_1_id,
+        "instanceId": inst_1_id,
+        "hrid": "ho00000000123",
+        "formerIds": ["12345"],
+    }
+    res = list(
+        mocked_mapper.create_bound_with_holdings(holding, bw_rel_map[hold_1_id], str(uuid.uuid4()))
+    )
+    assert res[0]["hrid"] == "ho00000000123"
+    assert "hrid" not in res[1]
+    assert all(h["formerIds"] == ["12345"] for h in res)
+
+
 def test_generate_bound_with_holding_default_single_callnumber(mocked_mapper):
     # mocked_mapper = Mock(spec=MapperBase)
     # mocked_mapper.folio_client = mocked_classes.mocked_folio_client()

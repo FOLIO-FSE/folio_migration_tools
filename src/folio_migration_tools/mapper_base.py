@@ -459,8 +459,12 @@ class MapperBase:
                 bound_with_holding["id"] = self.generate_boundwith_holding_uuid(
                     folio_holding["id"], instance_uuid
                 )
-                if bound_with_holding.get("hrid", ""):
-                    bound_with_holding["hrid"] = f"{bound_with_holding['hrid']}_bw_{bwidx}"
+                # Only the first holdings record of the set keeps the HRID, since it is the
+                # one tied to the legacy record (and to its source record, if any). FOLIO
+                # assigns HRIDs to the remaining copies as they are created. The legacy
+                # identifiers in formerIds are carried over to every copy, and remain the
+                # way to retrieve all of the holdings records in a boundwith set.
+                bound_with_holding.pop("hrid", None)
             self.migration_report.add_general_statistics(i18n.t("Bound-with holdings created"))
             yield bound_with_holding
 
