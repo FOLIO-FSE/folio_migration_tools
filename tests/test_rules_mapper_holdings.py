@@ -4,6 +4,8 @@ from unittest.mock import Mock
 
 import pymarc
 import pytest
+from folio_uuid.folio_namespaces import FOLIONamespaces
+from folio_uuid.folio_uuid import FolioUUID
 from pymarc import Field, MARCReader, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
@@ -73,6 +75,9 @@ def mapper(pytestconfig) -> RulesMapperHoldings:
     mapper = RulesMapperHoldings(folio, location_map, conf, lib, parent_id_map, [], statistical_codes_map)
     mapper.folio_client = folio
     mapper.migration_report = MigrationReport()
+    # Done here rather than in the individual tests: the 852 mappings it flattens cannot be
+    # flattened twice, so calling it per test would make the tests order-dependent.
+    mapper.integrate_supplemental_mfhd_mappings()
     return mapper
 
 
@@ -90,7 +95,6 @@ def test_basic(mapper: RulesMapperHoldings, caplog):
                 "in00000000005",
             )
         }
-        mapper.integrate_supplemental_mfhd_mappings()
         record = next(reader)
         ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)
         res = mapper.parse_record(
@@ -182,6 +186,56 @@ def test_setup_boundwith_relationship_map_with_entries():
         "ae0c833c-e76f-53aa-975a-7ac4c2be7972",
         "fae73ef8-b546-5310-b4ee-c2d68fed48c5",
     ]
+
+
+def test_bound_with_holdings_hrid_and_source_id(mapper: RulesMapperHoldings):
+    """Only the first holdings record of a boundwith set keeps its HRID and its MARC source."""
+    path = "./tests/test_data/mfhd/holding.mrc"
+    with open(path, "rb") as marc_file:
+        reader = MARCReader(marc_file, to_unicode=True, permissive=True)
+        reader.hide_utf8_warnings = True
+        reader.force_utf8 = True
+        mapper.parent_id_map = {
+            "7611780": (
+                "7611780",
+                "9d1673a3-a546-5afa-b0fb-5ab971f73eca",
+                "in00000000005",
+            )
+        }
+        record = next(reader)
+        ids = RulesMapperHoldings.get_legacy_ids(mapper, record, 1)
+        holdings_uuid = str(
+            FolioUUID(mapper.base_string_for_folio_uuid, FOLIONamespaces.holdings, ids[0])
+        )
+        mapper.boundwith_relationship_map = {
+            holdings_uuid: [
+                "9d1673a3-a546-5afa-b0fb-5ab971f73eca",
+                "fae73ef8-b546-5310-b4ee-c2d68fed48c5",
+            ]
+        }
+        mapper.task_configuration.holdings_type_uuid_for_boundwiths = (
+            "1b6c62cf-034c-4972-ac80-fa595a9bfbde"
+        )
+        hrid_counter = mapper.hrid_handler.holdings_hrid_counter
+        try:
+            res = mapper.parse_record(
+                record,
+                FileDefinition(file_name="", discovery_suppressed=False, staff_suppressed=False),
+                ids,
+            )
+        finally:
+            # The mapper fixture is session-scoped, so leave its state as it was found:
+            # other tests assert on specific enumerated HRIDs.
+            mapper.hrid_handler.holdings_hrid_counter = hrid_counter
+            mapper.boundwith_relationship_map = {}
+            mapper.task_configuration.holdings_type_uuid_for_boundwiths = ""
+    assert len(res) == 2
+    assert res[0]["hrid"].startswith("pref")
+    assert "hrid" not in res[1]
+    # MARC and FOLIO holdings sources, respectively
+    assert res[0]["sourceId"] == "036ee84a-6afd-4c3c-9ad3-4a12ab875f59"
+    assert res[1]["sourceId"] == "f32d531e-df79-46b3-8932-cdd35f7a2264"
+    assert res[0]["formerIds"] == res[1]["formerIds"]
 
 
 def test_edit852(mapper: RulesMapperHoldings, caplog):

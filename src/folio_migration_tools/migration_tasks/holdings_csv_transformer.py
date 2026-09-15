@@ -245,6 +245,10 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 else None,
             )
             self.holdings = {}
+            # Legacy id of each source row -> the self.holdings key of the record it owns.
+            # Resolved to holdings UUIDs in populate_holdings_id_map. This is what ties an
+            # item to a single holdings record of a boundwith set; see merge_holding_in.
+            self.legacy_id_to_holdings_key: dict[str, str] = {}
             self.total_records = 0
             self.holdings_id_map = self.load_id_map(self.folder_structure.holdings_id_map_path)
             self.results_path = self.folder_structure.created_objects_path
@@ -385,17 +389,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             )
             with open(self.folder_structure.created_objects_path, "w+") as holdings_file:
                 for holding in self.holdings.values():
-                    for legacy_id in holding["formerIds"]:
-                        # Prevent the first item in a boundwith to be overwritten
-                        # TODO: Find out why not
-                        # if legacy_id not in self.holdings_id_map:
-                        self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
-                            legacy_id, holding, self.object_type
-                        )
                     Helper.write_to_file(holdings_file, holding)
                     self.mapper.migration_report.add_general_statistics(
                         i18n_t("Holdings Records Written to disk")
                     )
+            self.populate_holdings_id_map()
             self.mapper.save_id_map_file(
                 self.folder_structure.holdings_id_map_path, self.holdings_id_map
             )
@@ -415,6 +413,29 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             self.mapper.migration_report.write_json_report(raw_report_file)
         logger.info("All done!")
         self.clean_out_empty_logs()
+
+    def populate_holdings_id_map(self):
+        """Map the legacy ids of this run onto the holdings records that ended up carrying them.
+
+        Any previously loaded entries for the same legacy ids are re-pointed, so that items
+        referencing holdings that were merged away in this run still resolve.
+        """
+        for holding in self.holdings.values():
+            for legacy_id in holding["formerIds"]:
+                # Catches legacy ids only reachable through the formerIds of a merged record:
+                # the legacy bib ids exploded out of a boundwith row, which items reference
+                # directly, and the ids of previously generated holdings absorbed into this
+                # record. The source rows below have the final say on the ids they own.
+                self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
+                    legacy_id, holding, self.object_type
+                )
+        # The rows themselves decide which holdings record their items attach to. For a
+        # boundwith set that is the first copy created from the row, not the last copy to be
+        # merged into a bucket that happens to share the row's legacy id.
+        for legacy_id, holdings_key in self.legacy_id_to_holdings_key.items():
+            self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
+                legacy_id, self.holdings[holdings_key], self.object_type
+            )
 
     def validate_merge_criterias(self):
         holdings_schema = self.folio_client.get_holdings_schema()
@@ -488,10 +509,14 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         else:
             raise TransformationRecordFailedError(legacy_id, "No instance id in parsed record", "")
 
-        for folio_holding in holdings_from_row:
+        for copy_idx, folio_holding in enumerate(holdings_from_row):
             self.mapper.perform_additional_mappings(legacy_id, folio_holding, file_def)
-            self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
-        self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
+            holdings_key = self.merge_holding_in(folio_holding, all_instance_ids, legacy_id)
+            if copy_idx == 0:
+                # Items attach to the copy whose UUID derives from their own legacy id,
+                # matching the behaviour of the other boundwith flavors.
+                self.legacy_id_to_holdings_key[legacy_id] = holdings_key
+            self.mapper.report_folio_mapping(folio_holding, self.mapper.schema)
 
     def create_bound_with_holdings(self, folio_holding, legacy_id: str):
         folio_holding["formerIds"] = explode_former_ids(folio_holding)
@@ -505,13 +530,16 @@ class HoldingsCsvTransformer(MigrationTaskBase):
 
     def merge_holding_in(
         self, incoming_holding: dict, instance_ids: list[str], legacy_item_id: str
-    ) -> None:
+    ) -> str:
         """Merge newly generated holdings with existing ones and create boundwith parts.
 
         Args:
             incoming_holding (dict): The newly created FOLIO Holding
             instance_ids (list): the instance IDs tied to the current item
             legacy_item_id (str): Id of the Item the holding was generated from
+
+        Returns:
+            str: the key of the self.holdings entry the holding was merged into.
         """
         if len(instance_ids) > 1:
             # Is boundwith
@@ -522,21 +550,20 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             if bw_key not in self.bound_with_keys:
                 self.bound_with_keys.add(bw_key)
                 self.holdings[bw_key] = incoming_holding
-                self.mapper.create_and_write_boundwith_part(legacy_item_id, incoming_holding["id"])
                 self.mapper.migration_report.add_general_statistics(
                     i18n_t("Unique BW Holdings created from Items")
                 )
             else:
                 self.merge_holding(bw_key, incoming_holding)
-                self.mapper.create_and_write_boundwith_part(
-                    legacy_item_id, self.holdings[bw_key]["id"]
-                )
-                self.holdings_id_map[legacy_item_id] = self.mapper.get_id_map_tuple(
-                    legacy_item_id, self.holdings[bw_key], self.object_type
-                )
                 self.mapper.migration_report.add_general_statistics(
                     i18n_t("BW Items found tied to previously created BW Holdings")
                 )
+            # Every copy of the set gets a boundwithPart for this item, whichever copy the
+            # item itself is attached to.
+            self.mapper.create_and_write_boundwith_part(
+                legacy_item_id, self.holdings[bw_key]["id"]
+            )
+            return bw_key
         else:
             # Regular holding. Merge according to criteria
             new_holding_key = HoldingsHelper.to_key(
@@ -555,6 +582,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                     i18n_t("Unique Holdings created from Items")
                 )
                 self.holdings[new_holding_key] = incoming_holding
+            return new_holding_key
 
     def merge_holding(self, holdings_key: str, new_holdings_record: dict):
         self.holdings[holdings_key] = HoldingsHelper.merge_holding(

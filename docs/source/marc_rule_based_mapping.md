@@ -149,38 +149,11 @@ The first step in preparing to transform MARC Bib records for FOLIO is to create
 ```
 For more information on the task configuration options for MFHD transformation, see [HoldingsMarcTransformer](./tasks/holdings_marc_transformer)
 
-### Boundwith Mapping for MFHD Holdings ("Voyager-style" boundwiths)
+### Boundwith Mapping for MFHD Holdings
 
-The MFHD transformer supports migrating boundwith relationships — where multiple bibliographic records share a single physical holdings record — via the `"boundwithRelationshipFilePath"` configuration key. The boundwith relationship file is a TSV placed in `source_data/holdings/` with columns `MFHD_ID` and `BIB_ID` mapping each holdings record to one or more bib records:
+The MFHD transformer can migrate boundwith relationships — where several bibliographic records share a single physical piece — by reading a TSV file of `MFHD_ID`/`BIB_ID` pairs named in the `"boundwithRelationshipFilePath"` task setting. Mapping rules play no part in this: the bib links come from the relationship file rather than the MFHD, and each generated holdings record is mapped by the ordinary rules before being copied per instance.
 
-```text
-MFHD_ID	BIB_ID
-12345	100001
-12345	100002
-12346	100003
-```
-
-During transformation, the tool creates a copy of the holdings record for each additional bib (instance), setting the `holdingsTypeId` to the value of `"holdingsTypeUuidForBoundwiths"` and generating deterministic UUIDs for the copies. The resulting relationship map (`boundwith_relationships_map.json`) is written to the results folder and consumed by the [ItemsTransformer](./tasks/items_transformer) to create `boundwithPart` records linking items to their boundwith holdings.
-
-#### Configuration example
-
-```json
-{
-    "name": "transform_mfhd",
-    "migrationTaskType": "HoldingsMarcTransformer",
-    "legacyIdMarcPath": "001",
-    "locationMapFileName": "location_map.tsv",
-    "defaultCallNumberTypeName": "Library of Congress classification",
-    "fallbackHoldingsTypeId": "82747568-cdf3-4980-bba2-e5b38950f65b",
-    "holdingsTypeUuidForBoundwiths": "1b6c62cf-034c-4972-ac80-fa595a9bfbde",
-    "boundwithRelationshipFilePath": "bib_mfhd.tsv",
-    "hridHandling": "default",
-    "createSourceRecords": false,
-    "files": [
-        {"file_name": "mfhd.mrc"}
-    ]
-}
-```
+See [Boundwith Handling](./boundwith_handling) for the source data requirements, the other boundwith patterns the tools support, and the full processing chain through the [ItemsTransformer](./tasks/items_transformer).
 
 (supplemental-mfhd-mapping-rules)=
 ### Supplemental MFHD Mapping Rules
@@ -384,4 +357,4 @@ You can use the name of the holdings note type you want to use, and the tools wi
 ### Limitations and other considerations
 * The MFHD transformer will only act upon the first 852 field encountered. Any remaining 852:s will be reported and discarded.
 * The MFHD transformer does not handle `852$x` or `852$z` mappings to holdings notes. You will need to create a supplemental MFHD map file or update the FOLIO system default map to include mapping rules for those subfields (or any other subfields of the 852 you want to map to an `entity`, in FOLIO MARC mapping rules terms) as a "952" mapping rule. During the transformation, the tools will copy the 852 into a 952 field with `ff` indicators and apply the configured 952 mapping.
-* Boundwith information in 014 will not be handled.
+* Boundwith information in 014 will not be handled. Supply the bib links in a separate relationship file instead — see [Boundwith Handling](./boundwith_handling).

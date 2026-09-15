@@ -208,13 +208,18 @@ class RulesMapperHoldings(RulesMapperBase):
         self.dedupe_rec(cleaned_folio_holding, props_to_not_dedupe)
         self.report_folio_mapping(cleaned_folio_holding, self.schema)
         if bw_instance_ids := self.boundwith_relationship_map.get(cleaned_folio_holding["id"], []):
-            return list(
+            bound_with_holdings = list(
                 self.create_bound_with_holdings(
                     cleaned_folio_holding,
                     bw_instance_ids,
                     self.task_configuration.holdings_type_uuid_for_boundwiths,
                 )
             )
+            # Only the first holdings record of the set gets a source record, so the rest
+            # must not claim MARC as their source.
+            for bound_with_holding in bound_with_holdings[1:]:
+                bound_with_holding["sourceId"] = self.holdingssources["FOLIO"]
+            return bound_with_holdings
         return [cleaned_folio_holding]
 
     def set_instance_id_by_map(self, legacy_ids: list, folio_holding: dict, marc_record: Record):

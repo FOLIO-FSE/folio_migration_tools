@@ -44,8 +44,8 @@ Transform MARC Holdings (MFHD) records into FOLIO Holdings records with support 
 | `createSourceRecords` | boolean | No | Create SRS records for holdings. Default: `false` |
 | `mfhdMappingFileName` | string | No | Custom MFHD rules file (replaces tenant rules) |
 | `supplementalMfhdMappingRulesFile` | string | No | Additional mapping rules to merge with tenant rules |
-| `boundwithRelationshipFilePath` | string | No | TSV file with bib-to-MFHD relationships for boundwiths |
-| `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith holdings |
+| `boundwithRelationshipFilePath` | string | No | TSV file with bib-to-MFHD relationships for boundwiths. See [Boundwith Handling](../boundwith_handling) |
+| `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith holdings. Required if `boundwithRelationshipFilePath` is set |
 | `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
 | `holdingsTypeMapFileName` | string | No | TSV file mapping holdings types |
 | `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
@@ -105,7 +105,7 @@ For MARC-based holdings, the legacy location values are extracted from the MFHD 
 
 ### Boundwith Relationship File (Optional)
 
-For Voyager-style boundwiths, provide a TSV file mapping MFHDs to multiple bibs:
+For Voyager-style boundwiths — where one MFHD is linked to several bibs — provide a TSV file in `source_data/holdings/` mapping MFHDs to bibs, and reference it via `boundwithRelationshipFilePath`:
 
 ```text
 MFHD_ID	BIB_ID
@@ -114,9 +114,13 @@ MFHD_ID	BIB_ID
 12346	100003
 ```
 
-This file is placed in `source_data/holdings/` and referenced via `boundwithRelationshipFilePath`. For each MFHD that maps to more than one bib, the transformer creates additional holdings records (one per extra bib), setting their `holdingsTypeId` to `holdingsTypeUuidForBoundwiths` with deterministic UUIDs.
+For each MFHD listed in the file, the transformer generates one holdings record per bib, with deterministic UUIDs and `holdingsTypeId` set to `holdingsTypeUuidForBoundwiths`. The resulting relationship map is written to `results/boundwith_relationships_map.json` and consumed by the [ItemsTransformer](items_transformer), which creates the `boundwithPart` records.
 
-The resulting relationship map (`boundwith_relationships_map.json`) is written to the results folder and consumed by the [ItemsTransformer](items_transformer) to create `boundwithPart` records. See the [ItemsTransformer documentation](items_transformer) for details on how boundwith relationships are resolved at the item level, including support for different ILS flavors via the `boundwithFlavor` parameter.
+```{important}
+`MFHD_ID` values must match the legacy IDs extracted via `legacyIdMarcPath`, every `BIB_ID` must exist in `instance_id_map`, and the file must list **every** bib in the set — including the one named in the MFHD's `004`.
+```
+
+See [Boundwith Handling](../boundwith_handling) for the full requirements, the other supported boundwith patterns, and how to post the results.
 
 ## Output Files
 
@@ -127,8 +131,8 @@ Files are created in `iterations/<iteration>/results/`:
 | `folio_holdings_<task_name>.json` | FOLIO Holdings records |
 | `holdings_id_map.json` | Legacy ID to FOLIO UUID mapping (used by ItemsTransformer) |
 | `folio_srs_holdings_<task_name>.json` | SRS records (if `createSourceRecords: true`) |
-| `extradata_<task_name>.extradata` | Extra data including boundwith parts (when applicable) |
-| `boundwith_relationships_map.json` | Boundwith relationship mappings (when processing boundwiths) |
+| `extradata_<task_name>.extradata` | Extra data generated during mapping (when applicable) |
+| `boundwith_relationships_map.json` | Boundwith relationship mappings, consumed by the ItemsTransformer (when processing boundwiths) |
 | `failed_records_decode_<task_name>.mrc` | MARC records that failed to decode from MARC21 format |
 | `failed_records_transformation_<task_name>.mrc` | MARC records that decoded OK but failed transformation (empty only if no failures) |
 
@@ -172,6 +176,8 @@ Files are created in `iterations/<iteration>/results/`:
     ]
 }
 ```
+
+The following [ItemsTransformer](items_transformer) task must set `boundwithFlavor: "voyager"` and a non-empty `boundwithRelationshipFilePath` for the `boundwithPart` records to be created. See [Boundwith Handling](../boundwith_handling).
 
 ### Preserving Original MFHD Data
 
@@ -235,5 +241,6 @@ folio-migration-tools mapping_files/config.json transform_mfhd --base_folder ./
 ## See Also
 
 - [MARC Rules Based Mapping](../marc_rule_based_mapping) - Customizing MFHD mapping rules
+- [Boundwith Handling](../boundwith_handling) - All supported boundwith patterns and their source data
 - [HoldingsCsvTransformer](holdings_csv_transformer) - Alternative for CSV-based holdings
 - [ItemsTransformer](items_transformer) - Transforming items
