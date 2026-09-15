@@ -51,6 +51,7 @@ The examples below use `camelCase` for consistency.
 | `parseCatalogedDate` | boolean | No | Parse mapped `catalogedDate` values into FOLIO date format. Default: `false` |
 | `resetHridSettings` | boolean | No | Reset instance HRID counter before processing. Default: `false` |
 | `updateHridSettings` | boolean | No | Whether to update FOLIO HRID settings after transformation. Default: `true` |
+| `captureBibLevelRelationships` | boolean | No | Capture raw 773/774 (Host Item Entry/Constituent Unit Entry) field contents and prevalence stats for later analysis. Does not create FOLIO instance relationships. Default: `true` |
 | `tagsToDelete` | array | No | MARC tags to remove before saving to output MARC file. |
 | `statisticalCodesMapFileName` | string | No | TSV file mapping legacy codes to FOLIO statistical codes. |
 | `statisticalCodeMappingFields` | array | No | MARC fields to extract statistical codes from (e.g., `["998$a$b"]`). |
@@ -168,6 +169,7 @@ Files are created in `iterations/<iteration>/results/`:
 | `instance_id_map_<task_name>.json` | Legacy ID to FOLIO UUID mapping |
 | `failed_records_decode_<task_name>.mrc` | MARC records that failed to decode from MARC21 format |
 | `failed_records_transformation_<task_name>.mrc` | MARC records that decoded OK but failed transformation (empty only if no failures) |
+| `bib_relationships_773_774.json` | Raw contents and direction of captured 773/774 fields (one per line), keyed by instance ID and legacy ID. Only written when records with these fields are found and `captureBibLevelRelationships` is `true`. |
 
 Reports are created in `iterations/<iteration>/reports/`:
 
