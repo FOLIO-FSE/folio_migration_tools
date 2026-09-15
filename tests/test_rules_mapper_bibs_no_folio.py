@@ -615,3 +615,62 @@ def test_get_custom_bib_id_empty_field_string_raises():
     with pytest.raises(TransformationRecordFailedError) as exception_info:
         get_custom_bib_id(record, "")
     assert "is missing from record but is required in all records" in str(exception_info.value)
+
+
+def test_extract_bib_relationship_fields_773_with_oclc_w(mapper: BibsRulesMapper):
+    record = pymarc.Record()
+    record.add_field(
+        Field(
+            tag="773",
+            indicators=["0", " "],
+            subfields=[
+                Subfield(code="t", value="Host title"),
+                Subfield(code="w", value="(OCoLC)12345"),
+                Subfield(code="g", value="no. 1"),
+            ],
+        )
+    )
+    folio_instance = {"id": "some-instance-id"}
+    records_before = len(mapper.bib_relationship_records)
+    mapper.extract_bib_relationship_fields(record, ["legacy_id_773"], folio_instance)
+    added = mapper.bib_relationship_records[records_before:]
+    assert len(added) == 1
+    assert added[0]["instance_id"] == "some-instance-id"
+    assert added[0]["hrid"] is None
+    assert added[0]["legacy_id"] == "legacy_id_773"
+    assert added[0]["marc_tag"] == "773"
+    assert added[0]["direction"] == "773 - this record links up to a host record"
+    assert added[0]["indicator1"] == "0"
+    assert {"code": "w", "value": "(OCoLC)12345"} in added[0]["subfields"]
+    assert "773 field found" in mapper.migration_report.report["BibLevelRelationships773774"]
+    assert (
+        "773 $w identifier prefix: OCoLC"
+        in mapper.migration_report.report["BibLevelRelationships773774"]
+    )
+
+
+def test_extract_bib_relationship_fields_774_missing_w(mapper: BibsRulesMapper):
+    record = pymarc.Record()
+    record.add_field(
+        Field(
+            tag="774",
+            indicators=["0", " "],
+            subfields=[Subfield(code="t", value="Constituent title")],
+        )
+    )
+    folio_instance = {"id": "some-other-instance-id"}
+    records_before = len(mapper.bib_relationship_records)
+    mapper.extract_bib_relationship_fields(record, ["legacy_id_774"], folio_instance)
+    added = mapper.bib_relationship_records[records_before:]
+    assert len(added) == 1
+    assert added[0]["marc_tag"] == "774"
+    assert added[0]["direction"] == "774 - this record links down to a constituent record"
+    assert "774 field missing $w" in mapper.migration_report.report["BibLevelRelationships773774"]
+
+
+def test_extract_bib_relationship_fields_no_fields_present(mapper: BibsRulesMapper):
+    record = pymarc.Record()
+    folio_instance = {"id": "no-relationship-fields"}
+    records_before = len(mapper.bib_relationship_records)
+    mapper.extract_bib_relationship_fields(record, ["legacy_id_none"], folio_instance)
+    assert len(mapper.bib_relationship_records) == records_before

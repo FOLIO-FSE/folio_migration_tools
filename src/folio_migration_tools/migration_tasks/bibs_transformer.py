@@ -114,6 +114,18 @@ class BibsTransformer(MigrationTaskBase):
                 description="At the end of the run, update FOLIO with the HRID settings",
             ),
         ] = True
+        capture_bib_level_relationships: Annotated[
+            bool,
+            Field(
+                title="Capture bib-level relationship fields (773/774)",
+                description=(
+                    "If set to true, the raw contents of 773 (Host Item Entry) and 774 "
+                    "(Constituent Unit Entry) fields are captured to a separate file for "
+                    "analysis, along with prevalence statistics in the migration report. "
+                    "This does not create FOLIO instance relationships."
+                ),
+            ),
+        ] = True
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -169,6 +181,18 @@ class BibsTransformer(MigrationTaskBase):
         logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
         self.processor.wrap_up()
+        if self.mapper.bib_relationship_records:
+            relationships_path = (
+                self.folder_structure.results_folder / "bib_relationships_773_774.json"
+            )
+            with open(relationships_path, "w+") as relationships_file:
+                for relationship_record in self.mapper.bib_relationship_records:
+                    Helper.write_to_file(relationships_file, relationship_record)
+            logger.info(
+                "Wrote %s captured 773/774 relationship field(s) to %s",
+                len(self.mapper.bib_relationship_records),
+                relationships_path,
+            )
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
                 i18n_t("Bibliographic records transformation report"),
