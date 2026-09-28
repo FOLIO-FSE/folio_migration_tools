@@ -99,7 +99,9 @@ class MigrationReport:
         )
         logger.info(f"Elapsed time: {time_finished - time_started}")
         for a in self.report:
-            blurb_id = self.report[a].get("blurb_id") or ""
+            # Sections created via set() have no blurb_id entry; the section key is the blurb id
+            blurb_id = self.report[a].get("blurb_id") or a
+            measures = [k for k in self.report[a] if k != "blurb_id"]
             report_file.write(
                 "\n".join(
                     [
@@ -107,7 +109,7 @@ class MigrationReport:
                         "## " + i18n.t(f"blurbs.{blurb_id}.title"),
                         i18n.t(f"blurbs.{blurb_id}.description"),
                         "<details><summary>"
-                        + i18n.t("Click to expand all %{count} things", count=len(self.report[a]))
+                        + i18n.t("Click to expand all %{count} things", count=len(measures))
                         + "</summary>",
                         "",
                         i18n_t("Measure") + " | " + i18n_t("Count"),
@@ -115,8 +117,7 @@ class MigrationReport:
                     ]
                     + [
                         f"{k or 'EMPTY'} | {self.report[a][k]:,}"
-                        for k in sorted(self.report[a], key=as_str)
-                        if k != "blurb_id"
+                        for k in sorted(measures, key=as_str)
                     ]
                     + ["</details>", ""]
                 )

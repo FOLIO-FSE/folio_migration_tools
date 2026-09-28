@@ -191,6 +191,28 @@ class TestMigrationReport:
             assert "Main Library" in content
             assert "50" in content
 
+    def test_write_migration_report_titles_sections_created_by_set(self):
+        """Test that sections created with set() still get their blurb title and count."""
+        with patch(
+            "folio_migration_tools.migration_report.i18n.t",
+            side_effect=lambda x, **kw: f"{x} {kw['count']}" if "count" in kw else x,
+        ), patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x: x):
+            report = MigrationReport()
+            report.set("GeneralStatistics", "Records processed", 100)
+            report.add("Details", "Something happened")
+
+            output = io.StringIO()
+            start_time = datetime(2024, 1, 15, 10, 0, 0, tzinfo=timezone.utc)
+
+            report.write_migration_report("Test Report", output, start_time)
+
+            content = output.getvalue()
+            assert "## blurbs.GeneralStatistics.title" in content
+            assert "## blurbs.Details.title" in content
+            assert "blurbs..title" not in content
+            # blurb_id is not a measure and should not be counted
+            assert content.count("Click to expand all %{count} things 1") == 2
+
     def test_log_me_logs_report_sections(self, caplog):
         """Test that log_me logs all report sections."""
         import logging as logging_mod

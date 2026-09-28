@@ -65,3 +65,22 @@ def test_cache_clear():
     assert cache_info.currsize == 0
     assert cache_info.hits == 0
     assert cache_info.misses == 0
+
+
+def test_cache_respects_locale_changes():
+    """Test that cached translations follow the active locale."""
+    import i18n
+    from pathlib import Path
+
+    i18n.load_config(Path(__file__).parents[1] / "src/folio_migration_tools/i18n_config.py")
+    clear_i18n_cache()
+    original_locale = i18n.get("locale")
+    try:
+        i18n.set("locale", "en")
+        assert i18n_t("Measure") == "Measure"
+        i18n.set("locale", "fr")
+        assert i18n_t("Measure") == "Mesure"
+        assert i18n_t("Measure", locale="en") == "Measure"
+    finally:
+        i18n.set("locale", original_locale)
+        clear_i18n_cache()
