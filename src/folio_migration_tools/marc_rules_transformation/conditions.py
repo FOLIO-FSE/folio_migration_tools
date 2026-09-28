@@ -616,7 +616,7 @@ class Conditions:
         if marc_field.indicator1 == "7" and "2" in marc_field:
             self.mapper.migration_report.add(
                 "CallNumberTypeMapping",
-                i18n.t("Unhandled call number type in $2 (ind1 == 7)" + str(marc_field["2"])),
+                i18n.t("Unhandled call number type in $2 (ind1 == 7)") + f": {marc_field['2']}",
             )
             return self.default_call_number_type["id"]
 
