@@ -94,8 +94,11 @@ class LegacyLoan(object):
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(
-                    "Provided due_date is not UTC, setting tz-info to tenant "
-                    f"timezone ({self.tenant_timezone})"
+                    i18n.t(
+                        "Provided due_date is not UTC, setting tz-info to tenant timezone"
+                        " (%{timezone})",
+                        timezone=self.tenant_timezone,
+                    )
                 )
             if temp_date_due.hour == 0 and temp_date_due.minute == 0:
                 temp_date_due = temp_date_due.replace(hour=23, minute=59)
@@ -105,7 +108,7 @@ class LegacyLoan(object):
                     "Assuming end of local calendar day (23:59)...",
                     json.dumps(self.legacy_loan_dict),
                 )
-                self.report("Hour and minute not specified for due date")
+                self.report(i18n.t("Hour and minute not specified for due date"))
         except (ParserError, OverflowError) as ee:
             logger.exception(ee)
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
@@ -124,8 +127,11 @@ class LegacyLoan(object):
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(
-                    "Provided out_date is not UTC, setting tz-info to tenant "
-                    f"timezone ({self.tenant_timezone})"
+                    i18n.t(
+                        "Provided out_date is not UTC, setting tz-info to tenant timezone"
+                        " (%{timezone})",
+                        timezone=self.tenant_timezone,
+                    )
                 )
         except (ParserError, OverflowError):
             temp_date_out = datetime.now(ZoneInfo("UTC")).replace(

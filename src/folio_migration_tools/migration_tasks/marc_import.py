@@ -19,6 +19,7 @@ from folio_data_import.MARCDataImport import MARCImportJob as FDIMARCImportJob
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -350,13 +351,13 @@ class MARCImportTask(MigrationTaskBase):
         # General statistics
         self.migration_report.set(
             "GeneralStatistics",
-            "Records sent to Data Import",
+            i18n_t("Records sent to Data Import"),
             self.total_records_sent,
         )
 
         self.migration_report.set(
             "GeneralStatistics",
-            "Data Import jobs created",
+            i18n_t("Data Import jobs created"),
             len(self.job_ids),
         )
 

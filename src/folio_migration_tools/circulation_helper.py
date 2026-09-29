@@ -172,14 +172,14 @@ class CirculationHelper:
                 )
                 return TransactionResult(False, False, "", error_message, error_message)
             loan = self.folio_client.folio_post(path, data)
-            stats = "Successfully checked out by barcode"
             logger.debug(
-                "%s (item barcode %s}) in %ss",
-                stats,
+                "Successfully checked out by barcode (item barcode %s) in %ss",
                 legacy_loan.item_barcode,
                 f"{(time.time() - t0_function):.2f}",
             )
-            return TransactionResult(True, False, loan, "", stats)
+            return TransactionResult(
+                True, False, loan, "", i18n_t("Successfully checked out by barcode")
+            )
         except FolioValidationError as fve:
             error_message_from_folio = self.folio_client.handle_json_response(fve.response)[
                 "errors"
@@ -201,7 +201,7 @@ class CirculationHelper:
                 )
             elif "No item with barcode" in error_message_from_folio:
                 error_message = f"No item with barcode {legacy_loan.item_barcode} in FOLIO"
-                stat_message = "Item barcode not in FOLIO"
+                stat_message = i18n_t("Item barcode not in FOLIO")
                 self.missing_item_barcodes.add(legacy_loan.item_barcode)
                 return TransactionResult(
                     False,
@@ -253,7 +253,7 @@ class CirculationHelper:
             )
             self.migration_report.add("Details", stat_message)
             return TransactionResult(
-                False, True, None, error_message, f"Check out error: {stat_message}"
+                False, True, None, error_message, i18n_t("Check out error") + f": {stat_message}"
             )
         except FolioInternalServerError as fise:
             logger.exception(
@@ -335,10 +335,15 @@ class CirculationHelper:
                     f"{client_response.text}"
                 )
                 logger.exception(message)
-                migration_report.add_general_statistics(message)
+                migration_report.add_general_statistics(
+                    i18n.t("HTTP %{code} Error creating request", code=client_response.status_code)
+                    + f": {client_response.text}"
+                )
             else:
                 logger.exception(f"Connection error creating request: {fce}")
-                migration_report.add_general_statistics("Connection error creating request")
+                migration_report.add_general_statistics(
+                    i18n_t("Connection error creating request")
+                )
             return False
         except Exception as exception:
             logger.exception(exception, exc_info=True)

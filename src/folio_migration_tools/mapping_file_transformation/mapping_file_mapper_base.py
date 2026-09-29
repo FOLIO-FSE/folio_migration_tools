@@ -455,9 +455,10 @@ class MappingFileMapperBase(MapperBase):
         if fallback_field and fallback_value not in ["", None]:
             migration_report.add(
                 "FieldMappingDetails",
-                (
-                    f"Added fallback value from {fallback_field} "
-                    f"instead of {mapping_file_entry['legacy_field']}"
+                i18n.t(
+                    "Added fallback value from %{fallback_field} instead of %{legacy_field}",
+                    fallback_field=fallback_field,
+                    legacy_field=mapping_file_entry["legacy_field"],
                 ),
             )
             return fallback_value, fallback_field
@@ -466,9 +467,10 @@ class MappingFileMapperBase(MapperBase):
         if fallback_value_literal:
             migration_report.add(
                 "FieldMappingDetails",
-                (
-                    f"Added fallback value {fallback_value_literal} "
-                    f"instead of empty {mapping_file_entry['legacy_field']}"
+                i18n.t(
+                    "Added fallback value %{fallback_value} instead of empty %{legacy_field}",
+                    fallback_value=fallback_value_literal,
+                    legacy_field=mapping_file_entry["legacy_field"],
                 ),
             )
             return fallback_value_literal, "fallback_value"
@@ -516,7 +518,12 @@ class MappingFileMapperBase(MapperBase):
             if replaced_val != value:
                 migration_report.add(
                     "FieldMappingDetails",
-                    f"Replaced {value} in {source_field} with {replaced_val}",
+                    i18n.t(
+                        "Replaced %{value} in %{source_field} with %{replaced_val}",
+                        value=value,
+                        source_field=source_field,
+                        replaced_val=replaced_val,
+                    ),
                 )
             value = replaced_val
 
@@ -875,11 +882,13 @@ class MappingFileMapperBase(MapperBase):
         logger.info("Source data file contains %d rows", total_rows)
         logger.info("Source data file contains %d empty rows", empty_rows)
         self.migration_report.set(
-            "GeneralStatistics", "Number of rows in {}".format(file_name.name), total_rows
+            "GeneralStatistics",
+            i18n.t("Number of rows in %{file_name}", file_name=file_name.name),
+            total_rows,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Number of empty rows in {}".format(file_name.name),
+            i18n.t("Number of empty rows in %{file_name}", file_name=file_name.name),
             empty_rows,
         )
         try:

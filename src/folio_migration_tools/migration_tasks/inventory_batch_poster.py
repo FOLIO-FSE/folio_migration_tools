@@ -17,6 +17,7 @@ from folio_data_import.BatchPoster import BatchPosterStats
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -322,37 +323,37 @@ class InventoryBatchPoster(MigrationTaskBase):
         # General statistics
         self.migration_report.set(
             "GeneralStatistics",
-            "Records processed",
+            i18n_t("Records processed"),
             self.stats.records_processed,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Records posted successfully",
+            i18n_t("Records posted successfully"),
             self.stats.records_posted,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Records created",
+            i18n_t("Records created"),
             self.stats.records_created,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Records updated",
+            i18n_t("Records updated"),
             self.stats.records_updated,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Records failed",
+            i18n_t("Records failed"),
             self.stats.records_failed,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Batches posted",
+            i18n_t("Batches posted"),
             self.stats.batches_posted,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Batches failed",
+            i18n_t("Batches failed"),
             self.stats.batches_failed,
         )
 
@@ -360,12 +361,12 @@ class InventoryBatchPoster(MigrationTaskBase):
         if self.task_configuration.rerun_failed_records:
             self.migration_report.set(
                 "GeneralStatistics",
-                "Rerun succeeded",
+                i18n_t("Rerun succeeded"),
                 self.stats.rerun_succeeded,
             )
             self.migration_report.set(
                 "GeneralStatistics",
-                "Rerun still failed",
+                i18n_t("Rerun still failed"),
                 self.stats.rerun_still_failed,
             )
 

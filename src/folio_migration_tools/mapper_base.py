@@ -149,15 +149,14 @@ class MapperBase:
             if prevent_default:
                 self.migration_report.add(
                     ref_data_mapping.blurb_id,
-                    (f'Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""'),
+                    i18n_t("Not to be mapped. (No default)")
+                    + f' -- {" - ".join(fieldvalues)} -> ""',
                 )
                 return ""
             self.migration_report.add(
                 ref_data_mapping.blurb_id,
-                (
-                    f"Unmapped (Default value was set) -- "
-                    f"{' - '.join(fieldvalues)} -> {ref_data_mapping.default_name}"
-                ),
+                i18n_t("Unmapped (Default value was set)")
+                + f" -- {' - '.join(fieldvalues)} -> {ref_data_mapping.default_name}",
             )
             return ref_data_mapping.default_name
         except IndexError as exception:
@@ -221,15 +220,14 @@ class MapperBase:
             if prevent_default:
                 self.migration_report.add(
                     ref_data_mapping.blurb_id,
-                    (f'Not to be mapped. (No default) -- {" - ".join(fieldvalues)} -> ""'),
+                    i18n_t("Not to be mapped. (No default)")
+                    + f' -- {" - ".join(fieldvalues)} -> ""',
                 )
                 return ""
             self.migration_report.add(
                 ref_data_mapping.blurb_id,
-                (
-                    f"Unmapped (Default value was set) -- "
-                    f"{' - '.join(fieldvalues)} -> {ref_data_mapping.default_name}"
-                ),
+                i18n_t("Unmapped (Default value was set)")
+                + f" -- {' - '.join(fieldvalues)} -> {ref_data_mapping.default_name}",
             )
             return ref_data_mapping.default_id
         except IndexError as exception:

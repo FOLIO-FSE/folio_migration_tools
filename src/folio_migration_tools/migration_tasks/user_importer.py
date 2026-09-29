@@ -19,6 +19,7 @@ from folio_data_import.UserImport import UserImporterStats
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -280,27 +281,27 @@ class UserImportTask(MigrationTaskBase):
         total_processed = self.stats.created + self.stats.updated + self.stats.failed
         self.migration_report.set(
             "GeneralStatistics",
-            "Total records in files",
+            i18n_t("Total records in files"),
             self.total_records,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Records processed",
+            i18n_t("Records processed"),
             total_processed,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Users created",
+            i18n_t("Users created"),
             self.stats.created,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Users updated",
+            i18n_t("Users updated"),
             self.stats.updated,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            "Users failed",
+            i18n_t("Users failed"),
             self.stats.failed,
         )
 
