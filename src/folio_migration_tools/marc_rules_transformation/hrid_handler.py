@@ -154,7 +154,7 @@ class HRIDHandler:
 
         except Exception:
             if "001" in marc_record:
-                s = i18n.n("Failed to create %{to} from %{fro}", to="001", fro="035")
+                s = i18n.t("Failed to create %{to} from %{fro}", to="035", fro="001")
                 migration_report.add("HridHandling", s)
                 Helper.log_data_issue(legacy_ids, s, marc_record["001"])
             else:
@@ -207,7 +207,9 @@ class HRIDHandler:
         logger.info("Resetting Holdings HRID settings to 1")
         self.holdings_hrid_counter = 1
         self.migration_report.set(
-            "GeneralStatistics", "Holdings HRID starting number", self.holdings_hrid_counter
+            "GeneralStatistics",
+            i18n.t("Holdings HRID starting number"),
+            self.holdings_hrid_counter,
         )
         self.store_hrid_settings()
 
@@ -215,7 +217,9 @@ class HRIDHandler:
         logger.info("Resetting Items HRID settings to 1")
         self.items_hrid_counter = 1
         self.migration_report.set(
-            "GeneralStatistics", "Items HRID starting number", self.items_hrid_counter
+            "GeneralStatistics",
+            i18n.t("Items HRID starting number"),
+            self.items_hrid_counter,
         )
         self.store_hrid_settings()
 
