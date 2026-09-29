@@ -1,36 +1,40 @@
-# Update Language Files with new Keys
+"""Sync a locale's translation file with the keys in the source locale."""
+
+import json
+import re
+from pathlib import Path
 
 from argparse_prompt import PromptParser
-import re
-import json
-from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 if __name__ == "__main__":
     parser = PromptParser()
     parser.add_argument(
         "--translations-dir",
         help=("Directory to read and write the translations."),
-        default="translations",
+        default=REPO_ROOT / "src" / "folio_migration_tools" / "translations",
+        type=Path,
         prompt=False,
     )
     parser.add_argument(
         "--source-lang",
-        help=("Directory to pull source files."),
+        help=("Locale whose keys are copied to the target."),
         default="en",
         prompt=False,
     )
     parser.add_argument(
         "--target-lang",
-        help=("Target language to convert to."),
+        help=("Locale to update, e.g. fr."),
     )
     args = parser.parse_args()
 
-    source_filename = Path(args.translations_dir) / f"{args.source_lang}.json"
-    target_filename = Path(args.translations_dir) / f"{args.target_lang}.json"
-    with open(source_filename) as f:
+    source_filename = args.translations_dir / f"{args.source_lang}.json"
+    target_filename = args.translations_dir / f"{args.target_lang}.json"
+    with open(source_filename, encoding="utf-8") as f:
         source_translations = json.load(f)
     if target_filename.exists():
-        with open(target_filename) as f:
+        with open(target_filename, encoding="utf-8") as f:
             target_translations = json.load(f)
     else:
         target_translations = {}
@@ -45,6 +49,7 @@ if __name__ == "__main__":
     # Update target translations
     for key in source_translations:
         if key not in target_translations:
+            print(f"Adding new key '{key}'")
             if isinstance(source_translations[key], str):
                 target_translations[key] = "TRANSLATE ME: " + source_translations[key]
             else:
@@ -67,5 +72,5 @@ if __name__ == "__main__":
                         f"correctly: format must have %"
                     )
     # Write
-    with open(target_filename, "w") as f:
-        json.dump(target_translations, f, sort_keys=True, indent=2)
+    with open(target_filename, "w", encoding="utf-8") as f:
+        json.dump(target_translations, f, sort_keys=True, indent=2, ensure_ascii=False)

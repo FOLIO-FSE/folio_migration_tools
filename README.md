@@ -90,7 +90,7 @@ Long strings can use a placeholder key:
 i18n.t("blurbs.Introduction.description")
 ```
 
-With the full string in ```translations/en.json```:
+With the full string in ```src/folio_migration_tools/translations/en.json```:
 
 ```json
 "blurbs.Introduction.description": "<br/>Data errors preventing records from being migrated
@@ -98,7 +98,7 @@ With the full string in ```translations/en.json```:
 
 ## Translations Files
 
-Translation files live in the `translations` directory, with `en.json` as the default.
+Translation files live in the `src/folio_migration_tools/translations` directory, with `en.json` as the default.
 
 Extract template files with the `extract_translations` script:
 
@@ -108,7 +108,7 @@ python scripts/extract_translations.py
 
 ## Internationalizations
 
-Other langauges translations live in `translations/[locale].json`.
+Other languages' translations live in `src/folio_migration_tools/translations/[locale].json`.
 For example, Spanish would be `es.json`. 
 
 The keys must match the English keys, but the Values should be translated.
