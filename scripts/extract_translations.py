@@ -7,6 +7,8 @@ import re
 from pathlib import Path
 from typing import TypeGuard
 
+import i18n
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PLACEHOLDER_RE = re.compile(r"%\{(\w+)\}")
 # Keyword arguments consumed by python-i18n itself rather than by placeholders
@@ -23,6 +25,20 @@ def is_translation_call(node: ast.AST) -> TypeGuard[ast.Call]:
     return isinstance(func, ast.Name) and func.id == "i18n_t"
 
 
+def unknown_i18n_function(node: ast.AST) -> str | None:
+    """Return <name> for i18n.<name>(...) calls where python-i18n has no such function."""
+    if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+        return None
+    func = node.func
+    if (
+        isinstance(func.value, ast.Name)
+        and func.value.id == "i18n"
+        and not hasattr(i18n, func.attr)
+    ):
+        return func.attr
+    return None
+
+
 def extract_keys(source_files, source_root: Path) -> set[str]:
     found_keys: set[str] = set()
     for file in source_files:
@@ -31,6 +47,8 @@ def extract_keys(source_files, source_root: Path) -> set[str]:
             continue
         tree = ast.parse(file.read_text(encoding="utf-8"), filename=str(file))
         for node in ast.walk(tree):
+            if name := unknown_i18n_function(node):
+                print(f"{file.relative_to(source_root)}:{node.lineno}: i18n.{name} does not exist")
             if not is_translation_call(node) or not node.args:
                 continue
             location = f"{file.relative_to(source_root)}:{node.lineno}"
