@@ -129,6 +129,9 @@ Transforms MARC bibliographic records to FOLIO Instance records.
 | InstanceFormat | Format mappings |
 | MappedIdentifierTypes | Identifier type usage |
 | MappedContributorTypes | Contributor type mappings |
+| MappedSubjectTypes | Subject type usage |
+| MappedSubjectSources | Subject source usage |
+| AuthoritySources | Heading/term sources from $2 and $0 |
 | PrecedingSuccedingTitles | Linked title relationships |
 
 #### HoldingsMarcTransformer
@@ -140,6 +143,7 @@ Transforms MFHD (MARC Holdings) records to FOLIO Holdings records.
 | HoldingsTypeMapping | Holdings type assignments |
 | LocationMapping | Location code mappings |
 | CallNumberTypeMapping | Call number type usage |
+| AuthoritySources | Heading/term sources from $2 and $0 |
 
 #### HoldingsCsvTransformer
 Transforms CSV/TSV holdings data to FOLIO Holdings records.
@@ -149,6 +153,7 @@ Transforms CSV/TSV holdings data to FOLIO Holdings records.
 | GeneralStatistics | Record counts, merging statistics |
 | LocationMapping | Location mappings |
 | HoldingsTypeMapping | Holdings type assignments |
+| HoldingsNoteTypeMapping | Holdings note type mappings |
 
 #### ItemsTransformer
 Transforms legacy item data to FOLIO Item records.
@@ -160,6 +165,7 @@ Transforms legacy item data to FOLIO Item records.
 | LoanTypeMapping | Loan type mappings |
 | ItemStatusMapping | Status mappings |
 | LocationMapping | Effective location mappings |
+| ItemNoteTypeMapping | Item note type mappings |
 
 #### UserTransformer
 Transforms patron/user data to FOLIO User records.
@@ -189,6 +195,7 @@ For Orders-specific address mapping behavior and validation/error handling for `
 | GeneralStatistics | Order and order line counts |
 | OrderTypeMapping | Order type assignments |
 | AcquisitionMethodMapping | Acquisition method mappings |
+| OrderAddressMapping | `billTo`/`shipTo` names resolved to address IDs |
 
 #### ManualFeeFinesTransformer
 Transforms fee/fine data.
@@ -223,6 +230,7 @@ Migrates open loans from the legacy system.
 |----------------|-------------|
 | GeneralStatistics | Loans processed, checked out, failed |
 | DiscardedLoans | Reasons for discarded loans |
+| ServicePointMapping | Service point mappings, if a service point map file is configured |
 
 #### RequestsMigrator
 Migrates open hold/recall requests.
@@ -230,7 +238,8 @@ Migrates open hold/recall requests.
 | Report Section | Description |
 |----------------|-------------|
 | GeneralStatistics | Requests processed, created, failed |
-| DiscardedLoans | Reasons for discarded requests |
+| DiscardedRequests | Reasons for discarded requests |
+| ServicePointMapping | Service point mappings, if a service point map file is configured |
 
 #### ReservesMigrator
 Migrates course reserve relationships.
