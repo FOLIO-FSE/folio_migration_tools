@@ -213,9 +213,11 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    (
-                        f'Mapping failed for ${contributor_code_subfield} "{subfield}" '
-                        f"({normalized_subfield}) "
+                    i18n.t(
+                        'Mapping failed for %{tag} "%{subfield}" (%{normalized_subfield})',
+                        tag=f"${contributor_code_subfield}",
+                        subfield=subfield,
+                        normalized_subfield=normalized_subfield,
                     ),
                 )
                 Helper.log_data_issue(
@@ -232,7 +234,7 @@ class Conditions:
                             code=t[1],
                             code_subfield=contributor_code_subfield,
                         )
-                        + f' "{subfield}" ({normalized_subfield}))'
+                        + f' "{subfield}" ({normalized_subfield})'
                     ),
                 )
                 return t[0]
@@ -247,9 +249,11 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    (
-                        f"Mapping failed for {marc_field.tag} ${contributor_name_subfield} "
-                        f"{subfield} (Normalized: {normalized_subfield}) "
+                    i18n.t(
+                        'Mapping failed for %{tag} "%{subfield}" (%{normalized_subfield})',
+                        tag=f"{marc_field.tag} ${contributor_name_subfield}",
+                        subfield=subfield,
+                        normalized_subfield=normalized_subfield,
                     ),
                 )
                 Helper.log_data_issue(
@@ -260,10 +264,12 @@ class Conditions:
             else:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    (
-                        f"Contributor type name {t[1]} found for {marc_field.tag} "
-                        f"${contributor_name_subfield} {normalized_subfield} ({subfield}) "
-                    ),
+                    i18n.t(
+                        "Contributor type name %{name} found for %{tag}",
+                        name=t[1],
+                        tag=marc_field.tag,
+                    )
+                    + f" ${contributor_name_subfield} {normalized_subfield} ({subfield}) ",
                 )
                 return t[0]
         return ""
@@ -418,7 +424,7 @@ class Conditions:
     ):
         self.mapper.migration_report.add(
             "Exceptions",
-            (
+            i18n.t(
                 "Condition set_holding_note_type_id_by_name is deprecated. "
                 "Use set_holdings_note_type_id instead"
             ),
@@ -541,9 +547,8 @@ class Conditions:
                         'Contributor type code "%{code}" found for $%{code_subfield}',
                         code=t[1],
                         code_subfield="4",
-                        normalized_subfield=normalized_subfield,
                     )
-                    + f' "%{subfield}" (%{normalized_subfield}))',
+                    + f' "{subfield}" ({normalized_subfield})',
                 )
                 return t[0]
         subfield_code = "j" if marc_field.tag in ["111", "711"] else "e"
@@ -590,7 +595,7 @@ class Conditions:
     ):
         self.mapper.migration_report.add(
             "Exceptions",
-            (
+            i18n.t(
                 "Condition set_call_number_type_by_indicator is deprecated. "
                 "Change to set_call_number_type_id"
             ),
@@ -647,10 +652,8 @@ class Conditions:
 
         self.mapper.migration_report.add(
             "CallNumberTypeMapping",
-            (
-                "Mapping failed. Setting default CallNumber type: "
-                f"{self.default_call_number_type['name']}"
-            ),
+            i18n.t("Mapping failed. Setting default CallNumber type")
+            + f": {self.default_call_number_type['name']}",
         )
 
         return self.default_call_number_type["id"]
@@ -687,7 +690,7 @@ class Conditions:
     ):
         self.mapper.migration_report.add(
             "Exceptions",
-            (
+            i18n.t(
                 "set_location_id_by_code condition used in rules. "
                 "Deprecated condition. Switch to set_permanent_location_id"
             ),
@@ -773,9 +776,9 @@ class Conditions:
         if marc_field.tag not in ["008", "336"]:
             self.mapper.migration_report.add(
                 "InstanceTypeMapping",
-                (
-                    f"Unhandled MARC tag {marc_field.tag}. Instance Type ID is only mapped "
-                    "from 336 "
+                i18n.t(
+                    "Unhandled MARC tag %{tag}. Instance Type ID is only mapped from 336",
+                    tag=marc_field.tag,
                 ),
             )
         return ""  # functionality moved

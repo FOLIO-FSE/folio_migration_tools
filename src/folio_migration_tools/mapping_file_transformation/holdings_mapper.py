@@ -206,7 +206,8 @@ class HoldingsMapper(MappingFileMapperBase):
             )
             self.migration_report.add(
                 "BoundWithMappings",
-                (f"Number of bib-level callnumbers in record: {len(legacy_value.split(','))}"),
+                i18n_t("Number of bib-level callnumbers in record")
+                + f": {len(legacy_value.split(','))}",
             )
         if legacy_value.startswith("[") and len(legacy_value.split(",")) == 1:
             try:

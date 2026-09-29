@@ -314,7 +314,7 @@ class BibsRulesMapper(RulesMapperBase):
         if not relationship_fields:
             return
         self.migration_report.add(
-            "BibLevelRelationships773774", "Records with at least one 773 or 774 field"
+            "BibLevelRelationships773774", i18n_t("Records with at least one 773 or 774 field")
         )
         for field in relationship_fields:
             direction = (
@@ -322,18 +322,21 @@ class BibsRulesMapper(RulesMapperBase):
                 if field.tag == "773"
                 else "774 - this record links down to a constituent record"
             )
-            self.migration_report.add("BibLevelRelationships773774", f"{field.tag} field found")
+            self.migration_report.add(
+                "BibLevelRelationships773774", i18n.t("%{tag} field found", tag=field.tag)
+            )
             w_values = field.get_subfields("w")
             if not w_values:
                 self.migration_report.add(
-                    "BibLevelRelationships773774", f"{field.tag} field missing $w"
+                    "BibLevelRelationships773774",
+                    i18n.t("%{tag} field missing $w", tag=field.tag),
                 )
             for w_value in w_values:
                 match = re.match(r"^\((?P<prefix>[^)]+)\)", w_value)
-                prefix = match.group("prefix") if match else "no parenthetical prefix"
+                prefix = match.group("prefix") if match else i18n_t("no parenthetical prefix")
                 self.migration_report.add(
                     "BibLevelRelationships773774",
-                    f"{field.tag} $w identifier prefix: {prefix}",
+                    i18n.t("%{tag} $w identifier prefix", tag=field.tag) + f": {prefix}",
                 )
             self.bib_relationship_records.append(
                 {
@@ -500,14 +503,17 @@ class BibsRulesMapper(RulesMapperBase):
         if "2" not in field:
             self.migration_report.add(
                 "InstanceFormat",
-                ("Instance Format not mapped from field since 338$2 is missing"),
+                i18n_t("Instance Format not mapped from field since 338$2 is missing"),
             )
             return False
         elif field["2"].strip().startswith("rdacarrier"):
             return True
         self.migration_report.add(
             "InstanceFormat",
-            (f"InstanceFormat not mapped since 338$2 (Source) is set to {field['2']}. "),
+            i18n.t(
+                "InstanceFormat not mapped since 338$2 (Source) is set to %{source}",
+                source=field["2"],
+            ),
         )
         return False
 

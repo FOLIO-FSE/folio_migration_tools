@@ -899,16 +899,22 @@ class BatchPoster(MigrationTaskBase):
                 )
         else:
             discrepancy = 0
-        run = "second time" if self.performing_rerun else "first time"
-        self.migration_report.set("GeneralStatistics", f"Records processed {run}", self.processed)
-        self.migration_report.set("GeneralStatistics", f"Records posted {run}", self.num_posted)
-        self.migration_report.set("GeneralStatistics", f"Failed to post {run}", self.num_failures)
+        # Whole phrases rather than a spliced-in "first/second time" so each can be translated
+        if self.performing_rerun:
+            processed_label = i18n_t("Records processed second time")
+            posted_label = i18n_t("Records posted second time")
+            failed_label = i18n_t("Failed to post second time")
+            discrepancy_label = i18n_t("Discrepancy in record count second time")
+        else:
+            processed_label = i18n_t("Records processed first time")
+            posted_label = i18n_t("Records posted first time")
+            failed_label = i18n_t("Failed to post first time")
+            discrepancy_label = i18n_t("Discrepancy in record count first time")
+        self.migration_report.set("GeneralStatistics", processed_label, self.processed)
+        self.migration_report.set("GeneralStatistics", posted_label, self.num_posted)
+        self.migration_report.set("GeneralStatistics", failed_label, self.num_failures)
         if discrepancy:
-            self.migration_report.set(
-                "GeneralStatistics",
-                f"Discrepancy in record count {run}",
-                discrepancy,
-            )
+            self.migration_report.set("GeneralStatistics", discrepancy_label, discrepancy)
         await self.rerun_run()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(

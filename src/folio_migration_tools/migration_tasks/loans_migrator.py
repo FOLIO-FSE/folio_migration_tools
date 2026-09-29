@@ -205,12 +205,12 @@ class LoansMigrator(MigrationTaskBase):
                 logger.info("Source data file contains %d empty rows", empty_rows)
                 self.migration_report.set(
                     "GeneralStatistics",
-                    f"Total rows in {loans_file_path.name}",
+                    i18n.t("Total rows in %{file_name}", file_name=loans_file_path.name),
                     total_rows,
                 )
                 self.migration_report.set(
                     "GeneralStatistics",
-                    f"Empty rows in {loans_file_path.name}",
+                    i18n.t("Empty rows in %{file_name}", file_name=loans_file_path.name),
                     empty_rows,
                 )
                 self.semi_valid_legacy_loans.extend(
@@ -631,7 +631,7 @@ class LoansMigrator(MigrationTaskBase):
                 self.migration_report.add_general_statistics(i18n_t("Loans failed pre-validation"))
                 self.migration_report.add(
                     "DiscardedLoans",
-                    f"{trfe.message} - see data issues log",
+                    f"{trfe.message} - " + i18n_t("see data issues log"),
                 )
                 trfe.log_it()
                 self.failed[
@@ -836,9 +836,11 @@ class LoansMigrator(MigrationTaskBase):
             )
             if req.status_code == 422:
                 error_message = json.loads(req.text)["errors"][0]["message"]
-                s = f"Update open loan error: {error_message} {req.status_code}"
-                self.migration_report.add("Details", s)
-                logger.error(s)
+                self.migration_report.add(
+                    "Details",
+                    i18n.t("Update open loan error") + f": {error_message} {req.status_code}",
+                )
+                logger.error(f"Update open loan error: {error_message} {req.status_code}")
                 return False
             elif req.status_code in [201, 204]:
                 self.migration_report.add(
