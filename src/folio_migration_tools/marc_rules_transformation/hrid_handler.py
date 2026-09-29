@@ -13,7 +13,7 @@ import httpx
 import i18n
 from folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
-from pymarc import Field, Record, Subfield
+from pymarc import Field, Indicators, Record, Subfield
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
@@ -140,7 +140,7 @@ class HRIDHandler:
                 str_035 = f"({f_003}){f_001}" if f_003 else f"{f_001}"
                 new_035 = Field(
                     tag="035",
-                    indicators=[" ", " "],
+                    indicators=Indicators(*[" ", " "]),
                     subfields=[Subfield(code="a", value=str_035)],
                 )
 
