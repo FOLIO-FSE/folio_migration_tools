@@ -711,7 +711,7 @@ class BibsRulesMapper(RulesMapperBase):
                 Helper.log_data_issue(index_or_legacy_id, m, language_value)
                 self.migration_report.add(
                     "UnrecognizedLanguageCodes",
-                    f"{m}: {language_value}",
+                    i18n_t("Unrecognized language codes in record") + f": {language_value}",
                 )
 
     def get_legacy_ids(self, marc_record: Record, idx: int) -> List[str]:
