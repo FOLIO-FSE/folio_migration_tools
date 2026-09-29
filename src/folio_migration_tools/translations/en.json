@@ -308,6 +308,7 @@
   "Unmapped (default applied)": "Unmapped (default applied)",
   "Unmapped code": "Unmapped code",
   "Unmatched level": "Unmatched level",
+  "Unrecognized language codes in record": "Unrecognized language codes in record",
   "Unresolvable %{renewal_count=} was replaced with 0.": "Unresolvable %{renewal_count=} was replaced with 0.",
   "Unsuccessful matching on %{criteria_1} and %{criteria_2}": "Unsuccessful matching on %{criteria_1} and %{criteria_2}",
   "Unsuccessful matching on %{criteria}": "Unsuccessful matching on %{criteria}",
