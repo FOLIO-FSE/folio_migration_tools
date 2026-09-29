@@ -93,6 +93,7 @@
   "Failed checkout http status %{code}": "Emprunt échoué, statut HTTP %{code}",
   "Failed loans": "Prêts échoués",
   "Failed records. No unique record identifiers in legacy record": "Notices échouées. Pas d'identifiant unique dans la notice héritée",
+  "Failed reserves": "Réservations échouées",
   "Failed to create %{to} from %{fro}": "Impossible de créer %{to} à partir de %{fro}",
   "Failed to post first time": "Échecs d'envoi (premier passage)",
   "Failed to post second time": "Échecs d'envoi (second passage)",

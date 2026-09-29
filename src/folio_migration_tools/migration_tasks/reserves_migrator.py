@@ -136,7 +136,7 @@ class ReservesMigrator(MigrationTaskBase):
         self.extradata_writer.flush()
         for k, v in self.failed.items():
             self.failed_and_not_dupe[k] = [v.to_dict()]
-        self.migration_report.set("GeneralStatistics", "Failed loans", len(self.failed))
+        self.migration_report.set("GeneralStatistics", i18n_t("Failed reserves"), len(self.failed))
         self.write_failed_reserves_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
@@ -168,21 +168,22 @@ class ReservesMigrator(MigrationTaskBase):
         self.circulation_helper.load_migrated_item_barcodes(
             item_barcodes, self.task_configuration.item_files, self.folder_structure
         )
-        for loan in self.semi_valid_legacy_loans:
-            has_item_barcode = loan.item_barcode in item_barcodes or not any(item_barcodes)
+        for reserve in self.semi_valid_reserves:
+            has_item_barcode = reserve.item_barcode in item_barcodes or not any(item_barcodes)
             if has_item_barcode:
                 self.migration_report.add_general_statistics(
                     i18n.t("Reserve verified against migrated item")
                 )
-                yield loan
+                yield reserve
             else:
                 self.migration_report.add(
-                    "DiscardedLoans", i18n.t("Reserve discarded. Could not find migrated barcode")
+                    "DiscardedReserves",
+                    i18n.t("Reserve discarded. Could not find migrated barcode"),
                 )
 
     def load_and_validate_legacy_reserves(self, reserves_reader):
         num_bad = 0
-        logger.info("Validating legacy loans in file...")
+        logger.info("Validating legacy reserves in file...")
         for legacy_reserve_count, legacy_reserve_dict in enumerate(reserves_reader):
             try:
                 legacy_reserve = LegacyReserve(

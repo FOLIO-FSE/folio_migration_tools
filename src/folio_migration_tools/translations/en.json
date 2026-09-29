@@ -93,6 +93,7 @@
   "Failed checkout http status %{code}": "Failed checkout http status %{code}",
   "Failed loans": "Failed loans",
   "Failed records. No unique record identifiers in legacy record": "Failed records. No unique record identifiers in legacy record",
+  "Failed reserves": "Failed reserves",
   "Failed to create %{to} from %{fro}": "Failed to create %{to} from %{fro}",
   "Failed to post first time": "Failed to post first time",
   "Failed to post second time": "Failed to post second time",
