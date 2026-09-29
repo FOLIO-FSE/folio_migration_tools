@@ -741,10 +741,7 @@ class LoansMigrator(MigrationTaskBase):
                 False,
                 False,
                 legacy_loan,
-                i18n.t(
-                    "Loan already exists for %{item_barcode}",
-                    item_barcode=legacy_loan.item_barcode,
-                ),
+                f"Loan already exists for {legacy_loan.item_barcode}",
                 i18n.t(
                     "Loan already exists for %{item_barcode}",
                     item_barcode=legacy_loan.item_barcode,
@@ -773,7 +770,7 @@ class LoansMigrator(MigrationTaskBase):
                 False,
                 False,
                 legacy_loan,
-                i18n.t("%{lost_type} and checked out", lost_type=lost_type),
+                f"{lost_type} and checked out",
                 i18n.t("%{lost_type} and checked out", lost_type=lost_type),
             )
 
@@ -807,7 +804,7 @@ class LoansMigrator(MigrationTaskBase):
                 False,
                 False,
                 legacy_loan,
-                i18n.t("Claimed returned and checked out"),
+                "Claimed returned and checked out",
                 i18n.t("Claimed returned and checked out"),
             )
         else:
