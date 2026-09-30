@@ -4,6 +4,7 @@ from pymarc.field import Indicators
 from types import SimpleNamespace
 from unittest.mock import Mock
 
+import pytest
 from pymarc import Field, MARCReader, Record, Subfield
 
 from folio_migration_tools.helper import Helper
@@ -824,3 +825,35 @@ def test_read_records_logs_data_issue_for_marc8_escape_redecode(monkeypatch):
     assert logged_issues[0][0] == "x.mrc:0"
     assert "escape sequences" in logged_issues[0][1]
     assert "subfields_changed=1" in logged_issues[0][2]
+
+
+def build_ansel_chunk(title: bytes) -> bytes:
+    record = Record()
+    record.add_field(Field(tag="001", data="ansel"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="X" * len(title))],
+        )
+    )
+    chunk = bytearray(record.as_marc())
+    chunk[9] = ord(" ")
+    offset = bytes(chunk).find(b"X" * len(title))
+    chunk[offset : offset + len(title)] = title
+    return bytes(chunk)
+
+
+@pytest.mark.parametrize(
+    "raw_title, expected",
+    [
+        (b"Caf\xe2e au", "Café au"),
+        (b"Fran\xf0cais", "Français"),
+        (b"M\xe8unchen", "München"),
+        (b"\xb0\xe2a x", "ʻá x"),
+    ],
+)
+def test_read_records_decodes_ansel_diacritics_without_marc8_signal_bytes(raw_title, expected):
+    record = read_one_record(build_ansel_chunk(raw_title))
+
+    assert record["245"]["a"] == expected
