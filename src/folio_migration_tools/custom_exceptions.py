@@ -8,8 +8,6 @@ Defines specialized exception types for different transformation error scenarios
 
 import logging
 
-import i18n
-
 from folio_migration_tools import StrCoercible
 
 
@@ -39,8 +37,8 @@ class TransformationFieldMappingError(TransformationError):
     def __str__(self):
         """Return formatted error message with record context."""
         return (
-            i18n.t("Data issue. Consider fixing the record. ")
-            + f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
+            f"Data issue. Consider fixing the record. "
+            f"\t{self.index_or_id}\t{self.message}\t{self.data_value}"
         )
 
     def log_it(self):
