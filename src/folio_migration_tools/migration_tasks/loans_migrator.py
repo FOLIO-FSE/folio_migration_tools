@@ -765,13 +765,17 @@ class LoansMigrator(MigrationTaskBase):
         legacy_loan: LegacyLoan,
         lost_type: Literal["Aged to lost", "Declared lost"],
     ) -> TransactionResult:
+        # lost_type is the FOLIO item status and is sent as is; only the report label is translated
+        lost_type_label = (
+            i18n_t("Aged to lost") if lost_type == "Aged to lost" else i18n_t("Declared lost")
+        )
         if self.circulation_helper.is_checked_out(legacy_loan):
             return TransactionResult(
                 False,
                 False,
                 legacy_loan,
                 f"{lost_type} and checked out",
-                i18n.t("%{lost_type} and checked out", lost_type=lost_type),
+                i18n.t("%{lost_type} and checked out", lost_type=lost_type_label),
             )
 
         else:
@@ -787,12 +791,12 @@ class LoansMigrator(MigrationTaskBase):
                 self.set_item_status(legacy_loan)
                 s = i18n.t(
                     "Successfully Checked out %{lost_type} item and put the status back",
-                    lost_type=lost_type,
+                    lost_type=lost_type_label,
                 )
             else:
                 s = i18n.t(
                     "Successfully Checked out %{lost_type} item. Item will be declared lost.",
-                    lost_type=lost_type,
+                    lost_type=lost_type_label,
                 )
             logger.info(s)
             self.migration_report.add("Details", s)
