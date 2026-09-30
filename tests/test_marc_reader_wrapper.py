@@ -766,3 +766,61 @@ def test_read_records_skips_text_fidelity_warning_without_recovery_strategy(monk
         "GeneralStatistics",
         {},
     )
+
+
+def build_marc8_escape_chunk(leader9: str = " ") -> bytes:
+    """Build a MARC-8 chunk whose only special characters are ESC-based (superscripts)."""
+    record = Record()
+    record.add_field(Field(tag="001", data="marc8-esc"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value="\x1bp40\x1bsAr/\x1bp39\x1bsAr ages")],
+        )
+    )
+    chunk = bytearray(record.as_marc())
+    chunk[9] = ord(leader9)
+    return bytes(chunk)
+
+
+def read_one_record(chunk: bytes) -> Record:
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processed_records = []
+    processor.process_record = lambda idx, record, source_file: processed_records.append(record)
+    reader = MARCReader(BytesIO(chunk), to_unicode=True, permissive=True, utf8_handling="strict")
+    reader.hide_utf8_warnings = False
+    reader.force_utf8 = True
+    MARCReaderWrapper.read_records(reader, FileDefinition(file_name="x.mrc"), BytesIO(), processor)
+    assert len(processed_records) == 1
+    return processed_records[0]
+
+
+def test_read_records_translates_marc8_escape_sequences():
+    record = read_one_record(build_marc8_escape_chunk())
+
+    assert record["245"]["a"] == "⁴⁰Ar/³⁹Ar ages"
+
+
+def test_read_records_leaves_utf8_leader_records_untouched():
+    record = read_one_record(build_marc8_escape_chunk(leader9="a"))
+
+    assert "\x1b" in record["245"]["a"]
+
+
+def test_read_records_logs_data_issue_for_marc8_escape_redecode(monkeypatch):
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+
+    read_one_record(build_marc8_escape_chunk())
+
+    assert len(logged_issues) == 1
+    assert logged_issues[0][0] == "x.mrc:0"
+    assert "escape sequences" in logged_issues[0][1]
+    assert "subfields_changed=1" in logged_issues[0][2]

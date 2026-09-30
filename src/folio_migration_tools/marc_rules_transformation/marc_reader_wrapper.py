@@ -233,6 +233,22 @@ class MARCReaderWrapper:
                             processor.mapper.migration_report,
                         )
                     record = recovered_record
+                # Forced UTF-8 decoding never raises for MARC-8 records whose special
+                # characters use ESC-based character sets (e.g. superscripts), so the
+                # escape sequences would otherwise be passed through untranslated.
+                if record is not None and recovery_strategy == "none":
+                    redecoded_record = MARCReaderWrapper.redecode_marc8_escape_sequences(
+                        getattr(reader, "current_chunk", b"")
+                    )
+                    if redecoded_record is not None:
+                        MARCReaderWrapper.log_marc8_escape_redecode(
+                            source_file,
+                            idx,
+                            record,
+                            redecoded_record,
+                            processor.mapper.migration_report,
+                        )
+                        record = redecoded_record
                 # Normal successful decode path.
                 if record is not None:
                     # Log MARC-8 truncation warnings, but do not alter decoding.
@@ -294,6 +310,51 @@ class MARCReaderWrapper:
                 exc_info=True,
             )
             return None, strategy
+
+    @staticmethod
+    def redecode_marc8_escape_sequences(chunk: bytes) -> Record | None:
+        """Re-decode a MARC-8 record (leader/09 blank) that still contains ESC characters.
+
+        Returns None if the record does not need it or the re-decode fails.
+        """
+        if not isinstance(chunk, bytes) or len(chunk) < 10 or chunk[9:10] != b" ":
+            return None
+        if b"\x1b" not in chunk:
+            return None
+        redecoded_record, _ = MARCReaderWrapper.decode_candidate_chunk(
+            chunk, "marc8_escape_sequence_redecode"
+        )
+        if redecoded_record is None or any(
+            "\x1b" in value for value in MARCReaderWrapper.iter_text_values(redecoded_record)
+        ):
+            return None
+        return redecoded_record
+
+    @staticmethod
+    def log_marc8_escape_redecode(
+        source_file: FileDefinition,
+        idx: int,
+        original_record: Record,
+        redecoded_record: Record,
+        migration_report: MigrationReport,
+    ):
+        migration_report.add_general_statistics(
+            i18n.t("Records with encoding errors - repaired"),
+        )
+        original_values = list(MARCReaderWrapper.iter_text_values(original_record))
+        redecoded_values = list(MARCReaderWrapper.iter_text_values(redecoded_record))
+        changed = [
+            (before, after)
+            for before, after in zip(original_values, redecoded_values)
+            if before != after
+        ]
+        before, after = changed[0] if changed else ("", "")
+        Helper.log_data_issue(
+            f"{source_file.file_name}:{idx}",
+            i18n.t("MARC-8 escape sequences translated to Unicode"),
+            f"subfields_changed={len(changed)}; first_before={before[:80]!r}; "
+            f"first_after={after[:80]!r}",
+        )
 
     @staticmethod
     def recover_failed_record(reader) -> tuple[Record | None, str]:

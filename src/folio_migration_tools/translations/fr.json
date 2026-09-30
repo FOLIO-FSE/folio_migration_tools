@@ -122,6 +122,7 @@
   "MARC parsing issue repaired with Latin-1 leader heuristic": "Problème d'analyse MARC réparé avec l'heuristique de leader Latin-1",
   "MARC parsing issue repaired with MARC-8 leader heuristic": "Problème d'analyse MARC réparé avec l'heuristique de leader MARC-8",
   "MARC text fidelity warning": "Avertissement de fidélité du texte MARC",
+  "MARC-8 escape sequences translated to Unicode": "Séquences d'échappement MARC-8 converties en Unicode",
   "MARC-8 decoding warning": "Avertissement de décodage MARC-8",
   "MFHD records transformation report": "Rapport de transformation des notices MFHD",
   "Manual fee/fine transformation report": "Rapport de transformation des amendes/frais manuels",
