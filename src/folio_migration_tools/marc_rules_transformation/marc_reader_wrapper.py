@@ -345,7 +345,7 @@ class MARCReaderWrapper:
         redecoded_values = list(MARCReaderWrapper.iter_text_values(redecoded_record))
         changed = [
             (before, after)
-            for before, after in zip(original_values, redecoded_values)
+            for before, after in zip(original_values, redecoded_values, strict=False)
             if before != after
         ]
         before, after = changed[0] if changed else ("", "")
