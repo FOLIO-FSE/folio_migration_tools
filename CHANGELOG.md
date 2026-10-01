@@ -1,5 +1,471 @@
 # Changelog
 
+## v1.12.10 (11/09/2026)
+
+#### Other Changes
+* replaceValues cannot assign an empty string to a value by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1042
+* Add documentation for configuration files and inheritance by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1045
+* Fix patronGroup/departments mapping to fall back to hybrid wildcard rows by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1044
+* Bump version and fix typing error by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1046
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.9...v1.12.10
+
+---
+
+## v1.12.9 (25/08/2026)
+
+#### Other Changes
+* Typing fixes by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1039
+* Custom legacy id field for bibs doesn't work if the field is a control field (< 010) by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1041
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.8...v1.12.9
+
+---
+
+## v1.12.8 (31/07/2026)
+
+#### Other Changes
+* Feature/allow code based service point references in loans and request transaction data map service points by code 1034 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1035
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.7...v1.12.8
+
+---
+
+## v1.12.7 (28/07/2026)
+
+#### Other Changes
+* Add name-based order bill-to and ship-to mapping by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1031
+* Maps to ref data UUIDs should be based on whitespace normalized forms by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1032
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.6...v1.12.7
+
+---
+
+## v1.12.6 (22/07/2026)
+
+#### Other Changes
+* Feature/reference data mapping for note types by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1030
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.5...v1.12.6
+
+---
+
+## v1.12.5 (21/07/2026)
+
+#### Other Changes
+* Fix/orders custom fields mapping by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1027
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.4...v1.12.5
+
+---
+
+## v1.12.4 (17/07/2026)
+
+#### Other Changes
+* update requirements.txt for docs to fix build by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1022
+* Add address type validation and dedupe in UserTransformer by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1023
+* Docs/add docs details for user notes transformation by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1025
+* Fix order line path mapping for nested objects and JSON-safe field mapping errors by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1026
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.3...v1.12.4
+
+---
+
+## v1.12.3 (13/07/2026)
+
+#### Other Changes
+* Feature/support lists in legacy fallback field mapping option by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1021
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.2...v1.12.3
+
+---
+
+## v1.12.2 (09/07/2026)
+
+#### Other Changes
+* Update MARC transformer docs for decoding updates by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1018
+* Update docs with new tutorial by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1019
+* Feature/save record failed marc bibs for all errors by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1020
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.1...v1.12.2
+
+---
+
+## v1.12.1 (07/07/2026)
+
+#### Other Changes
+* Add support for MARC preprocessors to MARC Transformer tasks and Loan Poster fixes by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1013
+* Fix fund map reference by @banerjek in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1015
+* Enhance MARC decoding handling by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1017
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.0...v1.12.1
+
+---
+
+## v1.12.0 (23/06/2026)
+
+#### Other Changes
+* Feature/add alternate barcode lookup support to loans poster by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1007
+* Update deepdiff version, fix some type check errors, and use logging.exception where appropriate instead of logging.error by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1008
+* Fix/array object validation silent failures by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1009
+* Adopt folio_uuid deterministic UUIDs for boundWithParts by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1011
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.11.3...v1.12.0
+
+---
+
+## v1.11.3 (24/04/2026)
+
+#### Other Changes
+* Fix/acq schema fetching wrong module version by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1006
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.11.2...v1.11.3
+
+---
+
+## v1.11.2 (16/04/2026)
+
+#### Other Changes
+* Bump version to 1.11.2 and update logging to use file_def.file_name directly in items transformer by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1004
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.11.1...v1.11.2
+
+---
+
+## v1.11.1 (16/04/2026)
+
+#### Other Changes
+* Add Aleph boundwith example query and processing instructions to documentation by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1000
+* Update statistical code mapping documentation to explicitly require task configuration reference to statistical code map by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1001
+* Fix logging of legacy items count to include file name in migration report instead of the entire file object by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1003
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.11.0...v1.11.1
+
+---
+
+## v1.11.0 (02/04/2026)
+
+#### Other Changes
+* Feature/aleph lkr boundwiths by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/998
+* Fix/file descriptor leak in batch poster async loops by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/999
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.10.6...v1.11.0
+
+---
+
+## v1.10.6 (27/03/2026)
+
+#### Other Changes
+* Fix/concurrency batch poster fix2 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/997
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.10.5...v1.10.6
+
+---
+
+## v1.10.5 (27/03/2026)
+
+#### Other Changes
+* Refactor BatchPoster to lazily initialize semaphore for concurrent requests by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/996
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.10.4...v1.10.5
+
+---
+
+## v1.10.4 (16/02/2026)
+
+#### Other Changes
+* Feature/use-call-number-type-fallback by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/991
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.10.3...v1.10.4
+
+---
+
+## v1.10.3 (04/02/2026)
+
+#### Other Changes
+* Feature/replace-batchposter-folio-data-import by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/986
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.10.2...v1.10.3
+
+---
+
+## v1.10.2 (27/01/2026)
+
+#### Other Changes
+* Fix/add-semaphore-to-batch-poster by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/985
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.10.1...v1.10.2
+
+---
+
+## v1.10.1 (24/01/2026)
+
+#### Other Changes
+* Feature/output-raw-report-data by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/983
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.10.0...v1.10.1
+
+---
+
+## v1.10.0 (23/01/2026)
+
+#### Other Changes
+* Exit when list_source_files fails by @banerjek in https://github.com/FOLIO-FSE/folio_migration_tools/pull/959
+* Update to support FolioClient 1.0+ and Python 3.14 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/963
+* Move circulation_helper tests to tests directory by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/967
+* Fix tenant_id assignment to avoid setting it to an empty string in non-ECS migration context by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/969
+* Merge Feature/allow-exclude-marc-bibs-by-file-def by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/971
+* Refactor API request handling to use FolioClient methods instead of httpx.Client/AsyncClien in BatchPoster by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/973
+* Implement refactor/974-remove-authorities-transformer-task by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/975
+* Fix posting error in BatchPoster and file handling errors on Windows by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/976
+* add parameter to build user objects without username by @marnold-ebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/977
+* Feature/save-raw-report-data by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/980
+* Fix: Update release event type to 'published' and add Python version 3.14 to the matrix by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/981
+* Update version to 1.10.0 and add folio-data-import dependency back by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/982
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.10...v1.10.0
+
+---
+
+## v1.9.10 (08/11/2025)
+
+#### Other Changes
+* 821 improve fund mapping for composite orders by @banerjek in https://github.com/FOLIO-FSE/folio_migration_tools/pull/958
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.9...v1.9.10
+
+---
+
+## v1.9.9 (29/09/2025)
+
+#### Other Changes
+* Bump folio-data-import dependency to >=0.4.1 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/955
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.8...v1.9.9
+
+---
+
+## v1.9.8 (14/09/2025)
+
+#### Other Changes
+* Add patching functionality to BatchPoster for upsert process by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/954
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.7...v1.9.8
+
+---
+
+## v1.9.7 (12/09/2025)
+
+#### Other Changes
+* 952 stat code mapping doesnt work for csv holdings transformation by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/953
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.6...v1.9.7
+
+---
+
+## v1.9.6 (04/09/2025)
+
+#### Other Changes
+* Bump version to 1.9.6 and update Python dependencies by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/950
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.5...v1.9.6
+
+---
+
+## v1.9.5 (15/08/2025)
+
+#### Other Changes
+* Update loan handling and version bump to 1.9.5 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/948
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.4...v1.9.5
+
+---
+
+## v1.9.4 (15/08/2025)
+
+#### Other Changes
+* Fixes for Loans, Orgs, MFHD, BatchPoster Upsert, and Docs Improvements by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/947
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.3...v1.9.4
+
+---
+
+## v1.9.3 (13/08/2025)
+
+#### Other Changes
+* 872 increase test coverage for items transformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/929
+* Fixes #928 and #933 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/934
+* 873 Increase test coverage for user_transformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/932
+* 870 Increase test coverage for holdings_marc_transformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/935
+* Implement mapping conditions for policies and acquisition methods by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/940
+* 874 increase test coverage for batch_poster and improve code formatting by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/937
+* Fix crash on empty legacy_id values by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/941
+* 888 increase test coverage for user_mapper by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/939
+* Implement fix for Support mapping multiple departments using multi_field_delimiter by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/946
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.2...v1.9.3
+
+---
+
+## v1.9.2 (05/06/2025)
+
+#### Other Changes
+* Fix Holdings CSV Transformer for Ramsons and Log invalid invalid authorityId mapping as a record-level data issue and modify the entity mapping to allow transformation ton continue and produce valid records by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/927
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.1...v1.9.2
+
+---
+
+## v1.9.1 (27/05/2025)
+
+#### Other Changes
+* Add support for splitting MRC/MRK holdings notes to fit in 32K character limit and support field mapped enum in multi-field mappings by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/924
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.9.0...v1.9.1
+
+---
+
+## v1.8.25 (22/05/2025)
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.8.24...v1.8.25
+
+---
+
+## v1.9.0 (14/05/2025)
+
+#### Other Changes
+* Create PULL_REQUEST_TEMPLATE.md by @jjensen-ebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/818
+* 771 composite order mapper needs to remove invalid characters from po numbers by @ealexch in https://github.com/FOLIO-FSE/folio_migration_tools/pull/825
+* Merge 1.9.x branch into main by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/833
+* Update pyproject.toml to poetry 2.1 syntax by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/836
+* Fix optional item permanent location map implementation by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/838
+* Fix file path references in failed records clean-up by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/839
+* get_call_number fix to handle valueerror by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/841
+* 578 Add annotation to the Task configuration entries for BatchPoster by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/844
+* 346 Two test cases for condition_remove_prefix_by_indicator by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/842
+* 580 Add annotation to the Task configuration entries for CoursesMigrator by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/845
+* 589 Add annotations to the Task configuration entries for UserTransformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/855
+* 588 Add annotations to the Task configuration entries for ReservesMigrator by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/854
+* 587 Add annotations to the Task configuration entries for RequestsMigrator by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/853
+* 586 Add annotations to the Task configuration entries for OrganizationTransformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/852
+* Poetry export plugin has been added to pyproject.toml by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/851
+* 585 Add annotations to the Task configuration entries for OrdersTransformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/850
+* 584 Add annotations to the Task configuration entries for LoansMigrator by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/849
+* 583 Add annotations to the Task configuration entries for ItemsTransformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/848
+* 581 Add annotations to the Task configuration entries for HoldingsCsvTransformer by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/846
+* 713 loans migrator empty renewal count issue by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/829
+* 843 support generating instance relationships parentchild during marc bib transformation by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/858
+* 349 Increase test coverage in legacy_reserve.py (rebased) by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/860
+* Refactoring validate_po_number method in order_mapper by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/859
+* Add ShadowInstances handling to BatchPoster by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/862
+* Update MigrationTaskBase to support structural verification of reference data files (#826) by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/861
+* Adding set_version methods to BatchPoster for to support inventory upserts, tweaks to bound with handling for Voyager-style boundwiths, and enhancements to MARC mapping by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/867
+* Test coverage in legacy_loan has been increased (#350) by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/863
+* Remove custom ASCII art and replace with art module by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/881
+* 882-add-python-313-to-pre-publish-tests by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/883
+* Create fixtures, compile test datasets, and mock mapper classes for bibs_transformer.py (#869) by @mtrineyev in https://github.com/FOLIO-FSE/folio_migration_tools/pull/875
+* Fix temporary loan type mapping file path reference in ItemsTransformer to use specified instead of fixed path. by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/892
+* Change get_mapped_name arguments for departments_mapping to prevent_default=True. by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/893
+* 894-add-option-to-use-deterministic-uuids-based-on-tenantid-instead-of-api-base-url by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/895
+* Remove pandas from dev dependencies by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/896
+* bump lxml dev dependency by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/897
+* Fix-unbound-local-error-in-1.9.0rc8 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/898
+* 899-when-data_import_marctrue-for-a-bibstransformer-task-create_source_records-should-be-forced-to-false by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/900
+* Bump Version to 1.9.0rc10 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/902
+* Bump folioclient to 0.70.1, update references to okapi_url to gateway_url and related changes, add option to print version when calling as a script by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/906
+* 884-update-docs-for-190 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/885
+* 904-add-support-for-mapping-all-85x86x-incl-866-867-868-to-staff-only-holdings-notes-as-marcmaker-strings by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/907
+* Refactor LegacyLoan to use instance variable for legacy_loan_dict and enhance error reporting for missing date information. Update tests. by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/909
+* 912-simple_bib_map-fails-when-no-1xx-or-7xx-is-present-in-the-bib-record by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/915
+* Refactor statistical code mapping for inventory records to support mapping from arbitrary MARC fields/subfields and multiple legacy fields in CSV-based mappings by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/918
+* preserve hrid when performing upsert by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/920
+
+#### New Contributors
+* @jjensen-ebsco made their first contribution in https://github.com/FOLIO-FSE/folio_migration_tools/pull/818
+* @ealexch made their first contribution in https://github.com/FOLIO-FSE/folio_migration_tools/pull/825
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_18...v1.9.0
+
+---
+
+## v1.8.24 (06/05/2025)
+
+#### Other Changes
+* Update holdings_helper.py by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/917
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_23...v1.8.24
+
+---
+
+## v1.8.23 (22/04/2025)
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_22...v_1_8_23
+
+---
+
+## v1.8.22 (22/04/2025)
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_21...v_1_8_22
+
+---
+
+## v1.8.21 (17/04/2025)
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_20...v_1_8_21
+
+---
+
+## v1.8.20 (19/02/2025)
+
+#### Other Changes
+* Fix get call number square brackets by @bltravis in https://github.com/FOLIO-FSE/folio_migration_tools/pull/840
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_19...v_1_8_20
+
+---
+
+## v1.8.19 (12/02/2025)
+
+#### Other Changes
+* Create PULL_REQUEST_TEMPLATE.md by @jjensen-ebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/818
+* 771 composite order mapper needs to remove invalid characters from po numbers by @ealexch in https://github.com/FOLIO-FSE/folio_migration_tools/pull/825
+
+#### New Contributors
+* @jjensen-ebsco made their first contribution in https://github.com/FOLIO-FSE/folio_migration_tools/pull/818
+* @ealexch made their first contribution in https://github.com/FOLIO-FSE/folio_migration_tools/pull/825
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_18...v_1_8_19
+
+---
+
+## v1.8.18 (21/11/2024)
+
+#### Other Changes
+* Add folio_client to BatchPoster __init__ and super().__init__ by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/809
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_17_post1...v_1_8_18
+
+---
+
+## v1.8.17.post1 (15/11/2024)
+
+#### Other Changes
+* Fix-task-inits-1817 by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/807
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_17...v_1_8_17_post1
+
+---
+
+## v1.8.17 (12/11/2024)
+
+#### Other Changes
+* Update changelog by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/803
+* Set httpx logger level to WARNING to avoid unneeded log messages and add upsert support to inventory batchposters by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/804
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v_1_8_16...v_1_8_17
+
+---
+
 ## v_1_8_16 (13/10/2024)
 
 #### closed
