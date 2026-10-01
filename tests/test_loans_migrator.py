@@ -667,22 +667,10 @@ class TestServicePointMappingInit:
         assert m.service_point_mapping is None
 
 
-@pytest.fixture
-def french_locale():
-    import i18n
-    from pathlib import Path
-
-    i18n.load_config(Path(__file__).parents[1] / "src/folio_migration_tools/i18n_config.py")
-    original_locale = i18n.get("locale")
-    i18n.set("locale", "fr")
-    yield
-    i18n.set("locale", original_locale)
-
-
 @pytest.mark.parametrize(
     ("lost_type", "label"), [("Aged to lost", "Perdu"), ("Declared lost", "Déclaré perdu")]
 )
-def test_handle_lost_item_translates_label_when_checked_out(french_locale, lost_type, label):
+def test_handle_lost_item_translates_label_when_checked_out(report_language, lost_type, label):
     migrator = Mock(spec=LoansMigrator)
     migrator.circulation_helper = Mock()
     migrator.circulation_helper.is_checked_out.return_value = True
@@ -696,7 +684,7 @@ def test_handle_lost_item_translates_label_when_checked_out(french_locale, lost_
 @pytest.mark.parametrize(
     ("lost_type", "label"), [("Aged to lost", "Perdu"), ("Declared lost", "Déclaré perdu")]
 )
-def test_handle_lost_item_keeps_folio_status_untranslated(french_locale, lost_type, label):
+def test_handle_lost_item_keeps_folio_status_untranslated(report_language, lost_type, label):
     migrator = Mock(spec=LoansMigrator)
     migrator.circulation_helper = Mock()
     migrator.circulation_helper.is_checked_out.return_value = False
