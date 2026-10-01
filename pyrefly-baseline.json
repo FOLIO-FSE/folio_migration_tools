@@ -1,0 +1,1159 @@
+{
+  "errors": [
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/circulation_helper.py",
+      "name": "unbound-name",
+      "concise_description": "`loan_to_put` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/circulation_helper.py",
+      "name": "unbound-name",
+      "concise_description": "`url` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/custom_dict.py",
+      "name": "bad-override",
+      "concise_description": "Class member `InsensitiveDictReader.fieldnames` overrides parent class `DictReader` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 25,
+      "path": "src/folio_migration_tools/logging_config.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `FileHandler` is not assignable to parameter `object` with type `RichHandler` in function `list.append`",
+      "severity": "error"
+    },
+    {
+      "column": 25,
+      "path": "src/folio_migration_tools/logging_config.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `FileHandler` is not assignable to parameter `object` with type `RichHandler` in function `list.append`",
+      "severity": "error"
+    },
+    {
+      "column": 41,
+      "path": "src/folio_migration_tools/mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`fieldvalues` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 37,
+      "path": "src/folio_migration_tools/mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`fieldvalues` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 41,
+      "path": "src/folio_migration_tools/mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`fieldvalues` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 37,
+      "path": "src/folio_migration_tools/mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`fieldvalues` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 28,
+      "path": "src/folio_migration_tools/mapper_base.py",
+      "name": "unsupported-operation",
+      "concise_description": "Cannot set item in `dict[Unknown, dict[Unknown, dict[Unknown, dict[Unknown, Unknown]]]]`",
+      "severity": "error"
+    },
+    {
+      "column": 28,
+      "path": "src/folio_migration_tools/mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`call_numbers` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 24,
+      "path": "src/folio_migration_tools/mapping_file_transformation/courses_mapper.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `look_up_instructor`",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/mapping_file_transformation/courses_mapper.py",
+      "name": "bad-override-param-name",
+      "concise_description": "Class member `CoursesMapper.get_prop` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/courses_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `RefDataMapping | Unknown | None` is not assignable to parameter `ref_data_mapping` with type `RefDataMapping` in function `folio_migration_tools.mapper_base.MapperBase.get_mapped_ref_data_value`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/courses_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `RefDataMapping | Unknown | None` is not assignable to parameter `ref_data_mapping` with type `RefDataMapping` in function `folio_migration_tools.mapper_base.MapperBase.get_mapped_ref_data_value`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/mapping_file_transformation/holdings_mapper.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `HoldingsMapper.task_configuration` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/mapping_file_transformation/holdings_mapper.py",
+      "name": "bad-override-param-name",
+      "concise_description": "Class member `HoldingsMapper.get_prop` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/holdings_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `Literal[''] | bool | Unknown` is not assignable to parameter `value` with type `str` in function `folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base.MappingFileMapperBase._resolve_note_type_id`",
+      "severity": "error"
+    },
+    {
+      "column": 42,
+      "path": "src/folio_migration_tools/mapping_file_transformation/holdings_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `Literal[''] | bool | Unknown` is not assignable to parameter `legacy_value` with type `str` in function `HoldingsMapper.get_instance_ids`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/mapping_file_transformation/item_mapper.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `ItemMapper.task_configuration` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/mapping_file_transformation/item_mapper.py",
+      "name": "bad-override-param-name",
+      "concise_description": "Class member `ItemMapper.get_prop` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/item_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `Literal[''] | bool | Unknown` is not assignable to parameter `value` with type `str` in function `folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base.MappingFileMapperBase._resolve_note_type_id`",
+      "severity": "error"
+    },
+    {
+      "column": 34,
+      "path": "src/folio_migration_tools/mapping_file_transformation/item_mapper.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `bool` has no attribute `strip`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/manual_fee_fines_mapper.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 28,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "no-matching-overload",
+      "concise_description": "No matching overload found for function `str.join` called with arguments: (Generator[Unknown | None])",
+      "severity": "error"
+    },
+    {
+      "column": 20,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`multi_field_props` may be uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 25,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`temp_object` may be uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 40,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "unbound-name",
+      "concise_description": "`temp_object` may be uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 44,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "not-iterable",
+      "concise_description": "`not in` is not supported between `Unknown` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 46,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `NoneType` has no attribute `extend`",
+      "severity": "error"
+    },
+    {
+      "column": 30,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `NoneType` has no attribute `append`",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "not-iterable",
+      "concise_description": "Type `None` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 49,
+      "path": "src/folio_migration_tools/mapping_file_transformation/mapping_file_mapper_base.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 26,
+      "path": "src/folio_migration_tools/mapping_file_transformation/order_mapper.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `NoneType` has no attribute `get`",
+      "severity": "error"
+    },
+    {
+      "column": 47,
+      "path": "src/folio_migration_tools/mapping_file_transformation/order_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `Unknown | None` is not assignable to parameter `schema_root` with type `dict[str, Any]` in function `CompositeOrderMapper._inject_custom_fields_properties`",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/mapping_file_transformation/order_mapper.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `NoneType` has no attribute `get`",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/mapping_file_transformation/order_mapper.py",
+      "name": "bad-override-param-name",
+      "concise_description": "Class member `CompositeOrderMapper.get_prop` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 51,
+      "path": "src/folio_migration_tools/mapping_file_transformation/order_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `Literal[''] | bool | Unknown` is not assignable to parameter `value` with type `str` in function `CompositeOrderMapper._resolve_order_address_id`",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "bad-override-param-name",
+      "concise_description": "Class member `OrganizationMapper.get_prop` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `RefDataMapping | Unknown | None` is not assignable to parameter `ref_data_mapping` with type `RefDataMapping` in function `folio_migration_tools.mapper_base.MapperBase.get_mapped_ref_data_value`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `RefDataMapping | Unknown | None` is not assignable to parameter `ref_data_mapping` with type `RefDataMapping` in function `folio_migration_tools.mapper_base.MapperBase.get_mapped_ref_data_value`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `RefDataMapping | Unknown | None` is not assignable to parameter `ref_data_mapping` with type `RefDataMapping` in function `folio_migration_tools.mapper_base.MapperBase.get_mapped_ref_data_value`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `RefDataMapping | Unknown | None` is not assignable to parameter `ref_data_mapping` with type `RefDataMapping` in function `folio_migration_tools.mapper_base.MapperBase.get_mapped_ref_data_value`",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "unsupported-operation",
+      "concise_description": "Cannot set item in `None`",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "unsupported-operation",
+      "concise_description": "Cannot set item in `None`",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/mapping_file_transformation/organization_mapper.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/mapping_file_transformation/user_mapper.py",
+      "name": "bad-override-param-name",
+      "concise_description": "Class member `UserMapper.get_prop` overrides parent class `MappingFileMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 23,
+      "path": "src/folio_migration_tools/marc_rules_transformation/conditions.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 47,
+      "path": "src/folio_migration_tools/marc_rules_transformation/conditions.py",
+      "name": "bad-assignment",
+      "concise_description": "`Unknown | None` is not assignable to attribute `default_call_number_type` with type `dict[Unknown, Unknown]`",
+      "severity": "error"
+    },
+    {
+      "column": 37,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 38,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 37,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 38,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 34,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 35,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 51,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/marc_rules_transformation/hrid_handler.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 45,
+      "path": "src/folio_migration_tools/marc_rules_transformation/marc_file_processor.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `str | None` is not assignable to parameter `obj` with type `Sized` in function `len`",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/marc_rules_transformation/marc_file_processor.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/marc_rules_transformation/marc_file_processor.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 36,
+      "path": "src/folio_migration_tools/marc_rules_transformation/marc_file_processor.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `list[str]` is not assignable to parameter `indicators` with type `Indicators | None` in function `pymarc.field.Field.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 33,
+      "path": "src/folio_migration_tools/marc_rules_transformation/marc_file_processor.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 37,
+      "path": "src/folio_migration_tools/marc_rules_transformation/marc_file_processor.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `Unknown | None` is not assignable to parameter `value` with type `str` in function `pymarc.field.Field.add_subfield`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_base.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `RulesMapperBase.task_configuration` overrides parent class `MapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `BibsRulesMapper.task_configuration` overrides parent class `RulesMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `BibsRulesMapper.conditions` overrides parent class `RulesMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 30,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 37,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 26,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 30,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 59,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `cached_property | Unknown` is not assignable to parameter `iterable` with type `Iterable[@_]` in function `list.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 19,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_bibs.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `cached_property | Unknown` is not assignable to parameter `iterable` with type `Iterable[@_]` in function `list.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_holdings.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `RulesMapperHoldings.task_configuration` overrides parent class `RulesMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_holdings.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `RulesMapperHoldings.conditions` overrides parent class `RulesMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_holdings.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `cached_property | Unknown` is not assignable to parameter `locations` with type `list[dict[Unknown, Unknown]]` in function `folio_migration_tools.mapper_base.MapperBase.validate_location_map`",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_holdings.py",
+      "name": "no-matching-overload",
+      "concise_description": "No matching overload found for function `str.join` called with arguments: (Unknown | None)",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/marc_rules_transformation/rules_mapper_holdings.py",
+      "name": "bad-override-param-name",
+      "concise_description": "Class member `RulesMapperHoldings.process_marc_field` overrides parent class `RulesMapperBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `BatchPoster.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 72,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "unbound-name",
+      "concise_description": "`idx` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 40,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "unbound-name",
+      "concise_description": "`last_row` may be uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 67,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `Any | None` is not assignable to parameter `response_json` with type `dict[Unknown, Unknown]` in function `BatchPoster.collect_existing_records_for_upsert`",
+      "severity": "error"
+    },
+    {
+      "column": 28,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "bad-context-manager",
+      "concise_description": "Cannot use `None` as a context manager",
+      "severity": "error"
+    },
+    {
+      "column": 28,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "bad-context-manager",
+      "concise_description": "Cannot use `None` as a context manager",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `TaskConfiguration` has no attribute `file`",
+      "severity": "error"
+    },
+    {
+      "column": 66,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "unbound-name",
+      "concise_description": "`res` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/batch_poster.py",
+      "name": "unsupported-operation",
+      "concise_description": "`-` is not supported between `None` and `int`",
+      "severity": "error"
+    },
+    {
+      "column": 14,
+      "path": "src/folio_migration_tools/migration_tasks/bibs_transformer.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `BibsTransformer.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 73,
+      "path": "src/folio_migration_tools/migration_tasks/bibs_transformer.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `list[dict[str | Any, str | Any]] | None` is not assignable to parameter `statistical_codes_map` with type `dict[str, str] | None` in function `folio_migration_tools.marc_rules_transformation.rules_mapper_bibs.BibsRulesMapper.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/courses_migrator.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `CoursesMigrator.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `HoldingsCsvTransformer.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 20,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `list[str] | None` is not assignable to parameter `iterable` with type `Iterable[object]` in function `any`",
+      "severity": "error"
+    },
+    {
+      "column": 34,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "not-iterable",
+      "concise_description": "Type `None` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 26,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "not-iterable",
+      "concise_description": "Type `None` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 43,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_csv_transformer.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `list[str] | None` is not assignable to parameter `fields_criterias` with type `list[str]` in function `folio_migration_tools.holdings_helper.HoldingsHelper.to_key`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_marc_transformer.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `HoldingsMarcTransformer.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/migration_tasks/holdings_marc_transformer.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `list[dict[str | Any, str | Any]] | None` is not assignable to parameter `statistical_codes_map` with type `dict[Unknown, Unknown] | None` in function `folio_migration_tools.marc_rules_transformation.rules_mapper_holdings.RulesMapperHoldings.__init__`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/inventory_batch_poster.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `InventoryBatchPoster.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 51,
+      "path": "src/folio_migration_tools/migration_tasks/inventory_batch_poster.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `list[Path]` is not assignable to parameter `file_paths` with type `Path | list[Path | str] | str` in function `folio_data_import.BatchPoster.BatchPoster.do_work`",
+      "severity": "error"
+    },
+    {
+      "column": 14,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `ItemsTransformer.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "not-iterable",
+      "concise_description": "Type `None` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 32,
+      "path": "src/folio_migration_tools/migration_tasks/items_transformer.py",
+      "name": "not-iterable",
+      "concise_description": "Type `None` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 14,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `LoansMigrator.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 20,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`req` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 64,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`loan_to_put` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 23,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`url` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 20,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`resp` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 33,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`resp` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 20,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`req` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 69,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`api_url` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 91,
+      "path": "src/folio_migration_tools/migration_tasks/loans_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`body` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/manual_fee_fines_transformer.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `ManualFeeFinesTransformer.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/manual_fee_fines_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/manual_fee_fines_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/manual_fee_fines_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/marc_import.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `MARCImportTask.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `MigrationTaskBase` has no attribute `mapper`",
+      "severity": "error"
+    },
+    {
+      "column": 29,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `files`",
+      "severity": "error"
+    },
+    {
+      "column": 41,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `TextIOBase` has no attribute `name`",
+      "severity": "error"
+    },
+    {
+      "column": 74,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `TextIOBase` has no attribute `name`",
+      "severity": "error"
+    },
+    {
+      "column": 53,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 48,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 49,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 44,
+      "path": "src/folio_migration_tools/migration_tasks/migration_task_base.py",
+      "name": "not-iterable",
+      "concise_description": "Type `cached_property` is not iterable",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/organization_transformer.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `OrganizationTransformer.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/organization_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/organization_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/organization_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/organization_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 20,
+      "path": "src/folio_migration_tools/migration_tasks/organization_transformer.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `OrganizationTransformer` has no attribute `legacy_id`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "unsupported-operation",
+      "concise_description": "`None` is not subscriptable",
+      "severity": "error"
+    },
+    {
+      "column": 12,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `skip_barcode_prevalidation`",
+      "severity": "error"
+    },
+    {
+      "column": 36,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "bad-assignment",
+      "concise_description": "`Unknown | None` is not assignable to attribute `patron_id` with type `str`",
+      "severity": "error"
+    },
+    {
+      "column": 34,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "bad-assignment",
+      "concise_description": "`Unknown | None` is not assignable to attribute `item_id` with type `str`",
+      "severity": "error"
+    },
+    {
+      "column": 45,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "bad-assignment",
+      "concise_description": "`Unknown | None` is not assignable to attribute `holdings_record_id` with type `str`",
+      "severity": "error"
+    },
+    {
+      "column": 38,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `NoneType` has no attribute `get`",
+      "severity": "error"
+    },
+    {
+      "column": 12,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `starting_row`",
+      "severity": "error"
+    },
+    {
+      "column": 38,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `starting_row`",
+      "severity": "error"
+    },
+    {
+      "column": 40,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `starting_row`",
+      "severity": "error"
+    },
+    {
+      "column": 45,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`t0_migration` may be uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 21,
+      "path": "src/folio_migration_tools/migration_tasks/requests_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `fallback_service_point_id`",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/migration_tasks/reserves_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `ReservesMigrator` has no attribute `failed_and_not_dupe`",
+      "severity": "error"
+    },
+    {
+      "column": 9,
+      "path": "src/folio_migration_tools/migration_tasks/reserves_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `ReservesMigrator` has no attribute `circulation_helper`",
+      "severity": "error"
+    },
+    {
+      "column": 28,
+      "path": "src/folio_migration_tools/migration_tasks/reserves_migrator.py",
+      "name": "missing-attribute",
+      "concise_description": "Object of class `AbstractTaskConfiguration` has no attribute `item_files`",
+      "severity": "error"
+    },
+    {
+      "column": 33,
+      "path": "src/folio_migration_tools/migration_tasks/reserves_migrator.py",
+      "name": "unbound-name",
+      "concise_description": "`resp` is uninitialized",
+      "severity": "error"
+    },
+    {
+      "column": 5,
+      "path": "src/folio_migration_tools/migration_tasks/user_importer.py",
+      "name": "bad-override-mutable-attribute",
+      "concise_description": "Class member `UserImportTask.task_configuration` overrides parent class `MigrationTaskBase` in an inconsistent manner",
+      "severity": "error"
+    },
+    {
+      "column": 13,
+      "path": "src/folio_migration_tools/migration_tasks/user_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/user_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 17,
+      "path": "src/folio_migration_tools/migration_tasks/user_transformer.py",
+      "name": "unsupported-operation",
+      "concise_description": "`/` is not supported between `Path` and `None`",
+      "severity": "error"
+    },
+    {
+      "column": 33,
+      "path": "src/folio_migration_tools/transaction_migration/legacy_request.py",
+      "name": "missing-attribute",
+      "concise_description": "No attribute `now` in module `datetime`",
+      "severity": "error"
+    },
+    {
+      "column": 36,
+      "path": "src/folio_migration_tools/transaction_migration/legacy_request.py",
+      "name": "missing-attribute",
+      "concise_description": "No attribute `now` in module `datetime`",
+      "severity": "error"
+    },
+    {
+      "column": 64,
+      "path": "src/generate_schemas.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `None` is not assignable to parameter `self` with type `CoursesMapper` in function `folio_migration_tools.mapping_file_transformation.courses_mapper.CoursesMapper.get_composite_course_schema`",
+      "severity": "error"
+    },
+    {
+      "column": 83,
+      "path": "src/generate_schemas.py",
+      "name": "bad-argument-type",
+      "concise_description": "Argument `None` is not assignable to parameter `self` with type `ManualFeeFinesMapper` in function `folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper.ManualFeeFinesMapper.get_composite_feefine_schema`",
+      "severity": "error"
+    }
+  ]
+}
