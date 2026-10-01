@@ -19,8 +19,8 @@ You can link to an Issue by saying something like "Fixes #1" -->
 - [ ] Ran `nox -rs safety`.
 - [ ] Ran `pre-commit run --all-files`
 - [ ] Tests cover new or modified code.
-- [ ] Ran test suite: `nox -rs tests`
-- [ ] Code runs and outputs default usage info: `cd src; poetry run python3 -m folio_migration_tools -h`
+- [ ] Ran test suite: `source .env && uv run pytest`
+- [ ] Code runs and outputs default usage info: `uv run folio-migration-tools -h`
 - [ ] Documentation updated
 
 ## Warning Checklist
