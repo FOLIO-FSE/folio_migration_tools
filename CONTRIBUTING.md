@@ -42,7 +42,7 @@ Both for sharing to the larger group of users what is needed or not working, but
 
 For the developer writing the issue, it is good practice to share a screenshot or some data examples or a drawing on what changed. Since Issues are linked into the [CHANGELOG.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CHANGELOG.md), this habit will propagate well-written issues over to Pypi and more.
 
-Formulating a DoD is good practice. Take a moment to do this properly.   
+Formulating a DoD is good practice. Take a moment to do this properly.
 
 
 # Code contribution workflow
@@ -60,10 +60,10 @@ If you are working based on a GitHub issue (which you should be), it is good pra
 ```
 
 ## 2. :sparkles: Do you thing :sparkles:
-* :test_tube: Write your tests 
+* :test_tube: Write your tests
 * :keyboard: Write your code
-* :ledger: Add documentation to the readme if necessary 
-* :vertical_traffic_light: It's good practice to add test data to the migration_repo_template in order to maintain a set of examples for new users and also maintain integration test coverage   
+* :ledger: Add documentation to the readme if necessary
+* :vertical_traffic_light: It's good practice to add test data to the migration_repo_template in order to maintain a set of examples for new users and also maintain integration test coverage
 
 
 
@@ -77,9 +77,10 @@ nox -rs safety
 and update any packages with a vulnerability.
 
 ### 3.2. :monocle_face: Check and format your code
-The following command runs Flake8 with plugins on your code. It:
-* Uses black to format the code. The Line-lenght is to be 99 characters
-* Uses isort to sort your imports. This makes merging much easier.
+The following command runs the pre-commit hooks on your code. It:
+* Uses ruff to lint and format the code. The line length is 99 characters.
+* Sorts imports, which makes merging much easier.
+* Type checks `src` with pyrefly. Existing errors are recorded in `pyrefly-baseline.json`, so only new ones fail.
 
 ```pre-commit run --all-files```
 
@@ -127,11 +128,11 @@ Choose your version, and tag the release
 ## Create release notes and change log using gren
 Once released, create release notes using gren:
 ```
-gren release --override 
+gren release --override
 ```
 and create the change log, also using gren:
 ```
-gren changelog --override 
+gren changelog --override
 ```
 
 ## Publish package to pypi
@@ -144,7 +145,7 @@ version = "1.5.1"
 ```
 poetry build
 ```
-Make sure one of the builds aligns with the version number you choosed above   
+Make sure one of the builds aligns with the version number you choosed above
 
 
 ### 3. Push the release to pypi
@@ -166,50 +167,30 @@ Save the file and commit (and push) the file back to main.
 ## What to install
 ```
 > pipx install pre-commit  (and run pre-commit install)
-> pipx install isort
 > pipx install nox
-> pipx install poetry
-> pipx install twine 
-> poetry shell
-> poetry install
+> uv sync --all-groups --all-extras
 > npm install github-release-notes -g
 ```
 ## Important settings
-* Set black max-line-length to 99
-* Use black in conjunction with Isort. Make sure to set the _--force-single-line-imports_ parameter
+* Ruff is configured in `pyproject.toml` (line length 99). Do not configure black, isort or flake8 separately.
 
 ## Setting up Visual studio
-Here is one example of the python settings part to use in VS code:
+Install the Ruff and Pyrefly extensions, then use settings along these lines:
 ```
 "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
-        "source.organizeImports": true
-    },
-    "editor.wordBasedSuggestions": false
+        "source.fixAll.ruff": "explicit",
+        "source.organizeImports.ruff": "explicit"
+    }
 },
 "editor.rulers": [99],
-"python.formatting.blackArgs": ["--line-length=99"],
-"python.formatting.provider": "black",
-"python.languageServer": "Pylance",
-"python.linting.flake8Args": [
-    "--max-line-length=99",
-    "--ignore=E203,W503 ",
-    "--select=B,B9,BLK,C,E,F,I,S,W"
-],
-"python.linting.flake8Enabled": true,
-"python.linting.mypyEnabled": true,
-"python.linting.pylintEnabled": true,
-"python.sortImports.args": [
-    "--profile",
-    "black",
-    "--force-single-line-imports"
-    ],
 ```
-https://cereblanco.medium.com/setup-black-and-isort-in-vscode-514804590bf9
 
 
 # Testing
-## Running tests 
+## Running tests
 ### Running tests against a FOLIO environment
 Pytest. Run the test suite against the latest bugfest release. Example call:
 
@@ -228,19 +209,19 @@ Running will just run the test for you, but debugging the test will allow you to
 
 ## Writing tests
 ### Naming
-Tests are written and maintained in the tests folder in the repository. Test files should be named after the class/file they are testing, and then the tests are named according to the methods being tested. 
+Tests are written and maintained in the tests folder in the repository. Test files should be named after the class/file they are testing, and then the tests are named according to the methods being tested.
 So, if you are to test a method named *condition_trim_period* in the *conditions.py* file, your test file should be named *test_conditions.py* and the test method should be named *test_condition_trim_period*
 ![image](https://user-images.githubusercontent.com/1894384/190117341-55d78ca0-853d-4e2b-b55a-48c04a111df3.png)
 
 ### Unit tests or integration-like tests?
-The test suite contains both tests that needs a connection to a FOLIO tenant to run, as well as a growing number of unit tests that can be run without any actual FOLIO tennant. The latter is preferable, so try to write unit tests, mocking the behaviour of a FOLIO tenant. 
+The test suite contains both tests that needs a connection to a FOLIO tenant to run, as well as a growing number of unit tests that can be run without any actual FOLIO tennant. The latter is preferable, so try to write unit tests, mocking the behaviour of a FOLIO tenant.
 
 The exception to this is the test suite in *test_rules_mapper_bibs.py* that needs to be rewritten long-term, but that will remain in the current form as is. So if you want to test the tools agains real-world data and a tenant, then this is the place to do it.
 
 ### Test libraries used
-We rely on Pytest in conjunction with unittest.mock. There are numerous introductions to both libraries:   
-* [Intro to test framework Pytest](https://medium.com/testcult/intro-to-test-framework-pytest-5b1ce4d011ae)   
-* [Understanding the Python Mock Object Library](https://realpython.com/python-mock-library/)   
+We rely on Pytest in conjunction with unittest.mock. There are numerous introductions to both libraries:
+* [Intro to test framework Pytest](https://medium.com/testcult/intro-to-test-framework-pytest-5b1ce4d011ae)
+* [Understanding the Python Mock Object Library](https://realpython.com/python-mock-library/)
 
 ### Test data
 In the past we have used OAI-PMH-formatted MARC records. This is for historical reasons no longer needed, and going MARC records should be as close to the original form as possible. One could argue that having all MARC records in JSON or .mrk for readability and for searching, but this would risk loosing important nuances.
