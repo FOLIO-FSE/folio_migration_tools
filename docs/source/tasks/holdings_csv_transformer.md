@@ -103,7 +103,7 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 
 ## Holdings Merge Criteria
 
-The `holdingsMergeCriteria` parameter determines how multiple rows in the source data are consolidated into single holdings records. 
+The `holdingsMergeCriteria` parameter determines how multiple rows in the source data are consolidated into single holdings records.
 
 **Example**: With `["instanceId", "permanentLocationId", "callNumber"]`:
 - Items with the same bib ID, location, and call number → one holdings record

@@ -349,7 +349,7 @@ class TestUserImporterTaskDoWorkAsync:
             migration_task_type="UserImporterTask",
             files=[FileDefinition(file_name="nonexistent.json")],
         )
-        
+
         importer = Mock(spec=UserImportTask)
         importer.task_configuration = task_config
         importer.folder_structure = mock_folder_structure
@@ -358,10 +358,10 @@ class TestUserImporterTaskDoWorkAsync:
         importer.do_work = MethodType(
             UserImportTask.do_work, importer
         )
-        
+
         # Make the file not exist
         mock_folder_structure.results_folder = Path("/nonexistent/path")
-        
+
         with pytest.raises(FileNotFoundError):
             await importer.do_work()
 
@@ -380,7 +380,7 @@ class TestUserImporterTaskDoWork:
         importer.files_processed = []
         importer.total_records = 0
         importer.do_work = MethodType(UserImportTask.do_work, importer)
-        
+
         with pytest.raises(FileNotFoundError):
             await importer.do_work()
 
@@ -395,7 +395,7 @@ class TestUserImporterTaskDoWork:
         importer.files_processed = []
         importer.total_records = 0
         importer.do_work = MethodType(UserImportTask.do_work, importer)
-        
+
         with pytest.raises(FileNotFoundError):
             await importer.do_work()
 
@@ -407,7 +407,7 @@ class TestUserImporterTaskWrapUp:
     async def test_wrap_up_writes_reports(self, tmp_path):
         """Test that wrap_up writes migration reports."""
         from folio_data_import.UserImport import UserImporterStats
-        
+
         importer = Mock(spec=UserImportTask)
         importer.task_configuration = UserImportTask.TaskConfiguration(
             name="test",
@@ -424,14 +424,14 @@ class TestUserImporterTaskWrapUp:
         importer.start_datetime = datetime.now(timezone.utc)
         importer.migration_report = Mock()
         importer.clean_out_empty_logs = Mock()
-        
+
         importer._translate_stats_to_migration_report = MethodType(
             UserImportTask._translate_stats_to_migration_report, importer
         )
         importer.wrap_up = MethodType(UserImportTask.wrap_up, importer)
-        
+
         await importer.wrap_up()
-        
+
         # Verify reports were written
         assert importer.migration_report.write_migration_report.called
         assert importer.migration_report.write_json_report.called
@@ -449,7 +449,7 @@ class TestUserImporterTaskNoProgress:
             files=[FileDefinition(file_name="users.json")],
             no_progress=True,
         )
-        
+
         importer = Mock(spec=UserImportTask)
         importer.task_configuration = task_config
         importer.library_configuration = Mock()
@@ -457,10 +457,10 @@ class TestUserImporterTaskNoProgress:
         importer._create_fdi_config = MethodType(
             UserImportTask._create_fdi_config, importer
         )
-        
+
         file_paths = [Path("/tmp/users.json")]
         fdi_config = importer._create_fdi_config(file_paths)
-        
+
         assert fdi_config.no_progress is True
 
 
@@ -474,7 +474,7 @@ class TestUserImporterTaskRecordCounting:
         file2 = tmp_path / "users2.json"
         file1.write_text('{"id": "1"}\n{"id": "2"}\n{"id": "3"}\n')
         file2.write_text('{"id": "4"}\n{"id": "5"}\n')
-        
+
         task_config = UserImportTask.TaskConfiguration(
             name="test",
             migration_task_type="UserImporterTask",
@@ -483,7 +483,7 @@ class TestUserImporterTaskRecordCounting:
                 FileDefinition(file_name="users2.json"),
             ],
         )
-        
+
         total_records = 0
         for file_def in task_config.files:
             path = tmp_path / file_def.file_name
@@ -491,5 +491,5 @@ class TestUserImporterTaskRecordCounting:
                 total_records += sum(
                     buf.count(b"\n") for buf in iter(lambda: f.read(1024 * 1024), b"")
                 )
-        
+
         assert total_records == 5

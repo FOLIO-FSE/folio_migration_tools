@@ -36,7 +36,7 @@ A typical mapping file looks like this:
         }
     ]
 }
-```    
+```
 You do not have to map every FOLIO property. You can either leave the entries unmapped or remove them from the file alltogether.
 
 ## The mapping file mapping entries
@@ -51,7 +51,7 @@ A typical entry looks like this:
     "fallback_value": ""
 }
 ```
-folio_field and legacy_field are mandatory. All other fields are optional. 
+folio_field and legacy_field are mandatory. All other fields are optional.
 ### The priority of the mappings in the mapping entry:
 There might be exceptions to this in some areas, but generally, this is the how the mapping works:
 1. If there are reference data mappings or special cases for particular fields, then this has precedence
@@ -75,7 +75,7 @@ The following order applies only when rules are applied (that is, when the resol
 ### The folio_field property
 The folio_field must contain the target folio field.
 
-_String array properties_   
+_String array properties_
 If the target field is an array, you must add a [0] at the end of the field for the first element in the arry and a [1] in the second.
 
 Example: If you have two fields in your legacy data you want to add to the formerIds string array property, your mapping entry should look like this:
@@ -99,7 +99,7 @@ This would render the following results:
     ]
 }
 ```
-_Object array properties_   
+_Object array properties_
 If the target field is a property of an object in an array, you must add a [0] at the end of each object in the array.
 
 Example: you have an array of addresses with, and each patron has two addresses.
@@ -170,8 +170,8 @@ If `LINK` has content, the item is treated as legacy-content, and missing requir
 See also: [Migration Reports](migration_reports.md) and [Logging](logging.md).
 
 ### The legacy_field property
-This field should contain the name of the column in the TSV source data file. 
-_Turn off mapping_   
+This field should contain the name of the column in the TSV source data file.
+_Turn off mapping_
 If you do not want it mapped, just add "Not mapped" as the value, or an empty string:
 ```
 {
@@ -185,7 +185,7 @@ If you do not want it mapped, just add "Not mapped" as the value, or an empty st
 ```
 
 ### The value property
-The value property is a way to add the same value to all records. 
+The value property is a way to add the same value to all records.
 
 ```{caution}
 ⚠️ The value field has preceedence over all other mappings. If you put a value here, no other mappings will be taken into consideration

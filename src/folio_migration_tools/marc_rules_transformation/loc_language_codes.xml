@@ -2277,7 +2277,7 @@
 				</uf>
 				<uf>
 					<name>Lemusmus</name>
-				</uf>	
+				</uf>
 			</uf>
 			<uf>
 				<name authorized="yes">Katingan</name>
@@ -2432,7 +2432,7 @@
 					<name>Varsu</name>
 				</uf>
 			</uf>
-			
+
 			<uf>
 				<name authorized="yes">Lindrou</name>
 			</uf>
@@ -2668,7 +2668,7 @@
 				</uf>
 				<uf>
 					<name>Tipun</name>
-				</uf>	
+				</uf>
 			</uf>
 			<uf>
 				<name authorized="yes">Ramoaaina</name>
@@ -4969,7 +4969,7 @@
 				</uf>
 				<uf>
 					<name>Kurma</name>
-				</uf>	
+				</uf>
 				<uf>
 					<name>Kurmali</name>
 				</uf>
@@ -4981,10 +4981,10 @@
 				</uf>
 				<uf>
 					<name>Kurni</name>
-				</uf>	
+				</uf>
 				<uf>
 					<name>Kurumali</name>
-				</uf>	
+				</uf>
 			</uf>
 			<uf>
 				<name authorized="yes">Panchpargania</name>
@@ -4999,7 +4999,7 @@
 				</uf>
 				<uf>
 					<name>Pan Sawasi</name>
-				</uf>	
+				</uf>
 				<uf>
 					<name>Tair</name>
 				</uf>
@@ -5011,7 +5011,7 @@
 				</uf>
 				<uf>
 					<name>Tanti</name>
-				</uf>	
+				</uf>
 				<uf>
 					<name>Temoral</name>
 				</uf>
@@ -5249,7 +5249,7 @@
 			</uf>
 			<uf>
 				<name authorized="yes">Udi</name>
-			</uf>			
+			</uf>
 		</language>
 		<language>
 			<uri>info:lc/vocabulary/languages/ceb</uri>
@@ -6368,7 +6368,7 @@
 				</uf>
 				<uf>
 					<name>Kangra</name>
-				</uf>	
+				</uf>
 			</uf>
 		</language>
 		<language>
@@ -9346,7 +9346,7 @@
 				</uf>
 			</uf>
 			<uf>
-				<name authorized="yes">Jhāḍī</name>				
+				<name authorized="yes">Jhāḍī</name>
 			</uf>
 			<uf>
 				<name authorized="yes">Kudali</name>
@@ -9940,7 +9940,7 @@
 			<code>mac</code>
 			<uf>
 				<name>Bǎlgarski (Macedonian)</name>
-			</uf>	
+			</uf>
 			<uf>
 				<name>Balgàrtzki (Macedonian)</name>
 			</uf>
@@ -9949,7 +9949,7 @@
 			</uf>
 			<uf>
 				<name>Bulgàrtski (Macedonian)</name>
-			</uf>	
+			</uf>
 			<uf>
 				<name>Dópia</name>
 			</uf>
@@ -9961,7 +9961,7 @@
 			</uf>
 			<uf>
 				<name>Makedoniski</name>
-			</uf>	
+			</uf>
 			<uf>
 				<name>Makedonski</name>
 			</uf>
@@ -9970,7 +9970,7 @@
 			</uf>
 			<uf>
 				<name>Slaviká (Macedonian)</name>
-			</uf>	
+			</uf>
 			<uf>
 				<name>Slavomacedonian</name>
 			</uf>
@@ -9986,7 +9986,7 @@
 			<code>mag</code>
 			<uf>
 				<name>Bihari (Magahi)</name>
-			</uf>	
+			</uf>
 			<uf>
 				<name>Magadhi</name>
 			</uf>
@@ -9995,7 +9995,7 @@
 			</uf>
 			<uf>
 				<name>Maghadi</name>
-			</uf>	
+			</uf>
 			<uf>
 				<name>Maghai</name>
 			</uf>
@@ -10004,7 +10004,7 @@
 			</uf>
 			<uf>
 				<name>Maghori</name>
-			</uf>	
+			</uf>
 			<uf>
 				<name>Magi (India)</name>
 			</uf>
@@ -10661,7 +10661,7 @@
 				<uf>
 					<name>Proto-Hittite</name>
 				</uf>
-				
+
 			</uf>
 			<uf>
 				<name authorized="yes">Hurrian</name>
@@ -14964,7 +14964,7 @@
 				</uf>
 				<uf>
 					<name>Kolon</name>
-				</uf>	
+				</uf>
 			</uf>
 			<uf>
 				<name authorized="yes">Ketengban</name>
@@ -15012,7 +15012,7 @@
 				</uf>
 				<uf>
 					<name>Umboi</name>
-				</uf>	
+				</uf>
 			</uf>
 			<uf>
 				<name authorized="yes">Kunimaipa</name>
@@ -16371,7 +16371,7 @@
 				</uf>
 				<uf>
 					<name>Portunhol</name>
-				</uf>	
+				</uf>
 			</uf>
 			<uf>
 				<name authorized="yes">Spanish, Old (to 1500)</name>
@@ -20219,7 +20219,7 @@
 				</uf>
 				<uf>
 					<name>Hindavi</name>
-				</uf>	
+				</uf>
 			</uf>
 		</language>
 		<language>

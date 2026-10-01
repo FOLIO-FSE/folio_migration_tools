@@ -1,6 +1,6 @@
 # Quick tutorial
 
-This is a quick guide on how to transform and load bib-level MARC records into a FOLIO tenant. 
+This is a quick guide on how to transform and load bib-level MARC records into a FOLIO tenant.
 
 ## Prerequisites
 * Make sure you have **Python 3.10** or higher installed. uv can manage Python versions for you automatically.
@@ -14,15 +14,15 @@ This is a quick guide on how to transform and load bib-level MARC records into a
 
 ## 1. Create a git repository for your settings and data
 ### The Migration Repo Template
-The tools are build to be run within a certain folder structure and with a set of mapping- and configuration files. 
+The tools are build to be run within a certain folder structure and with a set of mapping- and configuration files.
 
 For this purpose, we maintain a [repo template](https://github.com/folio-fse/migration_repo_template) in order to get folks started quickly with the tools.
 
 ###  Create a repo or clone this one
-Either use the Github button below to create your own repo based on this template    
-![image](https://user-images.githubusercontent.com/1894384/215045112-6964ecfb-a446-4036-99d0-323104f262c5.png)   
+Either use the Github button below to create your own repo based on this template
+![image](https://user-images.githubusercontent.com/1894384/215045112-6964ecfb-a446-4036-99d0-323104f262c5.png)
 
-Or clone the repo by running 
+Or clone the repo by running
 ```shell
 git clone git@github.com:FOLIO-FSE/migration_repo_template.git
 ```
@@ -33,17 +33,17 @@ git clone git@github.com:FOLIO-FSE/migration_repo_template.git
 cd migration_repo_template
 python create_folder_structure.py
 ```
-Your repository should look like this:    
+Your repository should look like this:
 ![image](https://user-images.githubusercontent.com/1894384/215044991-5b648501-aa10-46e2-873f-0b0996180a16.png)
 
 
 ## 2. Add your data, and configure the settings
 1. Locate the MARC file you want to use, and move it into the ```iterations/test_iteration/source_data/instances``` folder.
-2. Open up the mapping_files/exampleConfiguration.json file in a text editor and replace the outlined values in the picture below with your values:   
+2. Open up the mapping_files/exampleConfiguration.json file in a text editor and replace the outlined values in the picture below with your values:
 ![image](https://user-images.githubusercontent.com/1894384/215045374-fa84f983-fbee-4a54-8383-78934af77484.png)
 
 
-3. Save the file   
+3. Save the file
 
 ## 3. Install the tools and make sure they can run
 1. Install dependencies using uv

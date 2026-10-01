@@ -358,7 +358,7 @@ This helps identify:
 The raw JSON reports enable automated analysis. Example use cases:
 
 - **Trend tracking**: Compare statistics across migration iterations
-- **Quality gates**: Fail CI/CD pipelines if error rates exceed thresholds  
+- **Quality gates**: Fail CI/CD pipelines if error rates exceed thresholds
 - **Dashboards**: Aggregate statistics for project status reporting
 - **Alerting**: Notify team when specific error types appear
 
@@ -368,7 +368,7 @@ import json
 
 with open("reports/.raw/raw_report_20260124_transform_bibs.json") as f:
     report = json.load(f)
-    
+
 total = report["GeneralStatistics"].get("Records processed", 0)
 failed = report["GeneralStatistics"].get("Records with errors", 0)
 success_rate = ((total - failed) / total) * 100 if total > 0 else 0

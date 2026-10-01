@@ -319,12 +319,12 @@ class TestInventoryBatchPosterOnBatchError:
         poster._on_batch_error = MethodType(
             InventoryBatchPoster._on_batch_error, poster
         )
-        
+
         batch = [{"id": "1"}, {"id": "2"}]
         error_message = "Batch failed: 500 Internal Server Error"
-        
+
         poster._on_batch_error(batch, error_message)
-        
+
         assert error_message in poster.batch_errors
         poster.migration_report.add.assert_called_once_with("Details", error_message)
 
@@ -336,11 +336,11 @@ class TestInventoryBatchPosterOnBatchError:
         poster._on_batch_error = MethodType(
             InventoryBatchPoster._on_batch_error, poster
         )
-        
+
         errors = ["Error 1", "Error 2", "Error 3"]
         for error in errors:
             poster._on_batch_error([], error)
-        
+
         assert len(poster.batch_errors) == 3
         assert all(e in poster.batch_errors for e in errors)
 
@@ -357,17 +357,17 @@ class TestInventoryBatchPosterDoWorkAsync:
             object_type="Instances",
             files=[FileDefinition(file_name="nonexistent.json")],
         )
-        
+
         poster = Mock(spec=InventoryBatchPoster)
         poster.task_configuration = task_config
         poster.folder_structure = mock_folder_structure
         poster.do_work = MethodType(
             InventoryBatchPoster.do_work, poster
         )
-        
+
         # Make the file not exist
         mock_folder_structure.results_folder = Path("/nonexistent/path")
-        
+
         with pytest.raises(FileNotFoundError):
             await poster.do_work()
 
@@ -384,7 +384,7 @@ class TestInventoryBatchPosterDoWork:
         poster.folder_structure = Mock()
         poster.folder_structure.results_folder = Path("/nonexistent")
         poster.do_work = MethodType(InventoryBatchPoster.do_work, poster)
-        
+
         with pytest.raises(FileNotFoundError):
             await poster.do_work()
 
@@ -397,7 +397,7 @@ class TestInventoryBatchPosterDoWork:
         poster.folder_structure = Mock()
         poster.folder_structure.results_folder = Path("/nonexistent")
         poster.do_work = MethodType(InventoryBatchPoster.do_work, poster)
-        
+
         with pytest.raises(FileNotFoundError):
             await poster.do_work()
 
@@ -409,7 +409,7 @@ class TestInventoryBatchPosterWrapUp:
     async def test_wrap_up_writes_reports(self, tmp_path):
         """Test that wrap_up writes migration reports."""
         from folio_data_import.BatchPoster import BatchPosterStats
-        
+
         poster = Mock(spec=InventoryBatchPoster)
         poster.task_configuration = InventoryBatchPoster.TaskConfiguration(
             name="test",
@@ -436,14 +436,14 @@ class TestInventoryBatchPosterWrapUp:
         poster.start_datetime = datetime.now(timezone.utc)
         poster.migration_report = Mock()
         poster.clean_out_empty_logs = Mock()
-        
+
         poster._translate_stats_to_migration_report = MethodType(
             InventoryBatchPoster._translate_stats_to_migration_report, poster
         )
         poster.wrap_up = MethodType(InventoryBatchPoster.wrap_up, poster)
-        
+
         await poster.wrap_up()
-        
+
         # Verify stats were translated
         assert poster.migration_report.set.called
         # Verify reports were written
@@ -464,15 +464,15 @@ class TestInventoryBatchPosterNoProgress:
             object_type="ShadowInstances",
             files=[FileDefinition(file_name="shadow.json")],
         )
-        
+
         poster = Mock(spec=InventoryBatchPoster)
         poster.task_configuration = task_config
         poster._create_fdi_config = MethodType(
             InventoryBatchPoster._create_fdi_config, poster
         )
-        
+
         fdi_config = poster._create_fdi_config()
-        
+
         assert fdi_config.object_type == "ShadowInstances"
 
     def test_create_fdi_config_empty_patch_paths(self):
@@ -485,13 +485,13 @@ class TestInventoryBatchPosterNoProgress:
             patch_existing_records=True,
             patch_paths=[],
         )
-        
+
         poster = Mock(spec=InventoryBatchPoster)
         poster.task_configuration = task_config
         poster._create_fdi_config = MethodType(
             InventoryBatchPoster._create_fdi_config, poster
         )
-        
+
         fdi_config = poster._create_fdi_config()
-        
+
         assert fdi_config.patch_paths is None

@@ -152,15 +152,15 @@ def test_save_marc_record_both_flags_true():
     mock_mapper.save_data_import_marc_record = Mock()
     mock_processor.mapper = mock_mapper
     mock_processor.data_import_marc_file = BytesIO()
-    
+
     record = Record()
     record.add_field(Field(tag="245", indicators=["0", "0"], subfields=[Subfield(code="a", value="Test Title")]))
     file_def = FileDefinition(file_name="test.mrc", data_import_marc=True)
     folio_rec = {"id": "test-id"}
     object_type = FOLIONamespaces.instances
-    
+
     MarcFileProcessor.save_marc_record(mock_processor, record, file_def, folio_rec, object_type)
-    
+
     mock_mapper.save_data_import_marc_record.assert_called_once_with(
         mock_processor.data_import_marc_file,
         object_type,
@@ -179,15 +179,15 @@ def test_save_marc_record_task_config_false():
     mock_mapper.migration_report = MigrationReport()
     mock_processor.mapper = mock_mapper
     mock_processor.data_import_marc_file = BytesIO()
-    
+
     record = Record()
     record.add_field(Field(tag="245", indicators=["0", "0"], subfields=[Subfield(code="a", value="Test Title")]))
     file_def = FileDefinition(file_name="test.mrc", data_import_marc=True)
     folio_rec = {"id": "test-id"}
     object_type = FOLIONamespaces.instances
-    
+
     MarcFileProcessor.save_marc_record(mock_processor, record, file_def, folio_rec, object_type)
-    
+
     mock_mapper.save_data_import_marc_record.assert_not_called()
 
 
@@ -201,15 +201,15 @@ def test_save_marc_record_file_def_false():
     mock_mapper.migration_report = MigrationReport()
     mock_processor.mapper = mock_mapper
     mock_processor.data_import_marc_file = BytesIO()
-    
+
     record = Record()
     record.add_field(Field(tag="245", indicators=["0", "0"], subfields=[Subfield(code="a", value="Test Title")]))
     file_def = FileDefinition(file_name="test.mrc", data_import_marc=False)
     folio_rec = {"id": "test-id"}
     object_type = FOLIONamespaces.instances
-    
+
     MarcFileProcessor.save_marc_record(mock_processor, record, file_def, folio_rec, object_type)
-    
+
     mock_mapper.save_data_import_marc_record.assert_not_called()
 
 
@@ -222,15 +222,15 @@ def test_save_marc_record_no_data_import_marc_attribute():
     mock_mapper.migration_report = MigrationReport()
     mock_processor.mapper = mock_mapper
     mock_processor.data_import_marc_file = BytesIO()
-    
+
     record = Record()
     record.add_field(Field(tag="245", indicators=["0", "0"], subfields=[Subfield(code="a", value="Test Title")]))
     file_def = FileDefinition(file_name="test.mrc", data_import_marc=True)
     folio_rec = {"id": "test-id"}
     object_type = FOLIONamespaces.instances
-    
+
     MarcFileProcessor.save_marc_record(mock_processor, record, file_def, folio_rec, object_type)
-    
+
     mock_mapper.save_data_import_marc_record.assert_not_called()
 
 
@@ -549,4 +549,3 @@ def test_clean_out_empty_logs_keeps_nonempty_transformation_file(tmp_path):
     MigrationTaskBase.clean_out_empty_logs(mock_task)
 
     assert transformation_file.exists()
-
