@@ -265,7 +265,7 @@ def test_base_string_for_folio_uuid_uses_gateway_url():
     mapper.library_configuration.use_gateway_url_for_uuids = True
     mapper.library_configuration.is_ecs = False
     mapper.folio_client.gateway_url = "https://folio-gateway.example.com"
-    
+
     result = mapper.base_string_for_folio_uuid
     assert result == "https://folio-gateway.example.com"
 
@@ -289,7 +289,7 @@ def test_base_string_for_folio_uuid_uses_ecs_tenant_id():
     )
     mapper.library_configuration.use_gateway_url_for_uuids = False
     mapper.library_configuration.ecs_tenant_id = "ecs_tenant_123"
-    
+
     result = mapper.base_string_for_folio_uuid
     assert result == "ecs_tenant_123"
 
@@ -314,7 +314,7 @@ def test_base_string_for_folio_uuid_uses_tenant_id_default():
     mapper.library_configuration.use_gateway_url_for_uuids = False
     mapper.library_configuration.ecs_tenant_id = None
     mapper.library_configuration.tenant_id = "tenant_fallback"
-    
+
     result = mapper.base_string_for_folio_uuid
     assert result == "tenant_fallback"
 
@@ -340,6 +340,6 @@ def test_base_string_for_folio_uuid_gateway_url_takes_precedence_over_ecs():
     mapper.library_configuration.is_ecs = False
     mapper.library_configuration.ecs_tenant_id = "ecs_tenant_123"
     mapper.folio_client.gateway_url = "https://folio-gateway.example.com"
-    
+
     result = mapper.base_string_for_folio_uuid
     assert result == "https://folio-gateway.example.com"

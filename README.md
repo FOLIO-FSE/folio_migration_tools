@@ -4,7 +4,7 @@
 A toolkit that enables you to migrate data over from a legacy ILS system into [FOLIO LSP](https://www.folio.org/)
 
 # What is it good for?
-FOLIO Migration tools enables you to migrate libraries with the most common ILS:s over to FOLIO without data losses or any major data transformation tasks. 
+FOLIO Migration tools enables you to migrate libraries with the most common ILS:s over to FOLIO without data losses or any major data transformation tasks.
 The tools transforms and loads the data providing you and the library with good actionable logs and data cleaning task lists together with the migrated data.
 
 ## What data does it cover?
@@ -22,8 +22,8 @@ This is the loose roadmap, in order of most likely implementations first
 * Financial records
 
 ### Can I use the tools for ongoing imports and integrations?
-The tools are primarliy maintained for performing initial data migrations. We recommend that you use native FOLIO functionality for ongoing loads where possible. 
-In theory, these tools can be used for ongoing patron loads from systems like Banner, Workday, or PeopleSoft. But we recommend you to weigh your options carefully before going down this path. 
+The tools are primarliy maintained for performing initial data migrations. We recommend that you use native FOLIO functionality for ongoing loads where possible.
+In theory, these tools can be used for ongoing patron loads from systems like Banner, Workday, or PeopleSoft. But we recommend you to weigh your options carefully before going down this path.
 
 # Contributing
 Want to contribute? Read the [CONTRIBUTING.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CONTRIBUTING.md)
@@ -33,29 +33,29 @@ Report it on the [Github Issue tracker](https://github.com/FOLIO-FSE/folio_migra
 
 The scripts requires a FOLIO tenant with reference data properly set up. The script will throw messages telling what reference data is missing.
 # Installing
-Make sure you are running Python 3.10 or above. 
+Make sure you are running Python 3.10 or above.
 ## 1. Using [`uv`](https://docs.astral.sh/uv)
-### 2.1. Create and activate a [virtual environment](https://docs.astral.sh/uv/pip/environments/)   
-```   
-uv venv    # Creates a virtual env in the current folder
-source .venv/bin/activate  # Activates the venv    
+### 2.1. Create and activate a [virtual environment](https://docs.astral.sh/uv/pip/environments/)
 ```
-### 2. Install using pip: 
+uv venv    # Creates a virtual env in the current folder
+source .venv/bin/activate  # Activates the venv
+```
+### 2. Install using pip:
 ```
 uv pip install folio-migration-tools
 ```
-### 3. Test the installation by showing the help pages 
-```   
+### 3. Test the installation by showing the help pages
+```
 uv run folio-migration-tools -h
-```    
+```
 
 ## 2. Using pipenv
 ### 1. Run
-```   
+```
 pipenv install folio-migration-tools
-```   
+```
 ### 2. Test the installation by showing the help pages
-```  
+```
 pipenv run python3 -m folio_migration_tools -h
 ```
 
@@ -109,7 +109,7 @@ python scripts/extract_translations.py
 ## Internationalizations
 
 Other languages' translations live in `src/folio_migration_tools/translations/[locale].json`.
-For example, Spanish would be `es.json`. 
+For example, Spanish would be `es.json`.
 
 The keys must match the English keys, but the Values should be translated.
 
@@ -125,7 +125,7 @@ Translate all new strings, which begin with `TRANSLATE`, then commit.
 
 * Internationalize entire phrases or paragraphs, not just the constitutent words. Syntax and grammar vary significantly between languages.
 * Name template variables as generically as possible in the circumstance, and check translations for reusable translations.
-* In a block with sentences separately followed by values, such as a table, you only need to translate the sentences. 
+* In a block with sentences separately followed by values, such as a table, you only need to translate the sentences.
 
 # Running the scripts
 For information on syntax, what files are needed and produced by the toolkit, refer to the documentation and example files in the [template repository](https://github.com/FOLIO-FSE/migration_repo_template). We are building out the docs section in this repository as well:[Documentation](https://folio-migration-tools.readthedocs.io/en/latest/)

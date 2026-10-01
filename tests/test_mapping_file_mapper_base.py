@@ -6798,6 +6798,3 @@ def test_validate_hardcoded_note_type_values_holdings_note_type_id(mocked_folio_
         mapper._validate_hardcoded_note_type_values(note_types_by_name, ".holdingsNoteTypeId")
     assert "Invalid note type values found" in str(exc_info.value)
     assert "invalid-holdings-note" in str(exc_info.value)
-
-
-

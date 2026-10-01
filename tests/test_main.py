@@ -423,7 +423,7 @@ def test_authority_transformer_deprecation_warning(mock_prep_config):
     }
     mock_library_config = mock.MagicMock()
     mock_prep_config.return_value = (mock_config, mock_library_config)
-    
+
     with pytest.warns(DeprecationWarning, match="The AuthorityTransformer has been removed"):
         with pytest.raises(SystemExit) as exit_info:
             __main__.cli()

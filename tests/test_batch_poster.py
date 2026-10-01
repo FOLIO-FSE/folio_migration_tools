@@ -77,7 +77,7 @@ async def test_get_with_retry_successful():
     batch_poster.folio_client.folio_get_async = AsyncMock(return_value=mock_response_data)
     batch_poster.get_with_retry = Mock(wraps=BatchPoster.get_with_retry)
     batch_poster._semaphore = asyncio.Semaphore(10)
-    
+
     # Define test inputs
     query_api = "/instance-storage/instances"
     params = {"query": "id==(record1 OR record2)", "limit": 90}
@@ -226,7 +226,7 @@ async def test_set_version_preserve_status_false():
     batch_poster.keep_existing_fields = MethodType(
         BatchPoster.keep_existing_fields, batch_poster
     )
-    
+
     # Define test inputs
     batch = [{"id": "record1", "status": {"name": "Declared lost"}}, {"id": "record2", "status": {"name": "Unavailable"}}]
     query_api = "/instance-storage/instances"
@@ -518,7 +518,7 @@ async def test_set_version_preserve_administrative_notes_and_statistical_codes()
     # Define test inputs
     batch = [
         {
-            "id": "record1", "administrativeNotes": ["note2"], 
+            "id": "record1", "administrativeNotes": ["note2"],
             "statisticalCodeIds": ["code3", "code4"]
         },
         {"id": "record2"}
@@ -595,7 +595,7 @@ async def test_set_version_preserve_administrative_notes_and_statistical_codes_n
     # Define test inputs
     batch = [
         {
-            "id": "record1", "administrativeNotes": ["note2"], 
+            "id": "record1", "administrativeNotes": ["note2"],
             "statisticalCodeIds": ["code3", "code4"]
         },
         {"id": "record2"}
@@ -916,7 +916,7 @@ async def test_set_version_source_marc_instance_do_not_preserve_administrative_n
     assert batch[0]["statisticalCodeIds"] == [
         "code3",
         "code1",
-        "code2", 
+        "code2",
     ]
     assert "statisticalCodeIds" in batch[1]
     assert batch[1]["statisticalCodeIds"] == []

@@ -152,7 +152,7 @@ In ECS (Enhanced Consortial Support) environments, use `ShadowInstances` to crea
 ```
 
 ```{warning}
-ShadowInstances are for advanced ECS configurations. Consult FOLIO documentation on consortium data sharing before using this feature. While this does improve holding load performance, it will require an offline sync process against the mod_consortia.sharing_instances table to ensure future updates to the central instance propagate to the shadow instance. 
+ShadowInstances are for advanced ECS configurations. Consult FOLIO documentation on consortium data sharing before using this feature. While this does improve holding load performance, it will require an offline sync process against the mod_consortia.sharing_instances table to ensure future updates to the central instance propagate to the shadow instance.
 ```
 
 ## Source Files

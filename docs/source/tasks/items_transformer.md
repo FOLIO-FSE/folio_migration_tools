@@ -53,7 +53,7 @@ Transform delimited (CSV/TSV) data into FOLIO Item records with support for mate
 
 - **Location**: Place CSV/TSV files in `iterations/<iteration>/source_data/items/`
 - **Format**: Tab-separated (TSV) or comma-separated (CSV) with header row
-- **Prerequisites**: 
+- **Prerequisites**:
   - Run [BibsTransformer](bibs_transformer) to create `instance_id_map`
   - Run [HoldingsCsvTransformer](holdings_csv_transformer) or [HoldingsMarcTransformer](holdings_marc_transformer) to create `holdings_id_map`
 
@@ -285,10 +285,10 @@ WITH ITEM AS (
         bib.Z13_REC_KEY AS ITEM_BIB, item.ITEM_HOL ,
         ITEM.ENUM_A , ITEM.ENUM_B , ITEM.ENUM_C ,
         item.LKR_BIB
-    FROM ITEM LEFT JOIN xxx01.z103 
-        ON ITEM.ITM_ADM = SUBSTR(z103_rec_key,6,9) 
+    FROM ITEM LEFT JOIN xxx01.z103
+        ON ITEM.ITM_ADM = SUBSTR(z103_rec_key,6,9)
         AND SUBSTR(z103_rec_key,1,5) = 'XXX50'
-    LEFT JOIN xxx01.z13 BIB 
+    LEFT JOIN xxx01.z13 BIB
         ON SUBSTR(z103_rec_key_1,6.9) = z13_rec_key
 ), DATA AS (
     SELECT bib.*, hol.Z00R_DOC_NUMBER AS LKR_HOL, loc.Z00R_DOC_NUMBER LOC_HOL
@@ -318,18 +318,23 @@ from pathlib import Path
 relationship_file = Path("../iterations/iteration_1/source_data/items/raw_boundwith_data.tsv")
 
 # Create the initial lazyframe for the raw data
-boundwiths_df = pl.scan_csv(relationship_file, separator="\t", infer_schema=False, null_values=["", "[NULL]"])
+boundwiths_df = pl.scan_csv(
+    relationship_file, separator="\t", infer_schema=False, null_values=["", "[NULL]"]
+)
 
 # We need to capture all item->holdings relationships, so we will concatenate two sub-selections
 prepped_df = pl.concat(
     [
-        boundwiths_df.select(["ITEM_REC_KEY", "ITEM_HOL"]).rename({"ITEM_HOL": "LKR_HOL"}), boundwiths_df.select(["ITEM_REC_KEY", "LKR_HOL"])
+        boundwiths_df.select(["ITEM_REC_KEY", "ITEM_HOL"]).rename({"ITEM_HOL": "LKR_HOL"}),
+        boundwiths_df.select(["ITEM_REC_KEY", "LKR_HOL"]),
     ]
 )
 
 # Now, we need to export to a TSV file that can be included in the items transformer task configuration
 prepped_df.filter(
-    pl.col("LKR_HOL").is_not_null() # We can't link an item to a holdings record that doesn't exist
+    pl.col(
+        "LKR_HOL"
+    ).is_not_null()  # We can't link an item to a holdings record that doesn't exist
 ).unique().sink_csv(relationship_file.parent.joinpath("item_holdings_links.tsv", separator="\t"))
 ```
 

@@ -2,8 +2,8 @@
 In order to successfully migrate Inventory data into FOLIO, you will need to create (or account for) the following files in the {ref}`mapping_files <step-into-the-repo-and-create-the-example-folder-structure-py-running>` directory of your migration project.
 
 ## What file is needed for what objects?
-File\Process | Bibs->Instances | Holdings (from MARC/MFHD) | Holdings (from item tsv/csv) | Items  | Open Loans  | Users   
------------- | ------------- | ------------- | ------------- | ------------- | ------------- | -------------   
+File\Process | Bibs->Instances | Holdings (from MARC/MFHD) | Holdings (from item tsv/csv) | Items  | Open Loans  | Users
+------------ | ------------- | ------------- | ------------- | ------------- | ------------- | -------------
 marc-instance-mapping-rules.json  | yes | no | no | no |   no    |   no
 mfhd_rules.json  | no | yes | no | no |  no   |   no
 item_mapping.json  | no | no | no | yes |  no   |   no
@@ -45,12 +45,12 @@ To represent the legacy data field used to generate the deterministic UUID of th
 See [`item_mapping.json`](#-item_mappingjson), below.
 
 ### 📄 item_mapping.json
-This is a mapping file for the items. The process assumes you have the item data in a CSV/TSV format. 
+This is a mapping file for the items. The process assumes you have the item data in a CSV/TSV format.
 The structure of the file is dependant on the the column names in the TSV file. For example, if you have a file that looks like this:
-... | Z30_BARCODE | Z30_CALL_NO | Z30_DESCRIPTION |  ... 
+... | Z30_BARCODE | Z30_CALL_NO | Z30_DESCRIPTION |  ...
 ------------ | ------------- | ------------- | ------------- | -------------
  ... | 123456790 | Some call number | some note  | ...
- 
+
 
 
 Your map should look like this:
@@ -67,7 +67,7 @@ Your map should look like this:
     "legacy_field": "Z30_CALL_NO",
     "value":"",
     "description": ""
-}, 
+},
 {
     "folio_field": "notes[0].itemNoteTypeId",
     "legacy_field": "Z30_DESCRIPTION",
@@ -97,7 +97,7 @@ The resulting FOLIO Item would look like this:
 	"notes":[{
 			"staffOnly": false,
 			"note": "some note",
-			"itemNoteTypeId": "c7bc292c-a318-43d3-9b03-7a40dfba046a"			
+			"itemNoteTypeId": "c7bc292c-a318-43d3-9b03-7a40dfba046a"
 		}],
 	...
 }
@@ -111,45 +111,45 @@ Most reference data mapping fields (locations.tsv, material_types.tsv, locations
 
 ### 📄 locations.tsv
 These mappings allow for some complexity. These are the mappings of the legacy and FOLIO locations. The file must be structured like this:
- folio_code | legacy_code | Z30_COLLECTION 
+ folio_code | legacy_code | Z30_COLLECTION
 ------------ | ------------- | -------------
- AFA | AFAS | AFAS   
- AFA  |  * |  *    
- 
+ AFA | AFAS | AFAS
+ AFA  |  * |  *
+
 The legacy_code part is needed for both Holdings migratiom. For Item migration, the source fields can be used (Z30_COLLECTION in this case). You can add as many source fields as you like for the Items
 
 ### 📄 material_types.tsv
 These mappings allow for some complexity. The first column name is fixed, since that is the target material type in FOLIO. Then you add the column names from the Item export TSV. For each column added, the values in them must match. At least one value per column must match. Se loan_types.tsv for complex examples
- folio_name | Z30_MATERIAL 
------------- | ------------- 
+ folio_name | Z30_MATERIAL
+------------ | -------------
  Audiocassette | ACASS
  Audiocassette | *
 
 ### 📄 loan_types.tsv
 These mappings allow for some complexity. The first column name is fixed, since that is the target loan type in FOLIO. Then you add the column names from the Item export TSV. For each column added, the values in them must match. At least one value per column must match
 
- folio_name | Z30_SUB_LIBRARY | Z30_ITEM_STATUS 
+ folio_name | Z30_SUB_LIBRARY | Z30_ITEM_STATUS
 ------------ | ------------- | -------------
  Non-circulating | UMDUB | 02
- Non-circulating | * | *   
+ Non-circulating | * | *
 
 ### 📄 call_number_type_mapping.tsv
-These mappings allow for some complexity eventhough not needed. 
- folio_name | Z30_CALL_NO_TYPE 
+These mappings allow for some complexity eventhough not needed.
+ folio_name | Z30_CALL_NO_TYPE
 ------------ | -------------
 Dewey Decimal classification | 8
-Unmapped | *   
+Unmapped | *
 
 ### 📄 statcodes.tsv
 In order to map one statistical code to the FOLIO UUID, you need this map, and the field mapped in the item_mappings.json. These mappings allow for some complexity even though not needed. This mapping does not allow for default values. Any record without the field will not get one assigned.
- folio_code | legacy_stat_code 
+ folio_code | legacy_stat_code
 ------------ | -------------
 married_with_children | 8
 happily_ever_after | 9
 
-### 📄 item_statuses.tsv	
+### 📄 item_statuses.tsv
 The handling of Item statuses is a bit of a project of its own, since not all statuses in legacy systems will have their equivalents in FOLIO. This mapping allows you to point one legacy status to a FOLIO status. If not status map is supplied, the status will be set to available.
-legacy_code | folio_name 
+legacy_code | folio_name
 ------------ | -------------
 checked_out | Checked out
 available | Available
@@ -164,7 +164,7 @@ Optional mapping file for translating legacy item note type codes to FOLIO item 
 
 The file should be structured with `legacy_note_type` and `folio_name` columns:
 
-legacy_note_type | folio_name 
+legacy_note_type | folio_name
 ------------ | -------------
 LOCAL_NOTE | Local note
 INTERNAL_NOTE | Staff note
@@ -178,7 +178,7 @@ Optional mapping file for translating legacy holdings note type codes to FOLIO h
 
 The file should be structured with `legacy_note_type` and `folio_name` columns:
 
-legacy_note_type | folio_name 
+legacy_note_type | folio_name
 ------------ | -------------
 SUPPLEMENTAL_HOLDINGS | Binding information
 PRESERVATION_NOTE | Action note

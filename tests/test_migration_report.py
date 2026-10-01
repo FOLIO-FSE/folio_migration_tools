@@ -257,4 +257,3 @@ class TestAsStr:
         """Test as_str with None input."""
         result = as_str(None)
         assert result == ("None", "")
-

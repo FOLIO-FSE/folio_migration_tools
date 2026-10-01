@@ -141,7 +141,7 @@ class TestInactiveUserHandling:
     def test_create_request_with_inactive_user_retry_catches_inactive_user_error(self):
         m = self._make_migrator()
         legacy_request = DummyLegacyRequest(patron_barcode="P001")
-        
+
         # Mock the FolioValidationError response
         error_response = Mock()
         error_response.json.return_value = {
@@ -156,7 +156,7 @@ class TestInactiveUserHandling:
             fve,
             True,
         ]
-        
+
         # Mock the retry to succeed
         user_data = {
             "id": "user-123",
@@ -173,7 +173,7 @@ class TestInactiveUserHandling:
     def test_create_request_with_inactive_user_retry_returns_false_on_non_inactive_error(self):
         m = self._make_migrator()
         legacy_request = DummyLegacyRequest(patron_barcode="P001")
-        
+
         # circulation_helper.create_request catches FolioValidationError and returns False
         # so _create_request_with_inactive_user_retry just returns that False
         m.circulation_helper.create_request.return_value = False
@@ -206,7 +206,7 @@ class TestInactiveUserHandling:
     def test_full_inactive_user_flow_integration(self):
         m = self._make_migrator()
         legacy_request = DummyLegacyRequest(patron_barcode="P001")
-        
+
         # Mock user data
         user_data = {
             "id": "user-123",
@@ -216,10 +216,10 @@ class TestInactiveUserHandling:
         }
         m.folio_client.folio_get.return_value = [user_data]
         m.circulation_helper.create_request.return_value = True
-        
+
         # Call the retry method
         result = m._retry_request_for_inactive_user(legacy_request)
-        
+
         # Verify the flow
         assert result is True
         m.folio_client.folio_get.assert_called_once_with("/users", "users", query='barcode=="P001"')
@@ -252,16 +252,16 @@ class TestInactiveUserHandling:
             "barcode": "P001",
             "active": False,
         }
-        
+
         m.activate_user(user_data)
-        
+
         assert user_data["active"] is True
         m.folio_client.folio_put.assert_called_once()
 
     def test_request_creation_fails_after_reactivation(self):
         m = self._make_migrator()
         legacy_request = DummyLegacyRequest(patron_barcode="P001")
-        
+
         user_data = {
             "id": "user-123",
             "barcode": "P001",
@@ -270,9 +270,9 @@ class TestInactiveUserHandling:
         }
         m.folio_client.folio_get.return_value = [user_data]
         m.circulation_helper.create_request.return_value = False
-        
+
         result = m._retry_request_for_inactive_user(legacy_request)
-        
+
         assert result is False
         # User should still be deactivated even though request failed
         assert m.folio_client.folio_put.call_count == 2

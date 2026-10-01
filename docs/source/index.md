@@ -37,8 +37,8 @@ FOLIO Migration Tools currently covers the following data sets:
 
 
 ## Can I use the tools for ongoing imports and integrations?
-The tools are primarily maintained for performing initial data migrations. We recommend that you use native FOLIO functionality for ongoing loads where possible. 
-In theory, these tools can be used for ongoing patron loads from systems like Banner, Workday, or PeopleSoft. But we recommend you weigh your options carefully before going down this path. 
+The tools are primarily maintained for performing initial data migrations. We recommend that you use native FOLIO functionality for ongoing loads where possible.
+In theory, these tools can be used for ongoing patron loads from systems like Banner, Workday, or PeopleSoft. But we recommend you weigh your options carefully before going down this path.
 
 # Contributing
 Want to contribute? Read the [CONTRIBUTING.MD](https://github.com/FOLIO-FSE/folio_migration_tools/blob/main/CONTRIBUTING.md)
@@ -51,11 +51,11 @@ If you have come across an issue, reach out on our #fse_folio_migration_tools on
 There is a test suite for Bibs-to-Instance mapping. You need to add arguments in order to run it against a FOLIO environment. The tests are run against the latest [FOLIO Bugfest environment](https://wiki.folio.org/dosearchsite.action?cql=siteSearch%20~%20%22bugfest%22%20AND%20type%20in%20(%22space%22%2C%22user%22%2C%22com.atlassian.confluence.extra.team-calendars%3Acalendar-content-type%22%2C%22attachment%22%2C%22page%22%2C%22com.atlassian.confluence.extra.team-calendars%3Aspace-calendars-view-content-type%22%2C%22blogpost%22)&includeArchivedSpaces=false) as part of the commit process in this repo.
 
 IMPORTANT!
-the tests and the tools rely on many calls to GitHub, and you need to create a [GitHub personal Access token](https://github.com/settings/tokens) and add a .env file in the root of the folder with the following contents:   
-```GITHUB_TOKEN=ghp_.....```   
-Then, either restart your shell or run   
-```source .env```    
-from the command line 
+the tests and the tools rely on many calls to GitHub, and you need to create a [GitHub personal Access token](https://github.com/settings/tokens) and add a .env file in the root of the folder with the following contents:
+```GITHUB_TOKEN=ghp_.....```
+Then, either restart your shell or run
+```source .env```
+from the command line
 
 ## Running the tests for the Rules mapper
 ### Using uv
