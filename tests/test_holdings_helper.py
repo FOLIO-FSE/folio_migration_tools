@@ -342,7 +342,7 @@ def test_load_previously_generated_holdings_file_not_found():
 
     with pytest.raises(TransformationProcessError):
         HoldingsHelper.load_previously_generated_holdings(
-            Path("/nonexistent/path/to/file.json"),
+            [Path("/nonexistent/path/to/file.json")],
             ["instanceId"],
             MigrationReport(),
         )
@@ -364,7 +364,7 @@ def test_load_previously_generated_holdings_success(tmp_path, caplog):
 
     with caplog.at_level("INFO"):
         result = HoldingsHelper.load_previously_generated_holdings(
-            holdings_file,
+            [holdings_file],
             ["instanceId", "permanentLocation"],
             MigrationReport(),
             holdings_type_id_to_exclude_from_merging="test-exclude-id",
@@ -372,6 +372,106 @@ def test_load_previously_generated_holdings_success(tmp_path, caplog):
 
     assert "Holdings type id to exclude is set to test-exclude-id" in caplog.text
     assert result is not None
+
+
+def write_holdings_file(path, records: list[dict]):
+    import json
+
+    path.write_text("".join(f"{r['id']}\t{json.dumps(r)}\n" for r in records))
+    return path
+
+
+def test_load_previously_generated_holdings_records_merged_away_ids(tmp_path):
+    """A record merged into another one in the same file is recorded as merged away."""
+    holdings_file = write_holdings_file(
+        tmp_path / "holdings.json",
+        [
+            {"id": "A", "instanceId": "X", "permanentLocationId": "main", "formerIds": ["501"]},
+            {"id": "B", "instanceId": "X", "permanentLocationId": "main", "formerIds": ["502"]},
+        ],
+    )
+    merged_away_ids: dict[str, str] = {}
+
+    result = HoldingsHelper.load_previously_generated_holdings(
+        [holdings_file],
+        ["instanceId", "permanentLocationId"],
+        MigrationReport(),
+        merged_away_ids=merged_away_ids,
+    )
+
+    assert list(result) == ["X-main"]
+    assert result["X-main"]["id"] == "A"
+    assert result["X-main"]["formerIds"] == ["501", "502"]
+    assert merged_away_ids == {"B": "X-main"}
+
+
+def test_load_previously_generated_holdings_merges_across_files(tmp_path):
+    """Records sharing a key across files are merged into the first one, not replaced."""
+    statements = [{"statement": "v.1-2"}, {"statement": "v.3-4"}]
+    file_1 = write_holdings_file(
+        tmp_path / "holdings_mfhd.json",
+        [
+            {
+                "id": "A",
+                "instanceId": "X",
+                "permanentLocationId": "main",
+                "formerIds": ["501"],
+                "holdingsStatements": statements,
+            }
+        ],
+    )
+    file_2 = write_holdings_file(
+        tmp_path / "holdings_mfhd_2.json",
+        [
+            {
+                "id": "C",
+                "instanceId": "X",
+                "permanentLocationId": "main",
+                "formerIds": ["777"],
+                "holdingsStatements": [{"statement": "v.5"}],
+            }
+        ],
+    )
+    merged_away_ids: dict[str, str] = {}
+    migration_report = MigrationReport()
+
+    result = HoldingsHelper.load_previously_generated_holdings(
+        [file_1, file_2],
+        ["instanceId", "permanentLocationId"],
+        migration_report,
+        merged_away_ids=merged_away_ids,
+    )
+
+    assert list(result) == ["X-main"]
+    assert result["X-main"]["id"] == "A"
+    assert result["X-main"]["formerIds"] == ["501", "777"]
+    assert result["X-main"]["holdingsStatements"] == [*statements, {"statement": "v.5"}]
+    assert merged_away_ids == {"C": "X-main"}
+    assert (
+        migration_report.report["HoldingsMerging"][
+            "Duplicate key based on current merge criteria. Records merged"
+        ]
+        == 1
+    )
+
+
+def test_load_previously_generated_holdings_missing_second_file(tmp_path, caplog):
+    """A missing file is reported before any file is loaded."""
+    file_1 = write_holdings_file(
+        tmp_path / "holdings.json",
+        [{"id": "A", "instanceId": "X", "permanentLocationId": "main", "formerIds": ["501"]}],
+    )
+    migration_report = MigrationReport()
+
+    with caplog.at_level("INFO"), pytest.raises(TransformationProcessError):
+        HoldingsHelper.load_previously_generated_holdings(
+            [file_1, tmp_path / "missing.json"],
+            ["instanceId", "permanentLocationId"],
+            migration_report,
+        )
+
+    assert "Processing holdings.json" not in caplog.text
+    assert "HoldingsMerging" not in migration_report.report
 
 
 def test_to_key_with_exception(caplog):

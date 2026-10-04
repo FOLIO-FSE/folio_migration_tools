@@ -601,8 +601,8 @@ def test_apply_default_call_number_with_suffix():
     assert folio_rec["itemLevelCallNumberTypeId"] == "test-uuid-5678"
 
 
-def test_mapper_init_sets_bib_id_template():
-    """Test that ItemMapper correctly sets bib_id_template attribute."""
+def test_holdings_record_id_does_not_resolve_by_bib_id():
+    """Holdings resolve by their own legacy id only, never by a "Bib id: " formerIds entry."""
     mock_folio = mocked_classes.mocked_folio_client()
 
     lib = LibraryConfiguration(
@@ -631,7 +631,10 @@ def test_mapper_init_sets_bib_id_template():
         loan_type_map,
         location_map,
         None,
-        {"PREFIX:h1": ["PREFIX:h1", "holdings-uuid"]},
+        {
+            "h1": ["h1", "holdings-uuid"],
+            "Bib id: b1": ["Bib id: b1", "other-holdings-uuid"],
+        },
         None,
         None,
         None,
@@ -640,8 +643,9 @@ def test_mapper_init_sets_bib_id_template():
         mocked_config,
     )
 
-    # Default bib_id_template is "Bib id: "
-    assert mapper.bib_id_template == "Bib id: "
+    assert mapper.get_prop({"barcode": "h1"}, "holdingsRecordId", "h1", "") == "holdings-uuid"
+    with pytest.raises(TransformationRecordFailedError):
+        mapper.get_prop({"barcode": "b1"}, "holdingsRecordId", "b1", "")
 
 
 def test_get_prop_unmapped_returns_empty(mapper: ItemMapper):

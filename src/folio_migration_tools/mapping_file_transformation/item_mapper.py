@@ -323,8 +323,6 @@ class ItemMapper(MappingFileMapperBase):
         elif folio_prop_name == "holdingsRecordId":
             if mapped_value in self.holdings_id_map:
                 return self.holdings_id_map[mapped_value][1]
-            elif f"{self.bib_id_template}{mapped_value}" in self.holdings_id_map:
-                return self.holdings_id_map[f"{self.bib_id_template}{mapped_value}"][1]
             self.migration_report.add_general_statistics(
                 i18n_t("Records failed because of failed holdings"),
             )

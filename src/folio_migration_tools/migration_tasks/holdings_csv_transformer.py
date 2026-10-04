@@ -12,7 +12,7 @@ import logging
 import sys
 import time
 import traceback
-from typing import Annotated, List, Optional
+from typing import Annotated, Dict, List, Optional
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from httpx import HTTPError
@@ -248,7 +248,11 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             # Legacy id of each source row -> the self.holdings key of the record it owns.
             # Resolved to holdings UUIDs in populate_holdings_id_map. This is what ties an
             # item to a single holdings record of a boundwith set; see merge_holding_in.
-            self.legacy_id_to_holdings_key: dict[str, str] = {}
+            self.legacy_id_to_holdings_key: Dict[str, str] = {}
+            # UUID of each previously generated holdings record merged into another one while
+            # loading -> the self.holdings key of the record it was merged into. Used to
+            # re-point stale holdings_id_map entries in populate_holdings_id_map.
+            self.merged_away_holdings: Dict[str, str] = {}
             self.total_records = 0
             self.holdings_id_map = self.load_id_map(self.folder_structure.holdings_id_map_path)
             self.results_path = self.folder_structure.created_objects_path
@@ -278,17 +282,17 @@ class HoldingsCsvTransformer(MigrationTaskBase):
                 "%s will be used as default holdings type",
                 self.fallback_holdings_type["name"],
             )
-            if any(self.task_configuration.previously_generated_holdings_files):
-                for file_name in self.task_configuration.previously_generated_holdings_files:
-                    logger.info("Processing %s", file_name)
-                    self.holdings.update(
-                        HoldingsHelper.load_previously_generated_holdings(
-                            self.folder_structure.results_folder / file_name,
-                            self.task_configuration.holdings_merge_criteria,
-                            self.mapper.migration_report,
-                            self.task_configuration.holdings_type_uuid_for_boundwiths,
-                        )
-                    )
+            previous_files = [
+                f for f in self.task_configuration.previously_generated_holdings_files or [] if f
+            ]
+            if previous_files:
+                self.holdings = HoldingsHelper.load_previously_generated_holdings(
+                    [self.folder_structure.results_folder / f for f in previous_files],
+                    self.task_configuration.holdings_merge_criteria,
+                    self.mapper.migration_report,
+                    self.task_configuration.holdings_type_uuid_for_boundwiths,
+                    self.merged_away_holdings,
+                )
 
             else:
                 logger.info("No file of legacy holdings setup.")
@@ -417,17 +421,20 @@ class HoldingsCsvTransformer(MigrationTaskBase):
     def populate_holdings_id_map(self):
         """Map the legacy ids of this run onto the holdings records that ended up carrying them.
 
-        Any previously loaded entries for the same legacy ids are re-pointed, so that items
-        referencing holdings that were merged away in this run still resolve.
+        Previously loaded entries that point at a holdings record merged away while loading
+        the previously generated holdings are re-pointed to the record it was merged into.
+        Values in formerIds are never added to the map: holdings resolve by their own legacy
+        ids only.
         """
-        for holding in self.holdings.values():
-            for legacy_id in holding["formerIds"]:
-                # Catches legacy ids only reachable through the formerIds of a merged record:
-                # the legacy bib ids exploded out of a boundwith row, which items reference
-                # directly, and the ids of previously generated holdings absorbed into this
-                # record. The source rows below have the final say on the ids they own.
+        for legacy_id, entry in self.holdings_id_map.items():
+            if entry[1] in self.merged_away_holdings:
                 self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
-                    legacy_id, holding, self.object_type
+                    legacy_id,
+                    self.holdings[self.merged_away_holdings[entry[1]]],
+                    self.object_type,
+                )
+                self.mapper.migration_report.add_general_statistics(
+                    i18n_t("Holdings id map entries re-pointed to merged holdings")
                 )
         # The rows themselves decide which holdings record their items attach to. For a
         # boundwith set that is the first copy created from the row, not the last copy to be

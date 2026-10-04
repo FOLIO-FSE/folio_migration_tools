@@ -106,6 +106,14 @@ Create a JSON mapping file in `mapping_files/`:
 The `legacyIdentifier` field is required and must map to a unique value in your source data.
 ```
 
+`holdingsRecordId` must map to a legacy ID that is a key in `holdings_id_map`. For holdings from [HoldingsMarcTransformer](holdings_marc_transformer), that is the MFHD ID. For holdings from [HoldingsCsvTransformer](holdings_csv_transformer), it is the legacy ID of the source row the holdings record was created from. An item whose value isn't in the map fails with *Holdings id referenced in legacy item was not found amongst transformed Holdings records*.
+
+```{note}
+How `holdingsRecordId` resolves changed in version 1.12.11. Before that, HoldingsCsvTransformer added every value in a holdings record's `formerIds` to `holdings_id_map`, and ItemsTransformer also looked up `holdingsRecordId` with a `Bib id: ` prefix, matching the entry HoldingsMarcTransformer adds to `formerIds`. Together these let `holdingsRecordId` be mapped to a legacy bib ID. When a bib had more than one holdings record, the item went to whichever one was written last.
+
+If your item mapping file maps `holdingsRecordId` to a bib ID, map it to the holdings ID or the item's own legacy ID instead. A `holdings_id_map.json` written by an earlier version still contains the `formerIds` entries, because HoldingsCsvTransformer adds to the existing map rather than replacing it. Rebuild the map by following the steps in [Re-running](holdings_csv_transformer.md#re-running).
+```
+
 ### Reference Data Mapping Files
 
 Reference data mapping files connect values from your legacy data to FOLIO reference data. See [Reference Data Mapping](../reference_data_mapping) for detailed documentation on how these files work.
