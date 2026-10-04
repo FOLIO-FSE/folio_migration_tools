@@ -7,6 +7,8 @@ holdings notes management.
 
 import json
 import logging
+from pathlib import Path
+from typing import Dict, List
 from uuid import uuid4
 
 import i18n
@@ -21,8 +23,8 @@ logger = logging.getLogger(__name__)
 class HoldingsHelper:
     @staticmethod
     def to_key(
-        holdings_record: dict,
-        fields_criterias: list[str],
+        holdings_record: Dict,
+        fields_criterias: List[str],
         migration_report: MigrationReport,
         holdings_type_id_to_exclude_from_merging: str = "Not set",
     ) -> str:
@@ -72,51 +74,82 @@ class HoldingsHelper:
 
     @staticmethod
     def load_previously_generated_holdings(
-        holdings_file_path,
+        holdings_file_paths: List[Path],
         fields_criteria,
         migration_report: MigrationReport,
         holdings_type_id_to_exclude_from_merging: str = "Not set",
-    ):
-        if not holdings_file_path.is_file():
-            raise custom_exceptions.TransformationProcessError(
-                "", "File not found", holdings_file_path
-            )
+        merged_away_ids: dict[str, str] | None = None,
+    ) -> dict:
+        """Load previously generated holdings files into one dict keyed by merge key.
+
+        All files are loaded in a single pass, so records that share a merge key are merged
+        into the first one loaded, whether they come from the same file or different ones.
+
+        Args:
+            holdings_file_paths (list[Path]): The holdings files to load, in order.
+            fields_criteria: The merge criteria used to build the keys.
+            migration_report (MigrationReport): Report to help reporting merge
+            holdings_type_id_to_exclude_from_merging (str): the holdings type UUID to exclude
+            merged_away_ids (dict[str, str] | None): If given, filled with the UUID of each
+                record merged into another one -> the key of the record it was merged into.
+
+        Raises:
+            TransformationProcessError: If any of the files does not exist.
+
+        Returns:
+            dict: The loaded holdings, keyed by merge key.
+        """
+        for holdings_file_path in holdings_file_paths:
+            if not holdings_file_path.is_file():
+                raise custom_exceptions.TransformationProcessError(
+                    "", "File not found", holdings_file_path
+                )
         logger.info(
             "Holdings type id to exclude is set to %s",
             holdings_type_id_to_exclude_from_merging,
         )
-        with open(holdings_file_path) as holdings_file:
-            prev_holdings = {}
-            for row in holdings_file:
-                stored_holding = json.loads(row.split("\t")[-1])
-                stored_key = HoldingsHelper.to_key(
-                    stored_holding,
-                    fields_criteria,
-                    migration_report,
-                    holdings_type_id_to_exclude_from_merging,
-                )
-                if stored_key in prev_holdings:
-                    message = (
-                        f"Previously stored holdings key already exists in the list of previously"
-                        f" stored Holdings. You have likely not used the same matching criterias"
-                        f" ({fields_criteria}) as you did in the previous process"
+        prev_holdings: Dict = {}
+        for holdings_file_path in holdings_file_paths:
+            logger.info("Processing %s", holdings_file_path.name)
+            with open(holdings_file_path) as holdings_file:
+                for row in holdings_file:
+                    stored_holding = json.loads(row.split("\t")[-1])
+                    stored_key = HoldingsHelper.to_key(
+                        stored_holding,
+                        fields_criteria,
+                        migration_report,
+                        holdings_type_id_to_exclude_from_merging,
                     )
-                    helper.Helper.log_data_issue(stored_holding["formerIds"], message, stored_key)
-                    logging.warn(message)
-                    prev_holdings[stored_key] = HoldingsHelper.merge_holding(
-                        prev_holdings[stored_key], stored_holding
-                    )
-                    migration_report.add(
-                        "HoldingsMerging",
-                        i18n_t("Duplicate key based on current merge criteria. Records merged"),
-                    )
-                else:
-                    migration_report.add(
-                        "HoldingsMerging",
-                        i18n_t("Previously transformed holdings record loaded"),
-                    )
-                    prev_holdings[stored_key] = stored_holding
-            return prev_holdings
+                    if stored_key in prev_holdings:
+                        message = (
+                            f"Previously stored holdings key from {holdings_file_path.name}"
+                            f" already exists in the previously stored Holdings. Either the"
+                            f" files share holdings for the same key, or you have not used the"
+                            f" same matching criterias ({fields_criteria}) as you did in the"
+                            f" previous process. Records merged"
+                        )
+                        helper.Helper.log_data_issue(
+                            stored_holding["formerIds"], message, stored_key
+                        )
+                        logger.warning(message)
+                        if merged_away_ids is not None:
+                            merged_away_ids[stored_holding["id"]] = stored_key
+                        prev_holdings[stored_key] = HoldingsHelper.merge_holding(
+                            prev_holdings[stored_key], stored_holding
+                        )
+                        migration_report.add(
+                            "HoldingsMerging",
+                            i18n_t(
+                                "Duplicate key based on current merge criteria. Records merged"
+                            ),
+                        )
+                    else:
+                        migration_report.add(
+                            "HoldingsMerging",
+                            i18n_t("Previously transformed holdings record loaded"),
+                        )
+                        prev_holdings[stored_key] = stored_holding
+        return prev_holdings
 
     @staticmethod
     def merge_holding(holdings_record: dict, incoming_holdings: dict) -> dict:

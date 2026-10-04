@@ -112,6 +112,7 @@
   "Holdings HRID starting number": "Numéro de départ des HRID de fonds",
   "Holdings Records Written to disk": "Notices de fonds écrites sur le disque",
   "Holdings already created from Item": "Fonds déjà créés depuis l'exemplaire",
+  "Holdings id map entries re-pointed to merged holdings": "Entrées de la table des identifiants de fonds redirigées vers les fonds fusionnés",
   "Holdings lookups performed": "Recherches de fonds effectuées",
   "Holdings transformation report": "Rapport de transformation des fonds",
   "Hour and minute not specified for due date": "Heure et minute non précisées pour la date d'échéance",

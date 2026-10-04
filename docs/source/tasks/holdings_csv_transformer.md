@@ -117,6 +117,41 @@ Common configurations:
 | Group by location | `["instanceId", "permanentLocationId"]` | Holdings per location |
 | Group by location + call number | `["instanceId", "permanentLocationId", "callNumber"]` | Holdings per location + call number |
 
+## Holdings ID Map
+
+`holdings_id_map.json`, in `results/`, maps each legacy holdings ID to the UUID of the FOLIO holdings record created from it. [ItemsTransformer](items_transformer) uses it to resolve `holdingsRecordId` and Aleph boundwith links. It is the only record of which legacy ID became which holdings record, so the holdings tasks add to it rather than starting over.
+
+| Task | What it does with the map |
+|------|---------------------------|
+| [HoldingsMarcTransformer](holdings_marc_transformer) | Writes a new map, replacing any existing file |
+| HoldingsCsvTransformer | Loads the existing map, if there is one, adds its entries, and writes the whole map back |
+| [ItemsTransformer](items_transformer) | Reads the map |
+
+### What This Task Adds
+
+- An entry for each source row's legacy ID, pointing at the holdings record the row was merged into. For boundwith rows, it points at the first record of the set (see [Boundwith Handling](../boundwith_handling)).
+- Entries for previously generated records that were merged away while loading `previouslyGeneratedHoldingsFiles` are re-pointed to the surviving record.
+- Values in `formerIds` are not added. This changed in version 1.12.11 (see [ItemsTransformer](items_transformer.md#item-mapping-file)).
+
+A source row whose legacy ID is already in the map replaces the existing entry.
+
+### Order of Runs
+
+Run HoldingsMarcTransformer before any HoldingsCsvTransformer tasks. It replaces the map, so running it afterwards discards the entries the CSV tasks added. You can run several HoldingsCsvTransformer tasks one after another. Each one adds to the map.
+
+### Re-running
+
+Re-running this task with the same configuration and source data gives the same map. Because the task updates the map in place, entries from earlier runs are kept. After you change `holdingsMergeCriteria`, the mapping file, `previouslyGeneratedHoldingsFiles`, or the source data, those kept entries can be wrong:
+
+- Entries for rows that are no longer in the source data, or whose legacy ID changed, still point at holdings records that the new run doesn't produce.
+- Entries re-pointed to a merged record are not restored if the new criteria no longer merge the records.
+
+To start from a clean map:
+
+1. Re-run HoldingsMarcTransformer. If you have no MFHD run, delete `holdings_id_map.json` instead.
+2. Re-run each HoldingsCsvTransformer task, in the original order.
+3. Re-run ItemsTransformer.
+
 ## Output Files
 
 Files are created in `iterations/<iteration>/results/`:
@@ -124,7 +159,7 @@ Files are created in `iterations/<iteration>/results/`:
 | File | Description |
 |------|-------------|
 | `folio_holdings_<task_name>.json` | FOLIO Holdings records |
-| `holdings_id_map.json` | Legacy ID to FOLIO UUID mapping (used by ItemsTransformer) |
+| `holdings_id_map.json` | Legacy ID to FOLIO UUID mapping (used by ItemsTransformer). Updated in place; see [Holdings ID Map](#holdings-id-map) |
 | `extradata_<task_name>.extradata` | Extra data including boundwith parts (when applicable) |
 
 ## Examples
@@ -169,6 +204,8 @@ When you have both MFHD-derived holdings and need additional holdings from items
     ]
 }
 ```
+
+All files in `previouslyGeneratedHoldingsFiles` are loaded together, in the order listed. Previously generated records that share a key under `holdingsMergeCriteria`, whether from the same file or different ones, are merged into the first one loaded. See [Holdings ID Map](#holdings-id-map) for how `holdings_id_map.json` is updated.
 
 ### With Statistical Codes
 

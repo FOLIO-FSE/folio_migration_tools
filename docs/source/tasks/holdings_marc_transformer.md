@@ -129,7 +129,7 @@ Files are created in `iterations/<iteration>/results/`:
 | File | Description |
 |------|-------------|
 | `folio_holdings_<task_name>.json` | FOLIO Holdings records |
-| `holdings_id_map.json` | Legacy ID to FOLIO UUID mapping (used by ItemsTransformer) |
+| `holdings_id_map.json` | Legacy ID to FOLIO UUID mapping (used by ItemsTransformer). Replaces any existing map; see [Holdings ID Map](holdings_csv_transformer.md#holdings-id-map) |
 | `folio_srs_holdings_<task_name>.json` | SRS records (if `createSourceRecords: true`) |
 | `extradata_<task_name>.extradata` | Extra data generated during mapping (when applicable) |
 | `boundwith_relationships_map.json` | Boundwith relationship mappings, consumed by the ItemsTransformer (when processing boundwiths) |

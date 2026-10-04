@@ -48,6 +48,7 @@ def mocked_transformer() -> Mock:
     mock_transformer.holdings_id_map = {}
     mock_transformer.bound_with_keys = set()
     mock_transformer.legacy_id_to_holdings_key = {}
+    mock_transformer.merged_away_holdings = {}
     mock_transformer.fallback_holdings_type = {"id": "fallback_holdings_type_id"}
     mock_transformer.task_configuration = Mock()
     mock_transformer.task_configuration.holdings_type_uuid_for_boundwiths = "bw_holdings_type_id"
@@ -296,13 +297,46 @@ def test_id_map_for_two_items_in_the_same_boundwith_set():
     assert id_map["item_2"][1] == "holdings_uuid_for_item_1"
 
 
-def test_id_map_covers_legacy_ids_only_present_in_former_ids():
-    """Legacy bib ids exploded out of a boundwith row are referenced directly by items."""
+def test_id_map_ignores_legacy_ids_only_present_in_former_ids():
+    """Holdings resolve by the row's own legacy id, not by other values in formerIds."""
     mock_transformer = mocked_transformer()
     row = holdings_row("item_1", ["Instance_1"], formerIds=["item_1", "bib_1"])
 
     mock_transformer.post_process_holding(row, "item_1", FILE_DEF)
     mock_transformer.populate_holdings_id_map()
 
-    assert mock_transformer.holdings_id_map["bib_1"][1] == "holdings_uuid_for_item_1"
+    assert "bib_1" not in mock_transformer.holdings_id_map
     assert mock_transformer.holdings_id_map["item_1"][1] == "holdings_uuid_for_item_1"
+
+
+def test_id_map_former_ids_do_not_overwrite_preloaded_entries():
+    """A formerIds value matching a preloaded legacy id leaves that entry alone."""
+    mock_transformer = mocked_transformer()
+    mock_transformer.holdings_id_map = {"123": ("123", "mfhd_holdings_uuid")}
+    row = holdings_row("item_1", ["Instance_1"], formerIds=["item_1", "123"])
+
+    mock_transformer.post_process_holding(row, "item_1", FILE_DEF)
+    mock_transformer.populate_holdings_id_map()
+
+    assert mock_transformer.holdings_id_map["123"] == ("123", "mfhd_holdings_uuid")
+    assert mock_transformer.holdings_id_map["item_1"][1] == "holdings_uuid_for_item_1"
+
+
+def test_id_map_repoints_entries_for_merged_away_holdings():
+    """Preloaded entries for a holdings record merged away on load follow it to the survivor."""
+    mock_transformer = mocked_transformer()
+    mock_transformer.holdings = {
+        "X-main": {"id": "A", "instanceId": "X", "formerIds": ["501", "502"]}
+    }
+    mock_transformer.merged_away_holdings = {"B": "X-main"}
+    mock_transformer.holdings_id_map = {"501": ("501", "A"), "502": ("502", "B")}
+
+    mock_transformer.populate_holdings_id_map()
+
+    assert mock_transformer.holdings_id_map == {"501": ("501", "A"), "502": ("502", "A")}
+    assert (
+        mock_transformer.mapper.migration_report.report["GeneralStatistics"][
+            "Holdings id map entries re-pointed to merged holdings"
+        ]
+        == 1
+    )

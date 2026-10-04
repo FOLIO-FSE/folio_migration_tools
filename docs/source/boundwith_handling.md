@@ -342,7 +342,7 @@ Requirements for the item rows:
 * **A single-element list is not a boundwith.** It is unwrapped and treated as an ordinary one-instance holdings record.
 * Every bib ID must resolve in `instance_id_map`. Values beginning with `b` are also tried with a leading period (`b1000001` → `.b1000001`) to accommodate Sierra/III record-number conventions; if neither form is found, the record fails with *Bib id not in instance id map*.
 * Call numbers may be supplied as a positionally aligned list — see [Per-instance call numbers](#per-instance-call-numbers).
-* If the value mapped to `formerIds` is itself a stringified list, it is split into individual former IDs, so each legacy ID becomes a key in `holdings_id_map`.
+* If the value mapped to `formerIds` is itself a stringified list, it is split into individual former IDs on the holdings record.
 ```
 
 ### What happens during transformation
@@ -358,7 +358,7 @@ Requirements for the item rows:
    A later row producing the same key is merged into the existing boundwith holdings record — and still gets its own `boundwithPart` — rather than creating a duplicate. Rows whose boundwith set, location, or call number differ produce separate holdings records.
 4. The `holdings_id_map` entry for the source row points at the **first** record generated from it — the one that kept the UUID derived from the row's own legacy ID. A subsequent [ItemsTransformer](tasks/items_transformer) run therefore attaches the item to that record through `holdingsRecordId`, while the `boundwithPart` records tie it to every record in the set.
 
-   Every copy still carries the same former IDs, so a legacy ID that no source row owns — a legacy bib ID exploded out of `formerIds`, for instance — resolves to whichever record was written last. Only the ID of the row itself is guaranteed to resolve to the first copy.
+   Every copy still carries the same former IDs, but only the row's own legacy ID resolves to a holdings record. Other values in `formerIds`, such as legacy bib IDs, are not added to `holdings_id_map`, so an item whose `holdingsRecordId` is mapped to one of them fails with *Holdings id referenced in legacy item was not found amongst transformed Holdings records*. See [ItemsTransformer](tasks/items_transformer.md#item-mapping-file) for how this changed in version 1.12.11.
 
 ```{note}
 Which copy owns the item link changed in version 1.12.11, bringing this flavor in line with the other two: the item goes on the record that kept the legacy record's own UUID. Before that, the `holdings_id_map` entry was left pointing at whichever copy of the set was written last, so the instance an item appeared under depended on the order the bib IDs came out of the source row.
