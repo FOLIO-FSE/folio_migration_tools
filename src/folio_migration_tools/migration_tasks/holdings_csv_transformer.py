@@ -426,16 +426,17 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         Values in formerIds are never added to the map: holdings resolve by their own legacy
         ids only.
         """
-        for legacy_id, entry in self.holdings_id_map.items():
-            if entry[1] in self.merged_away_holdings:
-                self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
-                    legacy_id,
-                    self.holdings[self.merged_away_holdings[entry[1]]],
-                    self.object_type,
-                )
-                self.mapper.migration_report.add_general_statistics(
-                    i18n_t("Holdings id map entries re-pointed to merged holdings")
-                )
+        if self.merged_away_holdings:
+            for legacy_id, entry in self.holdings_id_map.items():
+                if entry[1] in self.merged_away_holdings:
+                    self.holdings_id_map[legacy_id] = self.mapper.get_id_map_tuple(
+                        legacy_id,
+                        self.holdings[self.merged_away_holdings[entry[1]]],
+                        self.object_type,
+                    )
+                    self.mapper.migration_report.add_general_statistics(
+                        i18n_t("Holdings id map entries re-pointed to merged holdings")
+                    )
         # The rows themselves decide which holdings record their items attach to. For a
         # boundwith set that is the first copy created from the row, not the last copy to be
         # merged into a bucket that happens to share the row's legacy id.
