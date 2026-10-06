@@ -1865,3 +1865,89 @@ def test_get_users_missing_keys():
     error = exc_info.value
     assert error.data_value == json.dumps({"col1": "val1", "col2": "val2"})
     assert "something is wrong source file row" in error.message
+
+
+def _map_active(mocked_folio_client, active_entry, legacy_active):
+    user_map = {
+        "data": [
+            {
+                "folio_field": "username",
+                "legacy_field": "user_name",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "externalSystemId",
+                "legacy_field": "ext_id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "legacyIdentifier",
+                "legacy_field": "id",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "personal.lastName",
+                "legacy_field": "",
+                "value": "Last name",
+                "description": "",
+            },
+            *([active_entry] if active_entry else []),
+        ]
+    }
+    legacy_user_record = {"user_name": "u1", "ext_id": "e1", "id": "1", "status": legacy_active}
+    mock_library_conf = mocked_classes.get_mocked_library_config()
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    mock_task_config.remove_id_and_request_preferences = False
+    mock_task_config.remove_request_preferences = False
+    mock_task_config.remove_username = False
+    mock_library_conf.multi_field_delimiter = "<delimiter>"
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
+    folio_user, index_or_id = user_mapper.do_map(legacy_user_record, "001", FOLIONamespaces.users)
+    return user_mapper.perform_additional_mapping(legacy_user_record, folio_user, index_or_id)
+
+
+def test_active_defaults_to_true_when_unmapped(mocked_folio_client):
+    assert _map_active(mocked_folio_client, None, "")["active"] is True
+
+
+@pytest.mark.parametrize(
+    "legacy_value,expected",
+    [("false", False), ("N", False), ("0", False), ("true", True), ("Yes", True), ("1", True)],
+)
+def test_active_direct_mapping_coerces_strings(mocked_folio_client, legacy_value, expected):
+    entry = {"folio_field": "active", "legacy_field": "status", "value": "", "description": ""}
+    assert _map_active(mocked_folio_client, entry, legacy_value)["active"] is expected
+
+
+def test_active_replace_values_to_boolean_strings(mocked_folio_client):
+    entry = {
+        "folio_field": "active",
+        "legacy_field": "status",
+        "value": "",
+        "description": "",
+        "rules": {"replaceValues": {"EXPIRED": "false", "CURRENT": "true"}},
+    }
+    assert _map_active(mocked_folio_client, entry, "EXPIRED")["active"] is False
+    assert _map_active(mocked_folio_client, entry, "CURRENT")["active"] is True
+
+
+def test_active_replace_values_to_json_booleans(mocked_folio_client):
+    entry = {
+        "folio_field": "active",
+        "legacy_field": "status",
+        "value": "",
+        "description": "",
+        "rules": {"replaceValues": {"EXPIRED": False}},
+    }
+    assert _map_active(mocked_folio_client, entry, "EXPIRED")["active"] is False
+
+
+def test_active_unrecognized_value_fails_record(mocked_folio_client):
+    entry = {"folio_field": "active", "legacy_field": "status", "value": "", "description": ""}
+    with pytest.raises(TransformationRecordFailedError):
+        _map_active(mocked_folio_client, entry, "maybe")

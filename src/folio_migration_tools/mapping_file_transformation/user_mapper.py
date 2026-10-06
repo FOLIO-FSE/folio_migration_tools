@@ -34,6 +34,9 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_TRUE_STRINGS = frozenset({"true", "t", "yes", "y", "1"})
+_FALSE_STRINGS = frozenset({"false", "f", "no", "n", "0"})
+
 
 class UserMapper(MappingFileMapperBase):
     task_config: "UserTransformer.TaskConfiguration"
@@ -110,7 +113,7 @@ class UserMapper(MappingFileMapperBase):
         if "personal" not in folio_user:
             folio_user["personal"] = {}
         folio_user["personal"]["preferredContactTypeId"] = "email"
-        folio_user["active"] = True
+        folio_user.setdefault("active", True)
         if folio_user.get("requestPreference"):
             folio_user["requestPreference"].update(
                 {
@@ -164,12 +167,34 @@ class UserMapper(MappingFileMapperBase):
                 )
             yield row
 
+    @staticmethod
+    def coerce_boolean(value, property_name: str, index_or_id):
+        """Convert a mapped string (e.g. from a replaceValues rule) to a bool.
+
+        Non-string values (already bool) and empty strings are returned unchanged.
+        """
+        if not isinstance(value, str) or not value.strip():
+            return value
+        normalized = value.strip().lower()
+        if normalized in _TRUE_STRINGS:
+            return True
+        if normalized in _FALSE_STRINGS:
+            return False
+        raise TransformationRecordFailedError(
+            index_or_id,
+            f"Could not interpret value as a boolean for {property_name}. "
+            f"Accepted values: {sorted(_TRUE_STRINGS | _FALSE_STRINGS)}. Value found: ",
+            value,
+        )
+
     def get_prop(self, legacy_user, folio_prop_name, index_or_id, schema_default_value):
         mapped_value = super().get_prop(
             legacy_user, folio_prop_name, index_or_id, schema_default_value
         )
         if folio_prop_name == "personal.addresses.id":
             return ""
+        elif folio_prop_name == "active":
+            return self.coerce_boolean(mapped_value, folio_prop_name, index_or_id)
         elif folio_prop_name == "patronGroup":
             if self.groups_mapping:
                 return self.get_mapped_name(
