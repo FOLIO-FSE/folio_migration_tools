@@ -9,9 +9,7 @@ import json
 import logging
 import sys
 import time
-import traceback
 from typing import Annotated, Dict
-from urllib.error import HTTPError
 
 import httpx
 import i18n
@@ -257,10 +255,11 @@ class ReservesMigrator(MigrationTaskBase):
                 logger.error(json.dumps(data_dict))
                 resp.raise_for_status()
             return True
-        except HTTPError as exception:
-            logger.exception(f"{resp.status_code}. {verb} FAILED for {url}")
-            traceback.print_exc()
-            logger.info(exception)
+        except httpx.HTTPStatusError as exception:
+            logger.exception(f"{exception.response.status_code}. {verb} FAILED for {url}")
+            return False
+        except httpx.RequestError:
+            logger.exception(f"{verb} FAILED for {url}")
             return False
 
 
