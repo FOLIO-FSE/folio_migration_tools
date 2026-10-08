@@ -1,4 +1,20 @@
 # Changelog
+## v1.13.0 (08/09/2026)
+
+### What's Changed
+* New feature: Capture bib-level 773/774 relationship data for later analysis by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1047
+* Fix: Translate MARC-8 escape sequences left by forced UTF-8 decoding by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1048
+* Fix: Fix i18n gaps in migration reports and add translation consistency checks by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1049
+* Modernize pre-commit, type checking and contributor docs by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1050
+* Fix: Honor a mapped active value on users and coerce boolean strings by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1051
+* Fix/docs: Fix boundwith holdings copies and centralize boundwith documentation by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1052
+* Fix: Resolve holdings only by their own legacy IDs in holdings_id_map, plus docs and config fixes by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1053
+
+```{warning}
+Any in-process inventory transformations should be re-run after upgrading to v1.13.0.
+```
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.12.10...v1.13.0
 
 ## v1.12.10 (11/09/2026)
 
