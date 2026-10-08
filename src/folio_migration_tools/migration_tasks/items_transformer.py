@@ -337,7 +337,8 @@ class ItemsTransformer(MigrationTaskBase):
             statcode_mapping,
             self.load_ref_data_mapping_file(
                 "status.name",
-                self.folder_structure.item_statuses_map_path,
+                self.folder_structure.mapping_files_folder
+                / self.task_config.item_statuses_map_file_name,
                 self.folio_keys,
                 False,
             ),
