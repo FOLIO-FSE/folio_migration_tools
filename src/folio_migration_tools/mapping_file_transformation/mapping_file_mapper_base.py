@@ -47,6 +47,7 @@ def _boolean_tokens(env_var: str, defaults) -> frozenset:
         return frozenset(defaults)
     return frozenset(t.strip().lower() for t in raw.split(",") if t.strip())
 
+
 # Sentinel used to distinguish "no replaceValues rule matched" from a rule that
 # intentionally maps a value to a falsy replacement (e.g. "").
 _REPLACE_VALUE_MISSING = object()
