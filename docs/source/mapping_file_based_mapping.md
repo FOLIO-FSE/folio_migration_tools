@@ -317,6 +317,22 @@ in the legacy data (like *N/A* or *0*) without having to preprocess the source d
 
 If STATUS is *N/A*, the resulting value will be an empty string, not the original *N/A*.
 
+## Boolean properties
+
+When a mapping targets a boolean-typed FOLIO property (including properties inside nested objects and array items), a mapped string is converted to a real boolean. This applies to values from the legacy data, from `value`, and from `rules.replaceValues`.
+
+* Values interpreted as `true`: `true`, `t`, `yes`, `y`, `1`
+* Values interpreted as `false`: `false`, `f`, `no`, `n`, `0`
+
+Matching is case-insensitive and ignores surrounding whitespace. Empty values are treated as unmapped. Any other value fails the record with an error naming the property and the value found.
+
+To change the accepted values, set the `FOLIO_BOOLEAN_TRUE_TOKENS` and/or `FOLIO_BOOLEAN_FALSE_TOKENS` environment variables to comma-separated lists. A list replaces the defaults for that side rather than adding to them.
+
+```bash
+export FOLIO_BOOLEAN_TRUE_TOKENS="active,current"
+export FOLIO_BOOLEAN_FALSE_TOKENS="inactive,expired"
+```
+
 ## Validation of Hardcoded Note Type Values
 
 When mapping item or holdings note types (`itemNoteTypeId` or `holdingsNoteTypeId` fields), any hardcoded values specified in the `value` or `fallback_value` properties are validated at mapper initialization. This ensures that mapping files are correct before data transformation begins.
