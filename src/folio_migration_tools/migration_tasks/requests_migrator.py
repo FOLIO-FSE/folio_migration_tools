@@ -4,7 +4,6 @@ Migrates patron requests from legacy ILS to FOLIO. Validates patron and item
 barcodes, handles request types and statuses, and maintains request dates.
 """
 
-import asyncio
 import csv
 import json
 import logging
@@ -15,22 +14,23 @@ from datetime import datetime, timedelta
 from typing import Annotated, Optional
 from zoneinfo import ZoneInfo
 
-import folioclient
 import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioValidationError
 from pydantic import Field
 
 from folio_migration_tools.circulation_helper import CirculationHelper
+from folio_migration_tools.circulation_prevalidation import (
+    load_patron_identifiers,
+    validate_item_barcodes,
+    validate_patron_barcodes,
+)
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
-)
-from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
-    get_from_path,
 )
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
@@ -152,33 +152,7 @@ class RequestsMigrator(MigrationTaskBase):
             logger.info('Tenant locale settings not available. Using "UTC".')
             self.tenant_timezone_str = "UTC"
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
-        other_circulation_settings_endpoint = (
-            "/configurations/entries?query=(module==CHECKOUT%20and%20configName==other_settings)"
-        )
-        default_patron_identifiers = ["barcode"]
-        try:
-            other_circulation_settings = (
-                self.folio_client.folio_get_single_object(other_circulation_settings_endpoint)
-                or {}
-            )
-            settings_value = other_circulation_settings.get("configs", [{}])[0].get("value", "{}")
-            parsed_settings = json.loads(settings_value)
-            patron_identifier_config = parsed_settings.get(
-                "prefPatronIdentifier", default_patron_identifiers
-            )
-            self.patron_identifiers = self._normalize_identifier_fields(patron_identifier_config)
-            if not self.patron_identifiers:
-                self.patron_identifiers = default_patron_identifiers
-            logger.info(
-                "Patron lookup identifiers available for this tenant: %s",
-                ", ".join(self.patron_identifiers),
-            )
-        except (ValueError, KeyError, TypeError, IndexError, folioclient.FolioClientError) as e:
-            if hasattr(e, "response"):
-                logger.exception("Error retrieving circulation settings: %s", e.response.text)
-            else:
-                logger.exception("Error retrieving circulation settings: %s", str(e))
-            self.patron_identifiers = default_patron_identifiers
+        self.patron_identifiers = load_patron_identifiers(self.folio_client)
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.open_requests_file.file_name,
@@ -200,59 +174,6 @@ class RequestsMigrator(MigrationTaskBase):
         self.failed_requests = set()
         logger.info("Starting row is %s", task_configuration.starting_row)
         logger.info("Init completed")
-
-    @staticmethod
-    def _normalize_identifier_fields(identifier_config: object) -> list[str]:
-        if isinstance(identifier_config, str):
-            return [p.strip() for p in identifier_config.split(",") if p and p.strip()]
-        if isinstance(identifier_config, list):
-            normalized = []
-            for val in identifier_config:
-                normalized.extend(RequestsMigrator._normalize_identifier_fields(val))
-            return normalized
-        if isinstance(identifier_config, dict):
-            normalized = []
-            for val in identifier_config.values():
-                normalized.extend(RequestsMigrator._normalize_identifier_fields(val))
-            return normalized
-        return []
-
-    @staticmethod
-    def _flatten_identifier_values(value: object) -> list[str]:
-        if value is None:
-            return []
-        if isinstance(value, (str, int, float, bool)):
-            text = str(value).strip()
-            return [text] if text else []
-        if isinstance(value, list):
-            flattened = []
-            for val in value:
-                flattened.extend(RequestsMigrator._flatten_identifier_values(val))
-            return flattened
-        if isinstance(value, dict):
-            flattened = []
-            for key in ["barcode", "value", "id", "identifier", "externalSystemId"]:
-                if key in value:
-                    flattened.extend(RequestsMigrator._flatten_identifier_values(value[key]))
-            if flattened:
-                return flattened
-            for nested in value.values():
-                flattened.extend(RequestsMigrator._flatten_identifier_values(nested))
-            return flattened
-        return []
-
-    def _get_patron_lookup_value(self, patron: dict, original_barcode: str) -> str | None:
-        candidate_paths = ["barcode", *self.patron_identifiers]
-        for path in candidate_paths:
-            value = get_from_path(patron, path, None)
-            if value is None and path in patron:
-                value = patron.get(path)
-            values = self._flatten_identifier_values(value)
-            if values:
-                if original_barcode in values:
-                    return original_barcode
-                return values[0]
-        return None
 
     async def _pre_validate_barcodes(self):
         if self.task_configuration.skip_barcode_prevalidation:
@@ -502,82 +423,11 @@ class RequestsMigrator(MigrationTaskBase):
             for request in self.semi_valid_legacy_requests
             if request.patron_barcode
         }
-        logger.info("Pre-validating %s unique patron barcodes (async)", len(request_barcodes))
-        semaphore = asyncio.Semaphore(max_concurrent)
-        self.valid_patron_map = {}
-        counter = 0
-        num_invalid = 0
-
-        async def check_one(barcode: str):
-            nonlocal num_invalid
-            nonlocal counter
-            query = " OR ".join(f"{field.strip()}=={barcode}" for field in self.patron_identifiers)
-            async with semaphore:
-                try:
-                    fetch_patron = await self.folio_client.folio_get_async(
-                        "/users", key="users", query=query
-                    )
-                except Exception as e:
-                    if hasattr(e, "response"):
-                        logger.exception(
-                            "Error fetching patron for barcode %s: %s", barcode, e.response.text
-                        )
-                    else:
-                        logger.exception(
-                            "Error fetching patron for barcode %s: %s",
-                            barcode,
-                            str(e),
-                        )
-                    fetch_patron = []
-                counter += 1
-            if not fetch_patron:
-                logger.warning("No patron found for barcode: %s", barcode)
-                Helper.log_data_issue_failed(
-                    "",
-                    "No patron found for barcode",
-                    f"Barcode: {barcode}",
-                )
-                num_invalid += 1
-            elif len(fetch_patron) > 1:
-                logger.warning("Multiple patrons found for barcode: %s", barcode)
-                Helper.log_data_issue_failed(
-                    "",
-                    "Multiple patrons found for barcode",
-                    f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
-                )
-                num_invalid += 1
-            else:
-                patron_lookup_value = self._get_patron_lookup_value(fetch_patron[0], barcode)
-                if patron_lookup_value:
-                    self.valid_patron_map[barcode] = patron_lookup_value
-                else:
-                    logger.warning(
-                        "Patron exists but has no lookupable identifier value: %s",
-                        barcode,
-                    )
-                    Helper.log_data_issue(
-                        "",
-                        "Fetched patron has no lookupable identifier value",
-                        f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
-                    )
-                    num_invalid += 1
-            if counter % 100 == 0:
-                logger.info(
-                    "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
-                    counter,
-                    len(request_barcodes),
-                    len(self.valid_patron_map),
-                    num_invalid,
-                )
-
-        tasks = [check_one(bc) for bc in request_barcodes]
-        await asyncio.gather(*tasks)
-        logger.info(
-            "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
-            counter,
-            len(request_barcodes),
-            len(self.valid_patron_map),
-            num_invalid,
+        self.valid_patron_map = await validate_patron_barcodes(
+            self.folio_client,
+            request_barcodes,
+            self.patron_identifiers,
+            max_concurrent=max_concurrent,
         )
 
     def pre_validate_item_barcodes(self, batch_size: int = 1000):
@@ -586,45 +436,9 @@ class RequestsMigrator(MigrationTaskBase):
             for request in self.semi_valid_legacy_requests
             if request.item_barcode
         }
-        logger.info("Pre-validating item barcodes for %s unique barcodes", len(request_barcodes))
-        logger.info(
-            "Fetching items matching request barcodes via /item-storage/items/retrieve endpoint..."
+        self.valid_item_barcodes = validate_item_barcodes(
+            self.folio_client, request_barcodes, batch_size
         )
-        fetch_items = []
-        barcode_list = list(request_barcodes)
-        for i in range(0, len(barcode_list), batch_size):
-            batch = barcode_list[i : i + batch_size]
-            try:
-                response = self.folio_client.folio_post(  # type: ignore[misc]
-                    "/item-storage/items/retrieve",
-                    {
-                        "query": " OR ".join([f'barcode=="{barcode}"' for barcode in batch]),
-                        "limit": len(batch),
-                    },
-                )
-                if not isinstance(response, dict):
-                    response = {}
-                fetch_items.extend(response.get("items", []))
-            except folioclient.FolioClientError as e:
-                logger.exception(
-                    "Error fetching items batch %s: %s", i // batch_size + 1, e.response.text
-                )
-            logger.info(
-                "Batch %s/%s: fetched %s items",
-                i // batch_size + 1,
-                (len(barcode_list) + batch_size - 1) // batch_size,
-                len(fetch_items),
-            )
-        logger.info("Fetched %s items matching request barcodes", len(fetch_items))
-        self.valid_item_barcodes = {item["barcode"] for item in fetch_items if "barcode" in item}
-        missing_item_barcodes = request_barcodes - self.valid_item_barcodes
-        for barcode in missing_item_barcodes:
-            logger.warning("No item found for barcode: %s", barcode)
-            Helper.log_data_issue_failed(
-                "",
-                "No item found for barcode",
-                f"Barcode: {barcode}",
-            )
 
     async def check_barcodes(self) -> AsyncGenerator[LegacyRequest, None]:
         self.pre_validate_item_barcodes()
