@@ -9,6 +9,7 @@ import csv
 import itertools
 import json
 import logging
+import os
 import re
 import uuid
 from functools import reduce
@@ -35,6 +36,16 @@ logger = logging.getLogger(__name__)
 
 
 empty_vals = ["Not mapped", None, ""]
+
+_DEFAULT_TRUE_TOKENS = ("true", "t", "yes", "y", "1")
+_DEFAULT_FALSE_TOKENS = ("false", "f", "no", "n", "0")
+
+
+def _boolean_tokens(env_var: str, defaults) -> frozenset:
+    raw = os.environ.get(env_var)
+    if raw is None or not raw.strip():
+        return frozenset(defaults)
+    return frozenset(t.strip().lower() for t in raw.split(",") if t.strip())
 
 # Sentinel used to distinguish "no replaceValues rule matched" from a rule that
 # intentionally maps a value to a falsy replacement (e.g. "").
@@ -571,6 +582,37 @@ class MappingFileMapperBase(MapperBase):
                 result_list.append(val)
         return result_list
 
+    @staticmethod
+    def is_boolean_schema_property(schema_property) -> bool:
+        schema_type = schema_property.get("type", "")
+        if isinstance(schema_type, list):
+            return "boolean" in schema_type
+        return schema_type == "boolean"
+
+    @staticmethod
+    def coerce_boolean(value, property_name: str, index_or_id):
+        """Convert a mapped string (e.g. from a replaceValues rule) to a bool.
+
+        Non-string values (already bool) and empty strings are returned unchanged.
+        Accepted tokens can be overridden with the FOLIO_BOOLEAN_TRUE_TOKENS and
+        FOLIO_BOOLEAN_FALSE_TOKENS environment variables (comma-separated).
+        """
+        if not isinstance(value, str) or not value.strip():
+            return value
+        true_tokens = _boolean_tokens("FOLIO_BOOLEAN_TRUE_TOKENS", _DEFAULT_TRUE_TOKENS)
+        false_tokens = _boolean_tokens("FOLIO_BOOLEAN_FALSE_TOKENS", _DEFAULT_FALSE_TOKENS)
+        normalized = value.strip().lower()
+        if normalized in true_tokens:
+            return True
+        if normalized in false_tokens:
+            return False
+        raise TransformationRecordFailedError(
+            index_or_id,
+            f"Could not interpret value as a boolean for {property_name}. "
+            f"Accepted values: {sorted(true_tokens | false_tokens)}. Value found: ",
+            value,
+        )
+
     def map_object_props(
         self,
         legacy_object,
@@ -634,10 +676,14 @@ class MappingFileMapperBase(MapperBase):
                 ):
                     set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
                 # temp_object[child_property_name] = p
-            elif p := self.get_prop(
-                legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
-            ):
-                set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
+            else:
+                p = self.get_prop(
+                    legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
+                )
+                if self.is_boolean_schema_property(child_property):
+                    p = self.coerce_boolean(p, sub_prop_path, index_or_id)
+                if p or isinstance(p, bool):
+                    set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
         if temp_object:
             set_deep(folio_object, schema_property_name, temp_object)
             # folio_object[schema_property_name] = temp_object
@@ -690,6 +736,8 @@ class MappingFileMapperBase(MapperBase):
                         self.report_legacy_mapping(
                             self.legacy_basic_property(prop_path), True, True
                         )
+                        if self.is_boolean_schema_property(sub_prop):
+                            res = self.coerce_boolean(res, prop_path, index_or_id)
 
                         if (
                             isinstance(res, str)
@@ -831,6 +879,8 @@ class MappingFileMapperBase(MapperBase):
             mapped_prop = self.get_prop(
                 legacy_object, property_name, index_or_id, schema_property.get("default", "")
             )
+            if self.is_boolean_schema_property(schema_property):
+                mapped_prop = self.coerce_boolean(mapped_prop, property_name, index_or_id)
             # Implementation note: a property resolved to "" (e.g. via a replaceValues rule
             # that intentionally clears a value) is not written to the output record here.
             # get_prop() can't distinguish "a rule cleared it" from "nothing was mapped",
