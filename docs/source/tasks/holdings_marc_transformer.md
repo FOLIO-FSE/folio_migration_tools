@@ -38,24 +38,28 @@ Transform MARC Holdings (MFHD) records into FOLIO Holdings records with support 
 | `migrationTaskType` | string | Yes | Must be `"HoldingsMarcTransformer"` |
 | `legacyIdMarcPath` | string | Yes | MARC field (with optional subfield) containing legacy holdings ID. Examples: `"001"`, `"951$c"` |
 | `locationMapFileName` | string | Yes | TSV file mapping legacy locations to FOLIO location codes |
-| `defaultCallNumberTypeName` | string | Yes | FOLIO call number type name for fallback |
-| `fallbackHoldingsTypeId` | string | Yes | UUID of fallback holdings type |
+| `defaultCallNumberTypeName` | string | Yes | FOLIO call number type name used when the mapping rules don't produce a call number type |
+| `fallbackHoldingsTypeId` | string | Yes | UUID of the holdings type used when the leader (LDR/06) doesn't match a FOLIO holdings type |
 | `hridHandling` | string | No | `"default"` or `"preserve001"`. Default: `"default"` |
 | `createSourceRecords` | boolean | No | Create SRS records for holdings. Default: `false` |
-| `mfhdMappingFileName` | string | No | Custom MFHD rules file (replaces tenant rules) |
 | `supplementalMfhdMappingRulesFile` | string | No | Additional mapping rules to merge with tenant rules |
 | `boundwithRelationshipFilePath` | string | No | TSV file with bib-to-MFHD relationships for boundwiths. See [Boundwith Handling](../boundwith_handling) |
 | `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith holdings. Required if `boundwithRelationshipFilePath` is set |
-| `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
-| `holdingsTypeMapFileName` | string | No | TSV file mapping holdings types |
-| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
-| `includeMrkStatements` | boolean | No | Preserve original holdings statements as MRK in notes |
-| `mrkHoldingsNoteType` | string | No | Note type name for MRK statements |
-| `includeMfhdMrkAsNote` | boolean | No | Preserve entire MFHD as MRK in notes |
-| `mfhdMrkNoteType` | string | No | Note type name for full MFHD MRK |
-| `includeMfhdMrcAsNote` | boolean | No | Preserve entire MFHD as MARC21 in notes |
-| `mfhdMrcNoteType` | string | No | Note type name for full MFHD MARC21 |
-| `files` | array | Yes | List of MFHD files to process |
+| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes. See [Statistical Codes](../statistical_codes) |
+| `statisticalCodeMappingFields` | array | No | MARC fields and subfields to map statistical codes from, `$`-delimited (e.g. `"907$a"`). Default: `[]` |
+| `deduplicateHoldingsStatements` | boolean | No | Remove duplicate holdings statements within a record. Default: `true` |
+| `deactivate035From001` | boolean | No | Don't move the existing 001 into a 035 (prefixed with 003). Default: `false` |
+| `updateHridSettings` | boolean | No | Update the FOLIO HRID settings at the end of the run. Default: `true` |
+| `resetHridSettings` | boolean | No | Reset the holdings HRID counter at the start of the run. Only applies when `updateHridSettings` is `true`. Default: `false` |
+| `marcRecordPreprocessors` | array | No | Ordered list of MARC preprocessors. See [MARC Record Preprocessors](#marc-record-preprocessors) |
+| `preprocessorsArgs` | object or string | No | Preprocessor arguments. See [MARC Record Preprocessors](#marc-record-preprocessors) |
+| `includeMrkStatements` | boolean | No | Preserve original holdings statements as MRK in notes. Default: `false` |
+| `mrkHoldingsNoteType` | string | No | Note type name for MRK statements. Default: `"Original MARC holdings statements"` |
+| `includeMfhdMrkAsNote` | boolean | No | Preserve entire MFHD as MRK in notes. Default: `false` |
+| `mfhdMrkNoteType` | string | No | Note type name for full MFHD MRK. Default: `"Original MFHD Record"` |
+| `includeMfhdMrcAsNote` | boolean | No | Preserve entire MFHD as MARC21 in notes. Default: `false` |
+| `mfhdMrcNoteType` | string | No | Note type name for full MFHD MARC21. Default: `"Original MFHD (MARC21)"` |
+| `files` | array | Yes | List of MFHD files to process. See [Configuration Files](../configuration_files.md#migrationtasks) for the file keys |
 
 ## MARC Record Preprocessors
 
@@ -100,6 +104,9 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | Mapping File | FOLIO Column | Maps To |
 |--------------|--------------|---------|
 | `locationMapFileName` | `folio_code` | Location code |
+| `statisticalCodesMapFileName` | `folio_code` | Statistical code |
+
+There are no holdings type or call number type mapping files for MARC holdings. The holdings type comes from the leader (LDR/06), falling back to `fallbackHoldingsTypeId`. The call number type comes from the mapping rules, falling back to `defaultCallNumberTypeName`.
 
 For MARC-based holdings, the legacy location values are extracted from the MFHD record according to the mapping rules (typically from 852$b or similar). Use the column name `legacy_code` for the legacy values when mapping from MARC data.
 

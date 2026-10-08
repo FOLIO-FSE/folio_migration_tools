@@ -14,11 +14,14 @@ Transform delimited (CSV/TSV) data into FOLIO Item records with support for mate
 {
     "name": "transform_items",
     "migrationTaskType": "ItemsTransformer",
+    "hridHandling": "default",
     "itemsMappingFileName": "item_mapping.json",
     "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
     "itemStatusesMapFileName": "item_statuses.tsv",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "files": [
         {
             "file_name": "items.tsv"
@@ -33,19 +36,23 @@ Transform delimited (CSV/TSV) data into FOLIO Item records with support for mate
 |-----------|------|----------|-------------|
 | `name` | string | Yes | The name of this task. |
 | `migrationTaskType` | string | Yes | Must be `"ItemsTransformer"` |
+| `hridHandling` | string | Yes | Not used by this task, but must be set. Use `"default"` |
 | `itemsMappingFileName` | string | Yes | JSON mapping file for item fields |
 | `locationMapFileName` | string | Yes | TSV file mapping legacy locations to FOLIO codes |
+| `defaultCallNumberTypeName` | string | Yes | FOLIO call number type name applied to items with call number parts but no type. Only used when no call number type map is loaded |
 | `materialTypesMapFileName` | string | Yes | TSV file mapping material types |
 | `loanTypesMapFileName` | string | Yes | TSV file mapping loan types |
-| `itemStatusesMapFileName` | string | No | TSV file mapping item statuses |
+| `itemStatusesMapFileName` | string | Yes | TSV file mapping item statuses. If the file doesn't exist, every item gets the status `Available` |
 | `tempLocationMapFileName` | string | No | TSV file for temporary location mapping |
 | `tempLoanTypesMapFileName` | string | No | TSV file for temporary loan type mapping |
-| `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
-| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
-| `damagedStatusMapFileName` | string | No | TSV file mapping damaged statuses |
+| `callNumberTypeMapFileName` | string | Yes | TSV file mapping call number types. Skipped if the file doesn't exist |
+| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes. Loaded when the mapping file maps `statisticalCodeIds` or a file definition sets `statisticalCode` |
+| `itemNoteTypeMapFileName` | string | No | TSV file mapping legacy note types (`legacy_note_type`) to FOLIO note type names (`folio_name`) |
 | `preventPermanentLocationMapDefault` | boolean | No | If `true`, don't use fallback for permanent location mapping |
 | `boundwithFlavor` | string | No | Shape of the legacy boundwith data. Supported: `"voyager"` (default), `"aleph"`. See [Boundwith Handling](../boundwith_handling) |
 | `boundwithRelationshipFilePath` | string | No | Enables boundwith part creation. See [Boundwith Handling](../boundwith_handling) |
+| `updateHridSettings` | boolean | No | Update the FOLIO HRID settings at the end of the run. Default: `true` |
+| `resetHridSettings` | boolean | No | Reset the item HRID counter at the start of the run. Only applies when `updateHridSettings` is `true`. Default: `false` |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -127,9 +134,9 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `tempLoanTypesMapFileName` | `folio_name` | Temporary loan type name |
 | `callNumberTypeMapFileName` | `folio_name` | Call number type name |
 | `statisticalCodesMapFileName` | `folio_code` | Statistical code |
-| `damagedStatusMapFileName` | `folio_name` | Damaged status name |
+| `itemNoteTypeMapFileName` | `folio_name` | Item note type name |
 
-#### Item Statuses (item_statuses.tsv)
+#### Item Statuses (itemStatusesMapFileName)
 
 Item status mapping has special requirements different from other reference data:
 
@@ -168,10 +175,14 @@ Unlike BibsTransformer and the Holdings transformers, ItemsTransformer does not 
 {
     "name": "transform_items",
     "migrationTaskType": "ItemsTransformer",
+    "hridHandling": "default",
     "itemsMappingFileName": "item_mapping.json",
     "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
+    "itemStatusesMapFileName": "item_statuses.tsv",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "files": [
         {
             "file_name": "items.tsv"
@@ -186,8 +197,10 @@ Unlike BibsTransformer and the Holdings transformers, ItemsTransformer does not 
 {
     "name": "transform_items",
     "migrationTaskType": "ItemsTransformer",
+    "hridHandling": "default",
     "itemsMappingFileName": "item_mapping.json",
     "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
     "tempLocationMapFileName": "temp_locations.tsv",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
@@ -195,7 +208,6 @@ Unlike BibsTransformer and the Holdings transformers, ItemsTransformer does not 
     "itemStatusesMapFileName": "item_statuses.tsv",
     "callNumberTypeMapFileName": "call_number_types.tsv",
     "statisticalCodesMapFileName": "stat_codes.tsv",
-    "damagedStatusMapFileName": "damaged_statuses.tsv",
     "files": [
         {
             "file_name": "items.tsv"
@@ -217,10 +229,14 @@ The ItemsTransformer creates FOLIO `boundwithPart` records to link a single item
 {
     "name": "transform_items",
     "migrationTaskType": "ItemsTransformer",
+    "hridHandling": "default",
     "itemsMappingFileName": "item_mapping.json",
     "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
+    "itemStatusesMapFileName": "item_statuses.tsv",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "boundwithFlavor": "aleph",
     "boundwithRelationshipFilePath": "item_holdings_links.tsv",
     "files": [
@@ -243,10 +259,14 @@ See [Boundwith Handling](../boundwith_handling) for the full source-data require
 {
     "name": "transform_items",
     "migrationTaskType": "ItemsTransformer",
+    "hridHandling": "default",
     "itemsMappingFileName": "item_mapping.json",
     "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
+    "itemStatusesMapFileName": "item_statuses.tsv",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "files": [
         {
             "file_name": "regular_items.tsv",

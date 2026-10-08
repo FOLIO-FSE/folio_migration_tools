@@ -269,8 +269,14 @@ Unmatched items are appended, so the same mechanism adds new content:
         {
             "name": "transform_items",
             "migrationTaskType": "ItemsTransformer",
+            "hridHandling": "default",
             "itemsMappingFileName": "item_mapping.json",
             "locationMapFileName": "locations.tsv",
+            "defaultCallNumberTypeName": "Library of Congress classification",
+            "materialTypesMapFileName": "material_types.tsv",
+            "loanTypesMapFileName": "loan_types.tsv",
+            "itemStatusesMapFileName": "item_statuses.tsv",
+            "callNumberTypeMapFileName": "call_number_types.tsv",
             "files": [
                 { "fileName": "items.tsv" }
             ]
