@@ -15,9 +15,11 @@ Transform delimited (CSV/TSV) data into FOLIO Holdings records. Use this when yo
 {
     "name": "transform_csv_holdings",
     "migrationTaskType": "HoldingsCsvTransformer",
+    "hridHandling": "default",
     "holdingsMapFileName": "holdings_mapping.json",
     "locationMapFileName": "locations.tsv",
     "defaultCallNumberTypeName": "Library of Congress classification",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
     "holdingsMergeCriteria": ["instanceId", "permanentLocationId", "callNumber"],
     "files": [
@@ -34,17 +36,20 @@ Transform delimited (CSV/TSV) data into FOLIO Holdings records. Use this when yo
 |-----------|------|----------|-------------|
 | `name` | string | Yes | The name of this task. |
 | `migrationTaskType` | string | Yes | Must be `"HoldingsCsvTransformer"` |
+| `hridHandling` | string | Yes | Must be present, but this task doesn't use it; HRIDs are always generated from the FOLIO HRID settings. Set it to `"default"` |
 | `holdingsMapFileName` | string | Yes | JSON mapping file for holdings fields |
 | `locationMapFileName` | string | Yes | TSV file mapping legacy locations to FOLIO codes |
+| `callNumberTypeMapFileName` | string | Yes | TSV file mapping call number types. The file must exist in `mapping_files/`; the task stops at startup if it doesn't |
 | `defaultCallNumberTypeName` | string | Yes | FOLIO call number type name for fallback |
-| `fallbackHoldingsTypeId` | string | Yes | UUID of fallback holdings type |
-| `holdingsMergeCriteria` | array | No | Fields used to group items into holdings. Default: `["instanceId", "permanentLocationId", "callNumber"]` |
-| `callNumberTypeMapFileName` | string | No | TSV file mapping call number types |
-| `holdingsTypeMapFileName` | string | No | TSV file mapping holdings types |
-| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes |
+| `fallbackHoldingsTypeId` | string | Yes | UUID of the holdings type used when `holdingsTypeId` is not mapped. Must exist in the tenant |
+| `holdingsMergeCriteria` | array | No | Fields used to group items into holdings. Each must be a holdings record property. Default: `["instanceId", "permanentLocationId", "callNumber"]` |
+| `statisticalCodesMapFileName` | string | No | TSV file mapping statistical codes. Loaded when the mapping file maps `statisticalCodeIds` or a file definition sets `statistical_code`; see [With Statistical Codes](#with-statistical-codes) |
+| `holdingsNoteTypeMapFileName` | string | No | TSV file translating legacy note type codes to FOLIO note type names. Without it, mapped note type values must be FOLIO note type names or UUIDs |
 | `holdingsTypeUuidForBoundwiths` | string | No | UUID of holdings type for boundwith holdings (enables automatic boundwith handling) |
 | `previouslyGeneratedHoldingsFiles` | array | No | List of previous holdings result files to avoid duplicates |
-| `files` | array | Yes | List of source data files to process |
+| `updateHridSettings` | boolean | No | Update the holdings HRID counter in FOLIO at the end of the run. Default: `true` |
+| `resetHridSettings` | boolean | No | Reset the holdings HRID counter at the start of the run. Only applies when `updateHridSettings` is `true`. Default: `false` |
+| `files` | array | Yes | List of source data files to process. See [Configuration Files](../configuration_files.md#migrationtasks) for the file keys |
 
 ## Source Data Requirements
 
@@ -100,6 +105,8 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 |--------------|--------------|---------|
 | `locationMapFileName` | `folio_code` | Location code |
 | `callNumberTypeMapFileName` | `folio_name` | Call number type name |
+| `statisticalCodesMapFileName` | `folio_code` | Statistical code |
+| `holdingsNoteTypeMapFileName` | `folio_name` | Holdings note type name |
 
 ## Holdings Merge Criteria
 
@@ -170,9 +177,11 @@ Files are created in `iterations/<iteration>/results/`:
 {
     "name": "transform_csv_holdings",
     "migrationTaskType": "HoldingsCsvTransformer",
+    "hridHandling": "default",
     "holdingsMapFileName": "holdings_mapping.json",
     "locationMapFileName": "locations.tsv",
     "defaultCallNumberTypeName": "Library of Congress classification",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
     "files": [
         {
@@ -190,9 +199,11 @@ When you have both MFHD-derived holdings and need additional holdings from items
 {
     "name": "transform_csv_holdings",
     "migrationTaskType": "HoldingsCsvTransformer",
+    "hridHandling": "default",
     "holdingsMapFileName": "holdings_mapping.json",
     "locationMapFileName": "locations.tsv",
     "defaultCallNumberTypeName": "Library of Congress classification",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
     "previouslyGeneratedHoldingsFiles": [
         "folio_holdings_transform_mfhd.json"
@@ -209,13 +220,17 @@ All files in `previouslyGeneratedHoldingsFiles` are loaded together, in the orde
 
 ### With Statistical Codes
 
+A `statistical_code` on a file definition is added to every holdings record created from that file. It is resolved through `statisticalCodesMapFileName`, the same as mapped `statisticalCodeIds` values, so the map needs a `legacy_stat_code` row for it. See [Statistical Codes](../statistical_codes) for the file format.
+
 ```json
 {
     "name": "transform_csv_holdings",
     "migrationTaskType": "HoldingsCsvTransformer",
+    "hridHandling": "default",
     "holdingsMapFileName": "holdings_mapping.json",
     "locationMapFileName": "locations.tsv",
     "defaultCallNumberTypeName": "Library of Congress classification",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
     "statisticalCodesMapFileName": "stat_codes.tsv",
     "files": [
@@ -249,9 +264,11 @@ To enable boundwith handling, set the `holdingsTypeUuidForBoundwiths` parameter 
 {
     "name": "transform_csv_holdings",
     "migrationTaskType": "HoldingsCsvTransformer",
+    "hridHandling": "default",
     "holdingsMapFileName": "holdings_mapping.json",
     "locationMapFileName": "locations.tsv",
     "defaultCallNumberTypeName": "Library of Congress classification",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
     "holdingsTypeUuidForBoundwiths": "1b6c62cf-034c-4972-ac80-fa595a9bfbde",
     "files": [

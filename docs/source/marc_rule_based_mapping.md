@@ -145,7 +145,7 @@ The first step in preparing to transform MARC Bib records for FOLIO is to create
                 }
             ],
             "updateHridSettings": false
-        },
+        }
 ```
 For more information on the task configuration options for MFHD transformation, see [HoldingsMarcTransformer](./tasks/holdings_marc_transformer)
 
@@ -157,7 +157,7 @@ See [Boundwith Handling](./boundwith_handling) for the source data requirements,
 
 (supplemental-mfhd-mapping-rules)=
 ### Supplemental MFHD Mapping Rules
-As of v1.9.0, `folio_migration_tools` supports the use of a supplemental MFHD mapping rules configuration, in lieu of either updating the system rules or creating a full, customized copy of the rules (specified by `mfhdMappingFileName` in the task configuration). Instead, you can create a JSON file with an object containing only the rules you want to add (or modify). The tools will perform a python `dict.update()` of the full rules file using the file specified in `"supplementalMfhdMappingRulesFile"`. For example, a supplemental mapping to map public and private holdings notes from 852$x and 852$z (using rules for a 952$x and 952$z, see [Limitation and Other Considerations](#limitations-and-other-considerations) below):
+As of v1.9.0, `folio_migration_tools` supports the use of a supplemental MFHD mapping rules configuration, in lieu of updating the system rules. Instead, you can create a JSON file with an object containing only the rules you want to add (or modify). The tools will perform a python `dict.update()` of the full rules file using the file specified in `"supplementalMfhdMappingRulesFile"`. For example, a supplemental mapping to map public and private holdings notes from 852$x and 852$z (using rules for a 952$x and 952$z, see [Limitation and Other Considerations](#limitations-and-other-considerations) below):
 
 ```json
 {

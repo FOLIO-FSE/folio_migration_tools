@@ -163,10 +163,14 @@ Items task, run after the holdings task:
 {
     "name": "transform_items",
     "migrationTaskType": "ItemsTransformer",
+    "hridHandling": "default",
     "itemsMappingFileName": "item_mapping.json",
     "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
+    "itemStatusesMapFileName": "item_statuses.tsv",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "boundwithFlavor": "voyager",
     "boundwithRelationshipFilePath": "bib_mfhd.tsv",
     "files": [
@@ -225,10 +229,14 @@ No holdings records are created or modified, so a missing `holdingsTypeUuidForBo
 {
     "name": "transform_items",
     "migrationTaskType": "ItemsTransformer",
+    "hridHandling": "default",
     "itemsMappingFileName": "item_mapping.json",
     "locationMapFileName": "locations.tsv",
+    "defaultCallNumberTypeName": "Library of Congress classification",
     "materialTypesMapFileName": "material_types.tsv",
     "loanTypesMapFileName": "loan_types.tsv",
+    "itemStatusesMapFileName": "item_statuses.tsv",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "boundwithFlavor": "aleph",
     "boundwithRelationshipFilePath": "item_holdings_links.tsv",
     "files": [
@@ -376,9 +384,11 @@ For a migration already in progress, this only matters if the holdings have been
 {
     "name": "transform_csv_holdings",
     "migrationTaskType": "HoldingsCsvTransformer",
+    "hridHandling": "default",
     "holdingsMapFileName": "holdings_mapping.json",
     "locationMapFileName": "locations.tsv",
     "defaultCallNumberTypeName": "Library of Congress classification",
+    "callNumberTypeMapFileName": "call_number_types.tsv",
     "fallbackHoldingsTypeId": "03c9c400-b9e3-4a07-ac0e-05ab470233ed",
     "holdingsTypeUuidForBoundwiths": "1b6c62cf-034c-4972-ac80-fa595a9bfbde",
     "files": [
