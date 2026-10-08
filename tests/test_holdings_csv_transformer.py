@@ -1,6 +1,7 @@
 import json
 import logging
 from functools import partial
+from pathlib import Path
 from unittest.mock import Mock
 
 from folio_migration_tools.library_configuration import FileDefinition
@@ -340,3 +341,46 @@ def test_id_map_repoints_entries_for_merged_away_holdings():
         ]
         == 1
     )
+
+
+def statcode_map_transformer(folio_keys: list[str], files: list[FileDefinition]) -> Mock:
+    mock_transformer = Mock(spec=HoldingsCsvTransformer)
+    mock_transformer.folio_keys = folio_keys
+    mock_transformer.task_configuration = Mock()
+    mock_transformer.task_configuration.files = files
+    mock_transformer.task_configuration.statistical_codes_map_file_name = "statcodes.tsv"
+    mock_transformer.folder_structure = Mock()
+    mock_transformer.folder_structure.mapping_files_folder = Path("mapping_files")
+    mock_transformer.load_ref_data_mapping_file.return_value = [{"folio_code": "c1"}]
+    mock_transformer.load_statistical_codes_map = partial(
+        HoldingsCsvTransformer.load_statistical_codes_map, mock_transformer
+    )
+    return mock_transformer
+
+
+def test_statistical_codes_map_loaded_for_file_level_statistical_code():
+    """A statistical_code on a file definition loads the map even when nothing maps it."""
+    file_def = FileDefinition(file_name="holdings.tsv", statistical_code="c1")
+    mock_transformer = statcode_map_transformer(["instanceId"], [FILE_DEF, file_def])
+
+    assert mock_transformer.load_statistical_codes_map() == [{"folio_code": "c1"}]
+    mock_transformer.load_ref_data_mapping_file.assert_called_once_with(
+        "statisticalCodeIds",
+        Path("mapping_files") / "statcodes.tsv",
+        ["instanceId"],
+        False,
+    )
+
+
+def test_statistical_codes_map_loaded_when_mapped():
+    mock_transformer = statcode_map_transformer(["statisticalCodeIds[0]"], [FILE_DEF])
+
+    assert mock_transformer.load_statistical_codes_map() == [{"folio_code": "c1"}]
+    mock_transformer.load_ref_data_mapping_file.assert_called_once()
+
+
+def test_statistical_codes_map_not_loaded_when_unused():
+    mock_transformer = statcode_map_transformer(["instanceId"], [FILE_DEF])
+
+    assert mock_transformer.load_statistical_codes_map() is None
+    mock_transformer.load_ref_data_mapping_file.assert_not_called()
