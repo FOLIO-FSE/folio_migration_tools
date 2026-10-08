@@ -3516,12 +3516,95 @@ def test_map_booleans_regular_mapping(mocked_folio_client: FolioClient, mocked_f
     assert isinstance(folio_recs[0]["trueOrFalse"], bool) and folio_recs[0]["trueOrFalse"] is True
     assert isinstance(folio_recs[1]["trueOrFalse"], bool) and folio_recs[1]["trueOrFalse"] is False
 
-    # This is what happens if the mapped source data contians strings "true"/"false"
-    # Some FOLIO API endpoints may still interpret "true"/"false" as Boolean values
-    assert isinstance(folio_recs[2]["trueOrFalse"], str) and folio_recs[2]["trueOrFalse"] == "true"
-    assert (
-        isinstance(folio_recs[3]["trueOrFalse"], str) and folio_recs[3]["trueOrFalse"] == "false"
+    # Mapped strings "true"/"false" are coerced to real booleans
+    assert folio_recs[2]["trueOrFalse"] is True
+    assert folio_recs[3]["trueOrFalse"] is False
+
+
+def _bool_mapper(mocked_folio_client, mocked_file_mapper, schema, fields):
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "",
+             "description": ""},
+            *[
+                {"folio_field": f, "legacy_field": lf, "value": "", "description": ""}
+                for f, lf in fields
+            ],
+        ]
+    }
+    return MappingFileMapperBase(
+        mocked_folio_client,
+        schema,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        mocked_classes.get_mocked_library_config(),
+        mocked_file_mapper.task_configuration,
     )
+
+
+def test_map_booleans_list_type_nested_and_array(mocked_folio_client, mocked_file_mapper):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "flag": {"type": ["boolean", "null"]},
+            "obj": {
+                "type": "object",
+                "properties": {"inner": {"type": "boolean"}},
+            },
+            "arr": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"b": {"type": "boolean"}},
+                },
+            },
+        },
+    }
+    mapper = _bool_mapper(
+        mocked_folio_client,
+        mocked_file_mapper,
+        schema,
+        [("flag", "f"), ("obj.inner", "i"), ("arr[0].b", "a")],
+    )
+    rec, _ = mapper.do_map(
+        {"id": "x1", "f": "Yes", "i": "no", "a": "false"},
+        "x1",
+        FOLIONamespaces.organizations,
+    )
+    assert rec["flag"] is True
+    assert rec["obj"]["inner"] is False
+    assert rec["arr"][0]["b"] is False
+
+
+def test_map_booleans_unrecognized_value_fails(mocked_folio_client, mocked_file_mapper):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {"id": {"type": "string"}, "flag": {"type": "boolean"}},
+    }
+    mapper = _bool_mapper(mocked_folio_client, mocked_file_mapper, schema, [("flag", "f")])
+    with pytest.raises(TransformationRecordFailedError, match="interpret value as a boolean"):
+        mapper.do_map({"id": "x1", "f": "maybe"}, "x1", FOLIONamespaces.organizations)
+
+
+def test_map_booleans_env_token_override(
+    mocked_folio_client, mocked_file_mapper, monkeypatch
+):
+    monkeypatch.setenv("FOLIO_BOOLEAN_TRUE_TOKENS", "active")
+    monkeypatch.setenv("FOLIO_BOOLEAN_FALSE_TOKENS", "inactive")
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {"id": {"type": "string"}, "flag": {"type": "boolean"}},
+    }
+    mapper = _bool_mapper(mocked_folio_client, mocked_file_mapper, schema, [("flag", "f")])
+    rec, _ = mapper.do_map({"id": "x1", "f": "Inactive"}, "x1", FOLIONamespaces.organizations)
+    assert rec["flag"] is False
+    with pytest.raises(TransformationRecordFailedError):
+        mapper.do_map({"id": "x2", "f": "yes"}, "x2", FOLIONamespaces.organizations)
 
 
 def test_map_booleans_with_replace_values(mocked_folio_client: FolioClient, mocked_file_mapper):
