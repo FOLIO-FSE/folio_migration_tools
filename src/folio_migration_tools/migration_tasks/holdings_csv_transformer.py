@@ -213,16 +213,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         super().__init__(library_config, task_config, folio_client, use_logging)
         self.fallback_holdings_type = None
         self.folio_keys, self.holdings_field_map = self.load_mapped_fields()
-        if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")):
-            statcode_mapping = self.load_ref_data_mapping_file(
-                "statisticalCodeIds",
-                self.folder_structure.mapping_files_folder
-                / self.task_configuration.statistical_codes_map_file_name,
-                self.folio_keys,
-                False,
-            )
-        else:
-            statcode_mapping = None
+        statcode_mapping = self.load_statistical_codes_map()
         try:
             self.bound_with_keys = set()
             self.mapper = HoldingsMapper(
@@ -322,6 +313,24 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             traceback.print_exc()
             sys.exit(1)
         logger.info("Init done")
+
+    def load_statistical_codes_map(self):
+        """Load the statistical code map when the mapping file or a file definition uses it.
+
+        A statistical_code set on a file definition is resolved through the same map as
+        mapped statisticalCodeIds values, so it needs the map even when nothing is mapped.
+        """
+        if any(k for k in self.folio_keys if k.startswith("statisticalCodeIds")) or any(
+            f.statistical_code for f in self.task_configuration.files
+        ):
+            return self.load_ref_data_mapping_file(
+                "statisticalCodeIds",
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.statistical_codes_map_file_name,
+                self.folio_keys,
+                False,
+            )
+        return None
 
     def load_call_number_type_map(self):
         with open(
