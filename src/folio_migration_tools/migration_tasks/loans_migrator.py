@@ -4,7 +4,6 @@ Migrates open/active circulation loans from legacy ILS to FOLIO. Validates patro
 and item barcodes, handles loan policies, and maintains due dates and renewal counts.
 """
 
-import asyncio
 import copy
 import csv
 import json
@@ -16,7 +15,6 @@ from datetime import datetime, timedelta
 from typing import Annotated, List, Literal, Optional
 from zoneinfo import ZoneInfo
 
-import folioclient
 import httpx
 import i18n
 from art import tprint
@@ -25,8 +23,12 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
 from folio_migration_tools.circulation_helper import CirculationHelper
+from folio_migration_tools.circulation_prevalidation import (
+    load_patron_identifiers,
+    validate_item_barcodes,
+    validate_patron_barcodes,
+)
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
-from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -169,31 +171,7 @@ class LoansMigrator(MigrationTaskBase):
 
         self.tenant_timezone = ZoneInfo(self.tenant_timezone_str)
         self.semi_valid_legacy_loans = []
-        other_circulation_settings_endpoint = (
-            "/configurations/entries?query=(module==CHECKOUT%20and%20configName==other_settings)"
-        )
-        default_patron_identifiers = {"prefPatronIdentifier": json.dumps(["barcode"])}
-        try:
-            other_circulation_settings = (
-                self.folio_client.folio_get_single_object(other_circulation_settings_endpoint)
-                or {}
-            )
-            self.patron_identifiers = (
-                json.loads(
-                    other_circulation_settings.get(
-                        "configs", [{"value": json.dumps(default_patron_identifiers)}]
-                    )[0]["value"]
-                )
-                .get("prefPatronIdentifier", "")
-                .split(",")
-            )
-            logger.info(
-                "Patron lookup identifiers available for this tenant: %s",
-                ", ".join(self.patron_identifiers),
-            )
-        except folioclient.FolioClientError as e:
-            logger.exception("Error retrieving circulation settings: %s", e.response.text)
-            self.patron_identifiers = []
+        self.patron_identifiers = load_patron_identifiers(self.folio_client)
         for file_def in task_configuration.open_loans_files:
             loans_file_path = self.folder_structure.legacy_records_folder / file_def.file_name
             with open(loans_file_path, "r", encoding="utf-8") as loans_file:
@@ -429,138 +407,23 @@ class LoansMigrator(MigrationTaskBase):
                 loan_barcodes.add(loan.patron_barcode)
             if loan.proxy_patron_barcode:
                 loan_barcodes.add(loan.proxy_patron_barcode)
-
-        logger.info("Pre-validating %s unique patron barcodes (async)", len(loan_barcodes))
-        semaphore = asyncio.Semaphore(max_concurrent)
-        self.valid_patron_map = {}
-        counter = 0
-        num_invalid = 0
-
-        async def check_one(barcode: str):
-            nonlocal num_invalid
-            nonlocal counter
-            query = " OR ".join(f"{field.strip()}=={barcode}" for field in self.patron_identifiers)
-            async with semaphore:
-                try:
-                    fetch_patron = await self.folio_client.folio_get_async(
-                        "/users", key="users", query=query
-                    )
-                except Exception as e:
-                    if hasattr(e, "response"):
-                        logger.exception(
-                            "Error fetching patron for barcode %s: %s", barcode, e.response.text
-                        )
-                    else:
-                        logger.exception(
-                            "Error fetching patron for barcode %s: %s", barcode, str(e)
-                        )
-                    fetch_patron = []
-                counter += 1
-            if not fetch_patron:
-                logger.warning("No patron found for barcode: %s", barcode)
-                Helper.log_data_issue_failed(
-                    "",
-                    "No patron found for barcode",
-                    f"Barcode: {barcode}",
-                )
-                num_invalid += 1
-            elif len(fetch_patron) > 1:
-                logger.warning("Multiple patrons found for barcode: %s", barcode)
-                Helper.log_data_issue_failed(
-                    "",
-                    "Multiple patrons found for barcode",
-                    f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
-                )
-                num_invalid += 1
-            elif "patronGroup" not in fetch_patron[0] or not fetch_patron[0]["patronGroup"]:
-                logger.warning("Patron exists but has no group: %s", barcode)
-                Helper.log_data_issue_failed(
-                    "",
-                    "Fetched patron has no group assigned",
-                    f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
-                )
-                num_invalid += 1
-            else:
-                try:
-                    self.valid_patron_map[barcode] = fetch_patron[0]["barcode"]
-                except KeyError:
-                    logger.warning("Patron exists but has no barcode: %s", barcode)
-                    Helper.log_data_issue(
-                        "",
-                        "Fetched patron has no barcode assigned",
-                        f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
-                    )
-                    num_invalid += 1
-            if counter % 100 == 0:
-                logger.info(
-                    "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
-                    counter,
-                    len(loan_barcodes),
-                    len(self.valid_patron_map),
-                    num_invalid,
-                )
-
-        # Without a /retrieve POST query endpoint for Users, the only sensible way to check
-        # patron barcodes is to query them one by one. This is still faster than trying to
-        # match them in Python after fetching all users for most systems.
-        tasks = [check_one(bc) for bc in loan_barcodes]
-        await asyncio.gather(*tasks)
-        logger.info(
-            "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
-            counter,
-            len(loan_barcodes),
-            len(self.valid_patron_map),
-            num_invalid,
+        # Check-out can only reference patrons by barcode, so the FOLIO user must have one.
+        self.valid_patron_map = await validate_patron_barcodes(
+            self.folio_client,
+            loan_barcodes,
+            self.patron_identifiers,
+            require_barcode=True,
+            max_concurrent=max_concurrent,
         )
 
     def pre_validate_item_barcodes(self, batch_size: int = 1000):
-        """Pre-validates item barcodes by checking if they exist in FOLIO.
-
-        Fetches items in batches to avoid exceeding query size limits.
-        Logs any barcodes that do not match an item.
-        """
+        """Pre-validates item barcodes by checking if they exist in FOLIO."""
         loan_barcodes = {
             loan.item_barcode for loan in self.semi_valid_legacy_loans if loan.item_barcode
         }
-        logger.info("Pre-validating item barcodes for %s unique barcodes", len(loan_barcodes))
-        logger.info(
-            "Fetching items matching loan barcodes via /item-storage/items/retrieve endpoint..."
+        self.valid_item_barcodes = validate_item_barcodes(
+            self.folio_client, loan_barcodes, batch_size
         )
-        fetch_items = []
-        barcode_list = list(loan_barcodes)
-        for i in range(0, len(barcode_list), batch_size):
-            batch = barcode_list[i : i + batch_size]
-            try:
-                response = self.folio_client.folio_post(
-                    "/item-storage/items/retrieve",
-                    {
-                        "query": " OR ".join([f'barcode=="{barcode}"' for barcode in batch]),
-                        "limit": len(batch),
-                    },
-                )
-                if not isinstance(response, dict):
-                    response = {}
-                fetch_items.extend(response.get("items", []))
-            except folioclient.FolioClientError as e:
-                logger.exception(
-                    "Error fetching items batch %s: %s", i // batch_size + 1, e.response.text
-                )
-            logger.info(
-                "Batch %s/%s: fetched %s items",
-                i // batch_size + 1,
-                (len(barcode_list) + batch_size - 1) // batch_size,
-                len(fetch_items),
-            )
-        logger.info("Fetched %s items matching loan barcodes", len(fetch_items))
-        self.valid_item_barcodes = {item["barcode"] for item in fetch_items if "barcode" in item}
-        missing_item_barcodes = loan_barcodes - self.valid_item_barcodes
-        for barcode in missing_item_barcodes:
-            logger.warning("No item found for barcode: %s", barcode)
-            Helper.log_data_issue_failed(
-                "",
-                "No item found for barcode",
-                f"Barcode: {barcode}",
-            )
 
     async def check_barcodes(self) -> AsyncGenerator[LegacyLoan, None]:
         self.pre_validate_item_barcodes()

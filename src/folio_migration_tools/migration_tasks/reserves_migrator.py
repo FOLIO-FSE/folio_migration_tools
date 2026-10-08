@@ -16,6 +16,7 @@ import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
+from folio_migration_tools.circulation_prevalidation import validate_item_barcodes
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.i18n_cache import i18n_t
@@ -59,6 +60,16 @@ class ReservesMigrator(MigrationTaskBase):
                 description="Path to the file with course reserves",
             ),
         ]
+        skip_barcode_prevalidation: Annotated[
+            bool,
+            Field(
+                title="Skip barcode pre-validation",
+                description=(
+                    "Skip pre-validation of item barcodes against FOLIO. "
+                    "By default, item barcodes are validated before reserves are posted."
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -80,7 +91,9 @@ class ReservesMigrator(MigrationTaskBase):
         csv.register_dialect("tsv", delimiter="\t")
         self.migration_report = MigrationReport()
         self.valid_reserves = []
+        self.semi_valid_reserves = []
         super().__init__(library_config, task_configuration, folio_client)
+        self.skip_barcode_prevalidation = task_configuration.skip_barcode_prevalidation
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.course_reserve_file_path.file_name,
@@ -96,14 +109,13 @@ class ReservesMigrator(MigrationTaskBase):
                 "Loaded and validated %s reserves in file",
                 len(self.semi_valid_reserves),
             )
-
-            self.valid_reserves = self.semi_valid_reserves
         self.t0 = time.time()
         self.failed: Dict = {}
         logger.info("Init completed")
 
     async def do_work(self):
         logger.info("Starting")
+        self._pre_validate_barcodes()
         for num_reserves, legacy_reserve in enumerate(self.valid_reserves, start=1):
             t0_migration = time.time()
             self.migration_report.add_general_statistics(i18n_t("Processed reserves"))
@@ -156,27 +168,34 @@ class ReservesMigrator(MigrationTaskBase):
             for _k, failed_reserve in self.failed.items():
                 writer.writerow(failed_reserve[0])
 
-    def check_barcodes(self):
-        """Stub for extension.
-
-        Yields:
-            _type_: _description_
-        """
-        item_barcodes = set()
-        self.circulation_helper.load_migrated_item_barcodes(
-            item_barcodes, self.task_configuration.item_files, self.folder_structure
+    def _pre_validate_barcodes(self):
+        if self.skip_barcode_prevalidation:
+            logger.info("Barcode pre-validation is disabled by configuration. Skipping.")
+            self.valid_reserves = self.semi_valid_reserves
+            return
+        logger.info(
+            "Performing item barcode pre-validation for %s legacy reserves...",
+            len(self.semi_valid_reserves),
         )
+        self.valid_reserves = list(self.check_barcodes())
+        logger.info("Loaded and validated %s reserves against barcodes", len(self.valid_reserves))
+
+    def check_barcodes(self):
+        """Yield reserves whose item barcode exists as an item in FOLIO."""
+        item_barcodes = {
+            reserve.item_barcode for reserve in self.semi_valid_reserves if reserve.item_barcode
+        }
+        valid_item_barcodes = validate_item_barcodes(self.folio_client, item_barcodes)
         for reserve in self.semi_valid_reserves:
-            has_item_barcode = reserve.item_barcode in item_barcodes or not any(item_barcodes)
-            if has_item_barcode:
+            if reserve.item_barcode in valid_item_barcodes:
                 self.migration_report.add_general_statistics(
-                    i18n.t("Reserve verified against migrated item")
+                    i18n_t("Reserve verified against migrated item")
                 )
                 yield reserve
             else:
                 self.migration_report.add(
                     "DiscardedReserves",
-                    i18n.t("Reserve discarded. Could not find migrated barcode"),
+                    i18n_t("Reserve discarded. Could not find migrated barcode"),
                 )
 
     def load_and_validate_legacy_reserves(self, reserves_reader):

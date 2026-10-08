@@ -38,3 +38,38 @@ class TestFolioPutPost:
     def test_connection_error_returns_false(self, migrator):
         with patch("httpx.put", side_effect=httpx.ConnectError("boom")):
             assert not ReservesMigrator.folio_put_post(migrator, "/x", {}, "PUT", "act")
+
+
+class _Reserve:
+    def __init__(self, item_barcode):
+        self.item_barcode = item_barcode
+
+
+def _make_migrator(reserves, skip=False):
+    from unittest.mock import Mock
+
+    m = Mock(spec=ReservesMigrator)
+    m.semi_valid_reserves = reserves
+    m.skip_barcode_prevalidation = skip
+    m.migration_report = Mock()
+    m.folio_client = Mock()
+    m.check_barcodes = lambda: ReservesMigrator.check_barcodes(m)
+    return m
+
+
+def test_check_barcodes_keeps_only_reserves_with_folio_items():
+    good, bad = _Reserve("I1"), _Reserve("I2")
+    m = _make_migrator([good, bad])
+    m.folio_client.folio_post.return_value = {"items": [{"barcode": "I1"}]}
+
+    assert list(ReservesMigrator.check_barcodes(m)) == [good]
+
+
+def test_prevalidation_can_be_skipped():
+    reserves = [_Reserve("I1")]
+    m = _make_migrator(reserves, skip=True)
+
+    ReservesMigrator._pre_validate_barcodes(m)
+
+    assert m.valid_reserves == reserves
+    m.folio_client.folio_post.assert_not_called()

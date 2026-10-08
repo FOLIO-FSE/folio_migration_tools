@@ -27,6 +27,7 @@ Add items to course reserves in FOLIO by linking existing items to courses.
 | `name` | string | Yes | The name of this task. |
 | `migrationTaskType` | string | Yes | Must be `"ReservesMigrator"` |
 | `reservesFile` | object | Yes | File definition with `file_name` for the reserves data file |
+| `skipBarcodePrevalidation` | boolean | No | Skip pre-validation of item barcodes against FOLIO. Default: false |
 
 ## Source Data Requirements
 
