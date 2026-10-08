@@ -11,14 +11,13 @@ import json
 import logging
 import sys
 import time
-import traceback
 from collections.abc import AsyncGenerator
 from datetime import datetime, timedelta
 from typing import Annotated, List, Literal, Optional
-from urllib.error import HTTPError
 from zoneinfo import ZoneInfo
 
 import folioclient
+import httpx
 import i18n
 from art import tprint
 from dateutil import parser as du_parser
@@ -724,14 +723,14 @@ class LoansMigrator(MigrationTaskBase):
         user = self.get_user_by_barcode(legacy_loan.patron_barcode)
         expiration_date = user.get("expirationDate", datetime.isoformat(datetime.now()))
         user["expirationDate"] = datetime.isoformat(datetime.now() + timedelta(days=1))
-        self.activate_user(user)
-        logger.debug("Successfully Activated user")
+        if self.activate_user(user):
+            logger.debug("Successfully Activated user")
         res = self.circulation_helper.check_out_by_barcode(legacy_loan)  # checkout_and_update
         if res.should_be_retried:
             res = self.handle_checkout_failure(legacy_loan, res)
         self.migration_report.add("Details", res.migration_report_message)
-        self.deactivate_user(user, expiration_date)
-        logger.debug("Successfully Deactivated user again")
+        if self.deactivate_user(user, expiration_date):
+            logger.debug("Successfully Deactivated user again")
         self.migration_report.add("Details", i18n.t("Handled inactive users"))
         return res
 
@@ -826,13 +825,13 @@ class LoansMigrator(MigrationTaskBase):
         due_date = du_parser.isoparse(str(legacy_loan.due_date))
         out_date = du_parser.isoparse(str(legacy_loan.out_date))
         renewal_count = legacy_loan.renewal_count
+        loan_to_put = copy.deepcopy(folio_loan)
+        del loan_to_put["metadata"]
+        loan_to_put["dueDate"] = due_date.isoformat()
+        loan_to_put["loanDate"] = out_date.isoformat()
+        loan_to_put["renewalCount"] = renewal_count
+        url = f"{self.folio_client.gateway_url}/circulation/loans/{loan_to_put['id']}"
         try:
-            loan_to_put = copy.deepcopy(folio_loan)
-            del loan_to_put["metadata"]
-            loan_to_put["dueDate"] = due_date.isoformat()
-            loan_to_put["loanDate"] = out_date.isoformat()
-            loan_to_put["renewalCount"] = renewal_count
-            url = f"{self.folio_client.gateway_url}/circulation/loans/{loan_to_put['id']}"
             req = self.http_client.put(
                 url,
                 headers=self.folio_client.okapi_headers,
@@ -858,15 +857,15 @@ class LoansMigrator(MigrationTaskBase):
                     i18n.t("Update open loan error http status") + f": {req.status_code}",
                 )
                 req.raise_for_status()
-            logger.debug("Updating open loan was successful")
             return True
-        except HTTPError as exception:
+        except httpx.HTTPStatusError as exception:
             logger.exception(
-                f"{req.status_code} PUT FAILED Extend loan to {loan_to_put['dueDate']}"
-                f"\t {url}\t{json.dumps(loan_to_put)}"
+                f"{exception.response.status_code} PUT FAILED Extend loan to "
+                f"{loan_to_put['dueDate']}\t {url}\t{json.dumps(loan_to_put)}"
             )
-            traceback.print_exc()
-            logger.exception(exception)
+            return False
+        except httpx.RequestError:
+            logger.exception(f"PUT FAILED Extend loan to {loan_to_put['dueDate']}\t {url}")
             return False
 
     def handle_previously_failed_loans(self, loan):
@@ -915,6 +914,7 @@ class LoansMigrator(MigrationTaskBase):
             )
 
     def set_item_status(self, legacy_loan: LegacyLoan):
+        resp = None
         try:
             # Get Item by barcode, update status.
             item_path = f'item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
@@ -952,21 +952,30 @@ class LoansMigrator(MigrationTaskBase):
                 )
         except Exception as ee:
             logger.exception(
-                f"{resp.status_code} when trying to set item with barcode "
+                f"{resp.status_code if resp is not None else ''} when trying to set item "
+                f"with barcode "
                 f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status} {ee}"
             )
             raise ee
 
     def activate_user(self, user):
         user["active"] = True
-        self.update_user(user)
+        if not self.update_user(user):
+            logger.error(f"Failed to activate user {user.get('id')}")
+            self.migration_report.add("Details", i18n.t("Failed to activate user"))
+            return False
         self.migration_report.add("Details", i18n.t("Successfully activated user"))
+        return True
 
     def deactivate_user(self, user, expiration_date):
         user["expirationDate"] = expiration_date
         user["active"] = False
-        self.update_user(user)
+        if not self.update_user(user):
+            logger.error(f"Failed to deactivate user {user.get('id')}")
+            self.migration_report.add("Details", i18n.t("Failed to deactivate user"))
+            return False
         self.migration_report.add("Details", i18n.t("Successfully deactivated user"))
+        return True
 
     def update_item(self, item):
         url = f"/item-storage/items/{item['id']}"
@@ -974,7 +983,7 @@ class LoansMigrator(MigrationTaskBase):
 
     def update_user(self, user):
         url = f"/users/{user['id']}"
-        self.folio_put_post(url, user, "PUT", i18n.t("Update user"))
+        return self.folio_put_post(url, user, "PUT", i18n.t("Update user"))
 
     def get_user_by_barcode(self, barcode):
         url = f'{self.folio_client.gateway_url}/users?query=(barcode=="{barcode}")'
@@ -1012,7 +1021,7 @@ class LoansMigrator(MigrationTaskBase):
                     ),
                 )
                 resp.raise_for_status()
-            elif resp.status_code in [201, 204]:
+            elif resp.is_success:
                 self.migration_report.add(
                     "Details",
                     i18n.t("Successfully %{action}", action=action_description)
@@ -1030,56 +1039,12 @@ class LoansMigrator(MigrationTaskBase):
 
                 resp.raise_for_status()
             return True
-        except HTTPError as exception:
-            logger.exception(f"{resp.status_code}. {verb} FAILED for {url}")
-            traceback.print_exc()
-            logger.info(exception)
+        except httpx.HTTPStatusError as exception:
+            logger.exception(f"{exception.response.status_code}. {verb} FAILED for {url}")
             return False
-
-    def change_due_date(self, folio_loan, legacy_loan):
-        try:
-            api_path = f"{folio_loan['id']}/change-due-date"
-            api_url = f"{self.folio_client.gateway_url}/circulation/loans/{api_path}"
-            body = {"dueDate": du_parser.isoparse(str(legacy_loan.due_date)).isoformat()}
-            req = self.http_client.post(
-                api_url, headers=self.folio_client.okapi_headers, json=body
-            )
-            if req.status_code == 422:
-                error_message = json.loads(req.text)["errors"][0]["message"]
-                self.migration_report.add(
-                    "Details", i18n.t("Change due date error") + f": {error_message}"
-                )
-                logger.info(
-                    f"{error_message}\t",
-                )
-                self.migration_report.add("Details", error_message)
-                return False
-            elif req.status_code == 201:
-                self.migration_report.add(
-                    "Details",
-                    i18n.t("Successfully changed due date") + f" ({req.status_code})",
-                )
-                return True, json.loads(req.text), None
-            elif req.status_code == 204:
-                self.migration_report.add(
-                    "Details",
-                    i18n.t("Successfully changed due date") + f" ({req.status_code})",
-                )
-                return True, None, None
-            else:
-                self.migration_report.add(
-                    "Details",
-                    i18n.t("Update open loan error http status"),
-                    f": {req.status_code}",
-                )
-                req.raise_for_status()
-        except HTTPError as exception:
-            logger.info(
-                f"{req.status_code} POST FAILED Change Due Date to {api_url}\t{json.dumps(body)})"
-            )
-            traceback.print_exc()
-            logger.info(exception)
-            return False, None, None
+        except httpx.RequestError:
+            logger.exception(f"{verb} FAILED for {url}")
+            return False
 
 
 def timings(t0, t0func, num_objects):

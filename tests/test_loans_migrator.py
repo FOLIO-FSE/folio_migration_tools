@@ -696,3 +696,97 @@ def test_handle_lost_item_keeps_folio_status_untranslated(report_language, lost_
     assert legacy_loan.next_item_status == lost_type
     (_, measure), _ = migrator.migration_report.add.call_args
     assert f"« {label} »" in measure
+
+
+def _http_response(status_code, body='{"errors": [{"message": "bad"}]}'):
+    import httpx
+
+    return httpx.Response(status_code, text=body, request=httpx.Request("POST", "http://folio/x"))
+
+
+class TestHttpErrorHandling:
+    @pytest.fixture
+    def m(self):
+        m = Mock(spec=LoansMigrator)
+        m.folio_client = Mock()
+        m.folio_client.gateway_url = "http://folio"
+        m.folio_client.okapi_headers = {}
+        m.http_client = Mock()
+        m.migration_report = Mock()
+        m.failed = {}
+        return m
+
+    @pytest.mark.parametrize("status", [200, 201, 204])
+    def test_folio_put_post_success(self, m, status):
+        m.http_client.post.return_value = _http_response(status, "")
+        assert LoansMigrator.folio_put_post(m, "/x", {}, "POST", "act") is True
+
+    @pytest.mark.parametrize("status", [422, 500])
+    def test_folio_put_post_http_error(self, m, status):
+        m.http_client.put.return_value = _http_response(status)
+        assert LoansMigrator.folio_put_post(m, "/x", {}, "PUT", "act") is False
+
+    def test_folio_put_post_connection_error(self, m):
+        import httpx
+
+        m.http_client.put.side_effect = httpx.ConnectError("boom")
+        assert LoansMigrator.folio_put_post(m, "/x", {}, "PUT", "act") is False
+
+    def _loan(self):
+        loan = Mock()
+        loan.due_date = "2024-01-02T00:00:00+00:00"
+        loan.out_date = "2024-01-01T00:00:00+00:00"
+        loan.renewal_count = 0
+        return loan
+
+    def test_update_open_loan_http_error(self, m):
+        m.http_client.put.return_value = _http_response(500)
+        folio_loan = {"id": "l1", "metadata": {}}
+        assert LoansMigrator.update_open_loan(m, folio_loan, self._loan()) is False
+
+    def test_update_open_loan_connection_error(self, m):
+        import httpx
+
+        m.http_client.put.side_effect = httpx.ConnectError("boom")
+        folio_loan = {"id": "l1", "metadata": {}}
+        assert LoansMigrator.update_open_loan(m, folio_loan, self._loan()) is False
+
+    def test_declare_lost_failure_is_reported(self, m):
+        m.task_configuration = Mock(fallback_service_point_id="sp")
+        m.folio_put_post = Mock(return_value=False)
+        LoansMigrator.declare_lost(m, {"id": "l1", "dueDate": "2024-01-01T00:00:00+00:00"})
+        measures = [c.args[1] for c in m.migration_report.add.call_args_list]
+        assert "Unsuccessfully declared loan as lost" in measures
+
+    def test_claim_returned_failure_is_reported(self, m):
+        m.folio_put_post = Mock(return_value=False)
+        LoansMigrator.claim_returned(m, {"id": "l1", "dueDate": "2024-01-01T00:00:00+00:00"})
+        measures = [c.args[1] for c in m.migration_report.add.call_args_list]
+        assert any("Unsuccessfully declared loan" in x for x in measures)
+
+    def test_set_item_status_failure_marks_loan_failed(self, m):
+        legacy = Mock(item_barcode="B1", next_item_status="Lost and paid")
+        m.http_client.get.return_value = _http_response(
+            200, '{"items": [{"id": "i1", "status": {"name": "Available"}}]}'
+        )
+        m.update_item = Mock(return_value=False)
+        LoansMigrator.set_item_status(m, legacy)
+        assert "B1" in m.failed
+
+    def test_activate_user_does_not_report_success_on_failure(self, m):
+        m.update_user = Mock(return_value=False)
+        assert LoansMigrator.activate_user(m, {"id": "u1"}) is False
+        measures = [c.args[1] for c in m.migration_report.add.call_args_list]
+        assert "Successfully activated user" not in measures
+        assert "Failed to activate user" in measures
+
+    def test_deactivate_user_does_not_report_success_on_failure(self, m):
+        m.update_user = Mock(return_value=False)
+        assert LoansMigrator.deactivate_user(m, {"id": "u1"}, "2030-01-01") is False
+        measures = [c.args[1] for c in m.migration_report.add.call_args_list]
+        assert "Successfully deactivated user" not in measures
+        assert "Failed to deactivate user" in measures
+
+    def test_activate_user_reports_success(self, m):
+        m.update_user = Mock(return_value=True)
+        assert LoansMigrator.activate_user(m, {"id": "u1"}) is True
