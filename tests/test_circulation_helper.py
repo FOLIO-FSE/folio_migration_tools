@@ -135,3 +135,52 @@ def test_check_out_by_barcode_handles_internal_server_error():
     assert result.was_successful is False
     assert result.should_be_retried is False
     assert "internal server error" in result.error_message.lower()
+
+
+def _checkout_loan(sp_id):
+    legacy_loan = MagicMock()
+    legacy_loan.item_barcode = "item123"
+    legacy_loan.patron_barcode = "user123"
+    legacy_loan.proxy_patron_barcode = ""
+    legacy_loan.service_point_id = sp_id
+    legacy_loan.out_date = datetime.now(timezone.utc)
+    legacy_loan.due_date = datetime.now(timezone.utc)
+    return legacy_loan
+
+
+def test_check_out_by_barcode_client_error_reports_actual_status():
+    import httpx
+    from folioclient.exceptions import FolioClientError
+
+    mocked_folio = mocked_classes.mocked_folio_client()
+    sp_id = str(uuid.uuid4())
+    circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
+    request = httpx.Request("POST", "http://folio/circulation/check-out-by-barcode")
+    response = httpx.Response(404, text="Not found", request=request)
+    mocked_folio.folio_post = MagicMock(
+        side_effect=FolioClientError("Not found", request=request, response=response)
+    )
+
+    result = circ_helper.check_out_by_barcode(_checkout_loan(sp_id))
+
+    assert result.was_successful is False
+    assert result.should_be_retried is False
+    assert result.error_message == "HTTP 404"
+
+
+def test_check_out_by_barcode_connection_error(caplog):
+    import httpx
+    from folioclient.exceptions import FolioConnectionError
+
+    mocked_folio = mocked_classes.mocked_folio_client()
+    sp_id = str(uuid.uuid4())
+    circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
+    request = httpx.Request("POST", "http://folio/circulation/check-out-by-barcode")
+    mocked_folio.folio_post = MagicMock(side_effect=FolioConnectionError("boom", request=request))
+
+    result = circ_helper.check_out_by_barcode(_checkout_loan(sp_id))
+
+    assert result.was_successful is False
+    assert result.should_be_retried is False
+    assert result.error_message == "Connection error"
+    assert "boom" in caplog.text

@@ -29,6 +29,7 @@ from folio_migration_tools.circulation_prevalidation import (
     validate_patron_barcodes,
 )
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -46,6 +47,16 @@ from folio_migration_tools.transaction_migration.transaction_result import (
 )
 
 logger = logging.getLogger(__name__)
+
+FOLLOWUP_COLUMNS = ["item_barcode", "patron_barcode", "loan_id", "followup_type", "detail"]
+
+
+def _error_message(resp: httpx.Response) -> str:
+    """Return the first FOLIO error message in a response, or the raw body if there is none."""
+    try:
+        return json.loads(resp.text)["errors"][0]["message"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        return resp.text[:500]
 
 
 class LoansMigrator(MigrationTaskBase):
@@ -148,6 +159,7 @@ class LoansMigrator(MigrationTaskBase):
         self.processed_items: set = set()
         self.failed: dict = {}
         self.failed_and_not_dupe: dict = {}
+        self.followups: List[dict] = []
         self.migration_report = MigrationReport()
         self.valid_legacy_loans: List[LegacyLoan] = []
         self.task_configuration: LoansMigrator.TaskConfiguration
@@ -356,17 +368,69 @@ class LoansMigrator(MigrationTaskBase):
             res_checkout (TransactionResult): _description_
         """
         # set new statuses
-        if legacy_loan.next_item_status == "Declared lost":
-            self.declare_lost(res_checkout.folio_loan)
-        elif legacy_loan.next_item_status == "Claimed returned":
-            self.claim_returned(res_checkout.folio_loan)
-        elif legacy_loan.next_item_status not in ["Available", "", "Checked out"]:
-            self.set_item_status(legacy_loan)
+        new_status = legacy_loan.next_item_status
+        if new_status == "Declared lost":
+            followup_type = "declare_lost"
+            succeeded = self.declare_lost(res_checkout.folio_loan)
+        elif new_status == "Claimed returned":
+            followup_type = "claim_returned"
+            succeeded = self.claim_returned(res_checkout.folio_loan)
+        elif new_status not in ["Available", "", "Checked out"]:
+            followup_type = "set_item_status"
+            succeeded = self.set_item_status(legacy_loan)
+        else:
+            return
+        if not succeeded:
+            self.migration_report.add_general_statistics(
+                i18n_t("Checked out loans where the new item status could not be set")
+            )
+            self.add_followup(
+                legacy_loan,
+                followup_type,
+                f"Loan is checked out but the item status could not be set to {new_status}",
+                res_checkout.folio_loan,
+            )
 
     def set_renewal_count(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
         if legacy_loan.renewal_count > 0:
-            self.update_open_loan(res_checkout.folio_loan, legacy_loan)
-            self.migration_report.add_general_statistics(i18n_t("Updated renewal count for loan"))
+            if self.update_open_loan(res_checkout.folio_loan, legacy_loan):
+                self.migration_report.add_general_statistics(
+                    i18n_t("Updated renewal count for loan")
+                )
+            else:
+                self.migration_report.add_general_statistics(
+                    i18n_t("Failed to update renewal count for loan")
+                )
+                self.add_followup(
+                    legacy_loan,
+                    "update_loan",
+                    f"Set renewalCount={legacy_loan.renewal_count}, "
+                    f"dueDate={legacy_loan.due_date}, loanDate={legacy_loan.out_date}",
+                    res_checkout.folio_loan,
+                )
+
+    def add_followup(
+        self,
+        legacy_loan: LegacyLoan,
+        followup_type: str,
+        detail: str,
+        folio_loan: Optional[dict] = None,
+    ):
+        """Record a step that failed after the checkout itself, for manual follow-up.
+
+        These loans are not added to the failed records file, since re-running them would
+        create duplicate loans.
+        """
+        self.followups.append(
+            {
+                "item_barcode": legacy_loan.item_barcode,
+                "patron_barcode": legacy_loan.patron_barcode,
+                "loan_id": folio_loan.get("id", "") if isinstance(folio_loan, dict) else "",
+                "followup_type": followup_type,
+                "detail": detail,
+            }
+        )
+        self.migration_report.add_general_statistics(i18n_t("Loan follow-up actions needed"))
 
     async def wrap_up(self):
         for k, v in self.failed.items():
@@ -374,6 +438,7 @@ class LoansMigrator(MigrationTaskBase):
         print(f"Wrapping up. Unique loans in failed:{len(self.failed_and_not_dupe)}")
 
         self.write_failed_loans_to_file()
+        self.write_followups_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.migration_report.write_migration_report(
@@ -399,6 +464,23 @@ class LoansMigrator(MigrationTaskBase):
             writer.writeheader()
             for _k, failed_loan in self.failed_and_not_dupe.items():
                 writer.writerow(failed_loan[0])
+
+    def write_followups_to_file(self):
+        if not self.followups:
+            return
+        followup_path = self.folder_structure.results_folder / (
+            f"loans_needing_followup{self.folder_structure.file_template}"
+            f"{self.folder_structure.time_stamp}.tsv"
+        )
+        with open(followup_path, "w", newline="", encoding="utf-8") as followup_file:
+            writer = csv.DictWriter(followup_file, fieldnames=FOLLOWUP_COLUMNS, dialect="tsv")
+            writer.writeheader()
+            writer.writerows(self.followups)
+        logger.warning(
+            "%s follow-up actions are needed for checked out loans. See %s",
+            len(self.followups),
+            followup_path,
+        )
 
     async def pre_validate_patron_barcodes_async(self, max_concurrent: int = 10):
         loan_barcodes = set()
@@ -527,7 +609,7 @@ class LoansMigrator(MigrationTaskBase):
              handling
         """
         folio_checkout.should_be_retried = False
-        if folio_checkout.error_message == "5XX":
+        if folio_checkout.error_message.startswith("HTTP "):
             return folio_checkout
         if folio_checkout.error_message.startswith(
             "No patron with barcode"
@@ -543,7 +625,7 @@ class LoansMigrator(MigrationTaskBase):
             return self.handle_checked_out_item(legacy_loan)
         elif "Aged to lost" in folio_checkout.error_message:
             return self.handle_lost_item(legacy_loan, "Aged to lost")
-        elif folio_checkout.error_message == "Declared lost":
+        elif "Declared lost" in folio_checkout.error_message:
             return self.handle_lost_item(legacy_loan, "Declared lost")
         elif folio_checkout.error_message.startswith("Cannot check out to inactive user"):
             return self.checkout_to_inactive_user(legacy_loan)
@@ -582,20 +664,98 @@ class LoansMigrator(MigrationTaskBase):
             return TransactionResult(False, False, "", "", "")
 
     def checkout_to_inactive_user(self, legacy_loan) -> TransactionResult:
+        """Temporarily activates an inactive patron, checks out, and deactivates them again.
+
+        A retried checkout that fails for another reason (e.g. the item status) is handled
+        once more while the patron is still active. A retried checkout that fails because
+        the patron is still inactive is final, so it cannot cause another
+        activate/checkout/deactivate round.
+        """
         logger.info("Cannot check out to inactive user. Activating and trying again")
         user = self.get_user_by_barcode(legacy_loan.patron_barcode)
-        expiration_date = user.get("expirationDate", datetime.isoformat(datetime.now()))
+        if not user:
+            return TransactionResult(
+                False,
+                False,
+                None,
+                f"Could not fetch inactive user with barcode {legacy_loan.patron_barcode}",
+                i18n_t("Could not fetch inactive user"),
+            )
+        original_expiration_date = user.get("expirationDate")
         user["expirationDate"] = datetime.isoformat(datetime.now() + timedelta(days=1))
-        if self.activate_user(user):
-            logger.debug("Successfully Activated user")
-        res = self.circulation_helper.check_out_by_barcode(legacy_loan)  # checkout_and_update
-        if res.should_be_retried:
-            res = self.handle_checkout_failure(legacy_loan, res)
-        self.migration_report.add("Details", res.migration_report_message)
-        if self.deactivate_user(user, expiration_date):
-            logger.debug("Successfully Deactivated user again")
+        if not self.activate_user(user):
+            return TransactionResult(
+                False,
+                False,
+                None,
+                "Failed to activate user",
+                i18n_t("Failed to activate user"),
+            )
+        logger.debug("Successfully Activated user")
+        res = None
+        try:
+            res = self.circulation_helper.check_out_by_barcode(legacy_loan)
+            if res.should_be_retried and not res.error_message.startswith(
+                "Cannot check out to inactive user"
+            ):
+                res = self.handle_checkout_failure(legacy_loan, res)
+            res.should_be_retried = False
+            self.migration_report.add("Details", res.migration_report_message)
+        finally:
+            if self.deactivate_user(user, original_expiration_date):
+                logger.debug("Successfully Deactivated user again")
+            else:
+                detail = (
+                    f"User {user.get('id')} was activated for checkout and could not be "
+                    f"deactivated. Original expirationDate: {original_expiration_date or 'none'}"
+                )
+                Helper.log_data_issue(legacy_loan.patron_barcode, detail, user.get("id"))
+                self.add_followup(
+                    legacy_loan,
+                    "deactivate_user",
+                    detail,
+                    res.folio_loan if res else None,
+                )
         self.migration_report.add("Details", i18n.t("Handled inactive users"))
         return res
+
+    def checkout_with_item_temporarily_available(
+        self, legacy_loan: LegacyLoan, item_status: str
+    ) -> TransactionResult:
+        """Sets the item to Available, checks it out, and sets next_item_status to item_status.
+
+        If the item cannot be set to Available, no checkout is attempted. If the checkout
+        fails, the item is set back to item_status.
+
+        Args:
+            legacy_loan (LegacyLoan): The legacy loan
+            item_status (str): The FOLIO status the item had before it was made Available
+
+        Returns:
+            TransactionResult: The checkout result. Never retried.
+        """
+        logger.debug('Setting item %s to status "Available"', legacy_loan.item_barcode)
+        legacy_loan.next_item_status = "Available"
+        if not self.set_item_status(legacy_loan):
+            legacy_loan.next_item_status = item_status
+            return TransactionResult(
+                False,
+                False,
+                None,
+                f"Could not set item {legacy_loan.item_barcode} to Available before checkout",
+                i18n_t("Could not set item status to Available before checkout"),
+            )
+        res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
+        res_checkout.should_be_retried = False
+        legacy_loan.next_item_status = item_status
+        if not res_checkout.was_successful and not self.set_item_status(legacy_loan):
+            self.add_followup(
+                legacy_loan,
+                "restore_item_status",
+                f"Checkout failed after the item was set to Available. "
+                f"Item status could not be set back to {item_status}",
+            )
+        return res_checkout
 
     def handle_checked_out_item(self, legacy_loan: LegacyLoan) -> TransactionResult:
         if self.circulation_helper.is_checked_out(legacy_loan):
@@ -610,17 +770,7 @@ class LoansMigrator(MigrationTaskBase):
                 ),
             )
         else:
-            logger.debug(
-                i18n.t(
-                    'Setting item %{item_barcode} to status "Available"',
-                    item_barcode=legacy_loan.item_barcode,
-                )
-            )
-            legacy_loan.next_item_status = "Available"
-            self.set_item_status(legacy_loan)
-            res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
-            legacy_loan.next_item_status = "Checked out"
-            return res_checkout
+            return self.checkout_with_item_temporarily_available(legacy_loan, "Checked out")
 
     def handle_lost_item(
         self,
@@ -641,27 +791,21 @@ class LoansMigrator(MigrationTaskBase):
             )
 
         else:
-            logger.debug(
-                'Setting item %s to status "Available"',
-                legacy_loan.item_barcode,
-            )
-            legacy_loan.next_item_status = "Available"
-            self.set_item_status(legacy_loan)
-            res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
-            legacy_loan.next_item_status = lost_type
-            if lost_type == "Aged to lost":
-                self.set_item_status(legacy_loan)
-                s = i18n.t(
-                    "Successfully Checked out %{lost_type} item and put the status back",
-                    lost_type=lost_type_label,
-                )
-            else:
-                s = i18n.t(
-                    "Successfully Checked out %{lost_type} item. Item will be declared lost.",
-                    lost_type=lost_type_label,
-                )
-            logger.info(s)
-            self.migration_report.add("Details", s)
+            res_checkout = self.checkout_with_item_temporarily_available(legacy_loan, lost_type)
+            if res_checkout.was_successful:
+                # set_new_status restores Aged to lost, or declares the item lost
+                if lost_type == "Aged to lost":
+                    s = i18n.t(
+                        "Successfully Checked out %{lost_type} item. Status will be put back.",
+                        lost_type=lost_type_label,
+                    )
+                else:
+                    s = i18n.t(
+                        "Successfully Checked out %{lost_type} item. Item will be declared lost.",
+                        lost_type=lost_type_label,
+                    )
+                logger.info(s)
+                self.migration_report.add("Details", s)
             return res_checkout
 
     def handle_claimed_returned_item(self, legacy_loan: LegacyLoan):
@@ -674,15 +818,7 @@ class LoansMigrator(MigrationTaskBase):
                 i18n.t("Claimed returned and checked out"),
             )
         else:
-            logger.debug(
-                'Setting item %s to status "Available"',
-                legacy_loan.item_barcode,
-            )
-            legacy_loan.next_item_status = "Available"
-            self.set_item_status(legacy_loan)
-            res_checkout = self.circulation_helper.check_out_by_barcode(legacy_loan)
-            legacy_loan.next_item_status = "Claimed returned"
-            return res_checkout
+            return self.checkout_with_item_temporarily_available(legacy_loan, "Claimed returned")
 
     def update_open_loan(self, folio_loan: dict, legacy_loan: LegacyLoan):
         due_date = du_parser.isoparse(str(legacy_loan.due_date))
@@ -693,22 +829,18 @@ class LoansMigrator(MigrationTaskBase):
         loan_to_put["dueDate"] = due_date.isoformat()
         loan_to_put["loanDate"] = out_date.isoformat()
         loan_to_put["renewalCount"] = renewal_count
-        url = f"{self.folio_client.gateway_url}/circulation/loans/{loan_to_put['id']}"
+        url = f"/circulation/loans/{loan_to_put['id']}"
         try:
-            req = self.http_client.put(
-                url,
-                headers=self.folio_client.okapi_headers,
-                json=loan_to_put,
-            )
+            req = self.http_client.put(url, json=loan_to_put)
             if req.status_code == 422:
-                error_message = json.loads(req.text)["errors"][0]["message"]
+                error_message = _error_message(req)
                 self.migration_report.add(
                     "Details",
                     i18n.t("Update open loan error") + f": {error_message} {req.status_code}",
                 )
                 logger.error(f"Update open loan error: {error_message} {req.status_code}")
                 return False
-            elif req.status_code in [201, 204]:
+            elif req.is_success:
                 self.migration_report.add(
                     "Details",
                     i18n.t("Successfully updated open loan") + f" ({req.status_code})",
@@ -749,9 +881,10 @@ class LoansMigrator(MigrationTaskBase):
         logger.debug(f"Declare lost data: {json.dumps(data, indent=4)}")
         if self.folio_put_post(declare_lost_url, data, "POST", i18n.t("Declare item as lost")):
             self.migration_report.add("Details", i18n.t("Successfully declared loan as lost"))
-        else:
-            logger.error(f"Unsuccessfully declared loan {folio_loan} as lost")
-            self.migration_report.add("Details", i18n.t("Unsuccessfully declared loan as lost"))
+            return True
+        logger.error(f"Unsuccessfully declared loan {folio_loan} as lost")
+        self.migration_report.add("Details", i18n.t("Unsuccessfully declared loan as lost"))
+        return False
 
     def claim_returned(self, folio_loan):
         claim_returned_url = f"/circulation/loans/{folio_loan['id']}/claim-item-returned"
@@ -766,60 +899,67 @@ class LoansMigrator(MigrationTaskBase):
             self.migration_report.add(
                 "Details", i18n.t("Successfully declared loan as Claimed returned")
             )
-        else:
-            logger.error(f"Unsuccessfully declared loan {folio_loan} as Claimed returned")
-            self.migration_report.add(
-                "Details",
-                i18n.t(
-                    "Unsuccessfully declared loan %{loan} as Claimed returned",
-                    loan=folio_loan,
-                ),
-            )
+            return True
+        logger.error(f"Unsuccessfully declared loan {folio_loan} as Claimed returned")
+        self.migration_report.add(
+            "Details",
+            i18n.t(
+                "Unsuccessfully declared loan %{loan} as Claimed returned",
+                loan=folio_loan,
+            ),
+        )
+        return False
 
-    def set_item_status(self, legacy_loan: LegacyLoan):
+    def set_item_status(self, legacy_loan: LegacyLoan) -> bool:
+        """Sets the FOLIO item's status to legacy_loan.next_item_status.
+
+        Returns:
+            bool: True if the item was updated. Callers decide what a failure means.
+        """
         resp = None
         try:
             # Get Item by barcode, update status.
-            item_path = f'item-storage/items?query=(barcode=="{legacy_loan.item_barcode}")'
-            item_url = f"{self.folio_client.gateway_url}/{item_path}"
-            resp = self.http_client.get(item_url, headers=self.folio_client.okapi_headers)
+            resp = self.http_client.get(
+                "/item-storage/items",
+                params={"query": f'(barcode=="{legacy_loan.item_barcode}")'},
+            )
             resp.raise_for_status()
             data = resp.json()
             folio_item = data["items"][0]
             folio_item["status"]["name"] = legacy_loan.next_item_status
-            if self.update_item(folio_item):
-                self.migration_report.add(
-                    "Details",
-                    i18n.t(
-                        "Successfully set item status to %{status}",
-                        status=legacy_loan.next_item_status,
-                    ),
-                )
-                logger.debug(
-                    f"Successfully set item with barcode "
-                    f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
-                )
-            else:
-                if legacy_loan.item_barcode not in self.failed:
-                    self.failed[legacy_loan.item_barcode] = legacy_loan
-                logger.exception(
-                    f"Error when setting item with barcode "
-                    f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
-                )
-                self.migration_report.add(
-                    "Details",
-                    i18n.t(
-                        "Error setting item status to %{status}",
-                        status=legacy_loan.next_item_status,
-                    ),
-                )
-        except Exception as ee:
+            updated = self.update_item(folio_item)
+        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as ee:
             logger.exception(
                 f"{resp.status_code if resp is not None else ''} when trying to set item "
                 f"with barcode "
                 f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status} {ee}"
             )
-            raise ee
+            updated = False
+        if updated:
+            self.migration_report.add(
+                "Details",
+                i18n.t(
+                    "Successfully set item status to %{status}",
+                    status=legacy_loan.next_item_status,
+                ),
+            )
+            logger.debug(
+                f"Successfully set item with barcode "
+                f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
+            )
+        else:
+            logger.error(
+                f"Error when setting item with barcode "
+                f"{legacy_loan.item_barcode} to {legacy_loan.next_item_status}"
+            )
+            self.migration_report.add(
+                "Details",
+                i18n.t(
+                    "Error setting item status to %{status}",
+                    status=legacy_loan.next_item_status,
+                ),
+            )
+        return updated
 
     def activate_user(self, user):
         user["active"] = True
@@ -830,8 +970,12 @@ class LoansMigrator(MigrationTaskBase):
         self.migration_report.add("Details", i18n.t("Successfully activated user"))
         return True
 
-    def deactivate_user(self, user, expiration_date):
-        user["expirationDate"] = expiration_date
+    def deactivate_user(self, user, expiration_date: Optional[str]):
+        """Deactivates the user and restores expirationDate (removed when None)."""
+        if expiration_date is None:
+            user.pop("expirationDate", None)
+        else:
+            user["expirationDate"] = expiration_date
         user["active"] = False
         if not self.update_user(user):
             logger.error(f"Failed to deactivate user {user.get('id')}")
@@ -848,32 +992,29 @@ class LoansMigrator(MigrationTaskBase):
         url = f"/users/{user['id']}"
         return self.folio_put_post(url, user, "PUT", i18n.t("Update user"))
 
-    def get_user_by_barcode(self, barcode):
-        url = f'{self.folio_client.gateway_url}/users?query=(barcode=="{barcode}")'
-        resp = self.http_client.get(url, headers=self.folio_client.okapi_headers)
-        resp.raise_for_status()
-        data = resp.json()
-        return data["users"][0]
+    def get_user_by_barcode(self, barcode) -> Optional[dict]:
+        try:
+            resp = self.http_client.get("/users", params={"query": f'(barcode=="{barcode}")'})
+            resp.raise_for_status()
+            users = resp.json().get("users", [])
+        except (httpx.HTTPError, ValueError) as ee:
+            logger.exception(f"Error fetching user with barcode {barcode}: {ee}")
+            return None
+        if not users:
+            logger.error(f"No user found with barcode {barcode}")
+            return None
+        return users[0]
 
     def folio_put_post(self, url, data_dict, verb, action_description=""):
-        full_url = f"{self.folio_client.gateway_url}{url}"
         try:
             if verb == "PUT":
-                resp = self.http_client.put(
-                    full_url,
-                    headers=self.folio_client.okapi_headers,
-                    json=data_dict,
-                )
+                resp = self.http_client.put(url, json=data_dict)
             elif verb == "POST":
-                resp = self.http_client.post(
-                    full_url,
-                    headers=self.folio_client.okapi_headers,
-                    json=data_dict,
-                )
+                resp = self.http_client.post(url, json=data_dict)
             else:
                 raise Exception("Bad verb")
             if resp.status_code == 422:
-                error_message = json.loads(resp.text)["errors"][0]["message"]
+                error_message = _error_message(resp)
                 logger.error(error_message)
                 self.migration_report.add(
                     "Details",

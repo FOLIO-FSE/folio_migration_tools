@@ -32,6 +32,14 @@ from folio_migration_tools.transaction_migration.legacy_reserve import LegacyRes
 logger = logging.getLogger(__name__)
 
 
+def _error_message(resp: httpx.Response) -> str:
+    """Return the first FOLIO error message in a response, or the raw body if there is none."""
+    try:
+        return json.loads(resp.text)["errors"][0]["message"]
+    except (ValueError, KeyError, IndexError, TypeError):
+        return resp.text[:500]
+
+
 class ReservesMigrator(MigrationTaskBase):
     class TaskConfiguration(AbstractTaskConfiguration):
         """Task configuration for ReservesMigrator."""
@@ -116,17 +124,18 @@ class ReservesMigrator(MigrationTaskBase):
     async def do_work(self):
         logger.info("Starting")
         self._pre_validate_barcodes()
-        for num_reserves, legacy_reserve in enumerate(self.valid_reserves, start=1):
-            t0_migration = time.time()
-            self.migration_report.add_general_statistics(i18n_t("Processed reserves"))
-            try:
-                self.post_single_reserve(legacy_reserve)
-            except Exception as ee:
-                logger.exception(
-                    f"Error in row {num_reserves}  Reserve: {json.dumps(legacy_reserve)} {ee}"
-                )
-            if num_reserves % 50 == 0:
-                logger.info(f"{timings(self.t0, t0_migration, num_reserves)} {num_reserves}")
+        with self.folio_client.get_folio_http_client() as self.http_client:
+            for num_reserves, legacy_reserve in enumerate(self.valid_reserves, start=1):
+                t0_migration = time.time()
+                self.migration_report.add_general_statistics(i18n_t("Processed reserves"))
+                try:
+                    self.post_single_reserve(legacy_reserve)
+                except Exception as ee:
+                    logger.exception(
+                        f"Error in row {num_reserves}  Reserve: {json.dumps(legacy_reserve)} {ee}"
+                    )
+                if num_reserves % 50 == 0:
+                    logger.info(f"{timings(self.t0, t0_migration, num_reserves)} {num_reserves}")
 
     def post_single_reserve(self, legacy_reserve: LegacyReserve):
         try:
@@ -228,24 +237,15 @@ class ReservesMigrator(MigrationTaskBase):
             sys.exit(1)
 
     def folio_put_post(self, url, data_dict, verb, action_description=""):
-        full_url = f"{self.folio_client.gateway_url}{url}"
         try:
             if verb == "PUT":
-                resp = httpx.put(
-                    full_url,
-                    headers=self.folio_client.okapi_headers,
-                    json=data_dict,
-                )
+                resp = self.http_client.put(url, json=data_dict)
             elif verb == "POST":
-                resp = httpx.post(
-                    full_url,
-                    headers=self.folio_client.okapi_headers,
-                    json=data_dict,
-                )
+                resp = self.http_client.post(url, json=data_dict)
             else:
                 raise TransformationProcessError("Bad verb supplied. This is a code issue.")
             if resp.status_code == 422:
-                error_message = json.loads(resp.text)["errors"][0]["message"]
+                error_message = _error_message(resp)
                 logger.error(error_message)
                 self.migration_report.add(
                     "Details",
@@ -256,7 +256,7 @@ class ReservesMigrator(MigrationTaskBase):
                     ),
                 )
                 resp.raise_for_status()
-            elif resp.status_code in [201, 204]:
+            elif resp.is_success:
                 self.migration_report.add(
                     "Details",
                     i18n.t("Successfully %{action}", action=action_description)

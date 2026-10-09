@@ -281,7 +281,7 @@ class CirculationHelper:
                 False,
                 False,
                 None,
-                "5XX",
+                f"HTTP {fce.response.status_code}",
                 i18n.t("Failed checkout http status %{code}", code=fce.response.status_code),
             )
         except FolioConnectionError as fce:
@@ -289,6 +289,7 @@ class CirculationHelper:
                 "Connection error\tPOST FAILED %s\n\t%s\n\t%s",
                 fce.request.url,
                 json.dumps(data),
+                str(fce),
             )
             return TransactionResult(
                 False,
