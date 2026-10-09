@@ -38,28 +38,28 @@ def normalize_identifier_fields(identifier_config: object) -> list[str]:
     return []
 
 
+def _flatten_dict_values(value: dict) -> list[str]:
+    """Prefer well-known identifier keys; otherwise flatten every nested value."""
+    flattened = []
+    for key in ["barcode", "value", "id", "identifier", "externalSystemId"]:
+        if key in value:
+            flattened.extend(flatten_identifier_values(value[key]))
+    if flattened:
+        return flattened
+    for nested in value.values():
+        flattened.extend(flatten_identifier_values(nested))
+    return flattened
+
+
 def flatten_identifier_values(value: object) -> list[str]:
     """Flatten a (possibly nested) patron field value into a list of identifier strings."""
-    if value is None:
-        return []
     if isinstance(value, (str, int, float, bool)):
         text = str(value).strip()
         return [text] if text else []
     if isinstance(value, list):
-        flattened = []
-        for val in value:
-            flattened.extend(flatten_identifier_values(val))
-        return flattened
+        return [text for val in value for text in flatten_identifier_values(val)]
     if isinstance(value, dict):
-        flattened = []
-        for key in ["barcode", "value", "id", "identifier", "externalSystemId"]:
-            if key in value:
-                flattened.extend(flatten_identifier_values(value[key]))
-        if flattened:
-            return flattened
-        for nested in value.values():
-            flattened.extend(flatten_identifier_values(nested))
-        return flattened
+        return _flatten_dict_values(value)
     return []
 
 
@@ -148,6 +148,60 @@ def validate_item_barcodes(
     return valid_barcodes
 
 
+async def _fetch_patrons(
+    folio_client: FolioClient, barcode: str, patron_identifiers: list[str]
+) -> list[dict]:
+    """Fetch the users matching a legacy barcode on any of the patron identifiers."""
+    query = " OR ".join(f"{field.strip()}=={barcode}" for field in patron_identifiers)
+    try:
+        return await folio_client.folio_get_async("/users", key="users", query=query)
+    except Exception as e:
+        error_text = e.response.text if hasattr(e, "response") else str(e)
+        logger.exception("Error fetching patron for barcode %s: %s", barcode, error_text)
+        return []
+
+
+def _resolve_patron_value(
+    patrons: list[dict],
+    barcode: str,
+    patron_identifiers: list[str],
+    require_barcode: bool,
+) -> str | None:
+    """Return the value to post transactions with, or None (after logging why) if invalid."""
+    if not patrons:
+        logger.warning("No patron found for barcode: %s", barcode)
+        Helper.log_data_issue_failed("", "No patron found for barcode", f"Barcode: {barcode}")
+        return None
+    if len(patrons) > 1:
+        logger.warning("Multiple patrons found for barcode: %s", barcode)
+        Helper.log_data_issue_failed(
+            "",
+            "Multiple patrons found for barcode",
+            f"Barcode: {barcode} - {json.dumps(patrons)}",
+        )
+        return None
+    patron = patrons[0]
+    if not patron.get("patronGroup"):
+        logger.warning("Patron exists but has no group: %s", barcode)
+        Helper.log_data_issue_failed(
+            "",
+            "Fetched patron has no group assigned",
+            f"Barcode: {barcode} - {json.dumps(patrons)}",
+        )
+        return None
+    if require_barcode:
+        lookup_value = patron.get("barcode")
+        issue = "Fetched patron has no barcode assigned"
+    else:
+        lookup_value = get_patron_lookup_value(patron, barcode, patron_identifiers)
+        issue = "Fetched patron has no lookupable identifier value"
+    if not lookup_value:
+        logger.warning("Patron exists but has no usable identifier value: %s", barcode)
+        Helper.log_data_issue("", issue, f"Barcode: {barcode} - {json.dumps(patron)}")
+        return None
+    return lookup_value
+
+
 async def validate_patron_barcodes(
     folio_client: FolioClient,
     barcodes: set[str],
@@ -175,82 +229,30 @@ async def validate_patron_barcodes(
     semaphore = asyncio.Semaphore(max_concurrent)
     valid_patron_map: dict[str, str] = {}
     counter = 0
-    num_invalid = 0
+
+    def log_progress():
+        logger.info(
+            "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
+            counter,
+            len(barcodes),
+            len(valid_patron_map),
+            counter - len(valid_patron_map),
+        )
 
     async def check_one(barcode: str):
-        nonlocal num_invalid
         nonlocal counter
-        query = " OR ".join(f"{field.strip()}=={barcode}" for field in patron_identifiers)
         async with semaphore:
-            try:
-                fetch_patron = await folio_client.folio_get_async(
-                    "/users", key="users", query=query
-                )
-            except Exception as e:
-                if hasattr(e, "response"):
-                    logger.exception(
-                        "Error fetching patron for barcode %s: %s", barcode, e.response.text
-                    )
-                else:
-                    logger.exception("Error fetching patron for barcode %s: %s", barcode, str(e))
-                fetch_patron = []
+            patrons = await _fetch_patrons(folio_client, barcode, patron_identifiers)
             counter += 1
-        if not fetch_patron:
-            logger.warning("No patron found for barcode: %s", barcode)
-            Helper.log_data_issue_failed("", "No patron found for barcode", f"Barcode: {barcode}")
-            num_invalid += 1
-        elif len(fetch_patron) > 1:
-            logger.warning("Multiple patrons found for barcode: %s", barcode)
-            Helper.log_data_issue_failed(
-                "",
-                "Multiple patrons found for barcode",
-                f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
-            )
-            num_invalid += 1
-        elif not fetch_patron[0].get("patronGroup"):
-            logger.warning("Patron exists but has no group: %s", barcode)
-            Helper.log_data_issue_failed(
-                "",
-                "Fetched patron has no group assigned",
-                f"Barcode: {barcode} - {json.dumps(fetch_patron)}",
-            )
-            num_invalid += 1
-        else:
-            patron = fetch_patron[0]
-            if require_barcode:
-                lookup_value = patron.get("barcode")
-            else:
-                lookup_value = get_patron_lookup_value(patron, barcode, patron_identifiers)
-            if lookup_value:
-                valid_patron_map[barcode] = lookup_value
-            else:
-                logger.warning("Patron exists but has no usable identifier value: %s", barcode)
-                Helper.log_data_issue(
-                    "",
-                    "Fetched patron has no barcode assigned"
-                    if require_barcode
-                    else "Fetched patron has no lookupable identifier value",
-                    f"Barcode: {barcode} - {json.dumps(patron)}",
-                )
-                num_invalid += 1
+        lookup_value = _resolve_patron_value(patrons, barcode, patron_identifiers, require_barcode)
+        if lookup_value:
+            valid_patron_map[barcode] = lookup_value
         if counter % 100 == 0:
-            logger.info(
-                "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
-                counter,
-                len(barcodes),
-                len(valid_patron_map),
-                num_invalid,
-            )
+            log_progress()
 
     # Without a /retrieve POST query endpoint for Users, the only sensible way to check
     # patron barcodes is to query them one by one. This is still faster than trying to
     # match them in Python after fetching all users for most systems.
     await asyncio.gather(*(check_one(bc) for bc in barcodes))
-    logger.info(
-        "Pre-validation progress: %s/%s barcodes checked. %s valid, %s not found.",
-        counter,
-        len(barcodes),
-        len(valid_patron_map),
-        num_invalid,
-    )
+    log_progress()
     return valid_patron_map

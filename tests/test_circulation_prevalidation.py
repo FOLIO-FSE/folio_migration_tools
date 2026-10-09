@@ -2,7 +2,11 @@ from unittest.mock import AsyncMock, Mock
 
 import pytest
 
+import folioclient
+
 from folio_migration_tools.circulation_prevalidation import (
+    flatten_identifier_values,
+    get_patron_lookup_value,
     load_patron_identifiers,
     normalize_identifier_fields,
     validate_item_barcodes,
@@ -126,5 +130,91 @@ class TestValidateItemBarcodes:
     def test_non_dict_response_yields_no_valid_barcodes(self):
         client = Mock()
         client.folio_post.return_value = []
+
+        assert validate_item_barcodes(client, {"I1"}) == set()
+
+
+class TestFlattenIdentifierValues:
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            (None, []),
+            ("  abc ", ["abc"]),
+            ("   ", []),
+            (123, ["123"]),
+            (["a", ["b", None]], ["a", "b"]),
+            ({"value": "v", "other": "x"}, ["v"]),
+            ({"unknown": "u", "nested": {"deep": "d"}}, ["u", "d"]),
+            (object(), []),
+        ],
+    )
+    def test_flatten(self, value, expected):
+        assert flatten_identifier_values(value) == expected
+
+
+class TestGetPatronLookupValue:
+    def test_checks_barcode_field_before_configured_identifiers(self):
+        patron = {"barcode": "NEW", "username": "OLD"}
+
+        assert get_patron_lookup_value(patron, "OLD", ["username"]) == "NEW"
+        assert get_patron_lookup_value({"username": "OLD"}, "OLD", ["username"]) == "OLD"
+
+    def test_falls_back_to_first_value(self):
+        assert get_patron_lookup_value({"barcode": "NEW"}, "OLD", ["barcode"]) == "NEW"
+
+    def test_uses_flat_key_when_path_lookup_misses(self):
+        assert get_patron_lookup_value({"a.b": "X"}, "X", ["a.b"]) == "X"
+
+    def test_returns_none_when_no_identifier_resolves(self):
+        assert get_patron_lookup_value({"id": "u"}, "OLD", ["username"]) is None
+
+
+class TestLoadPatronIdentifiersErrors:
+    def test_falls_back_on_invalid_json(self):
+        client = Mock()
+        client.folio_get_single_object.return_value = {"configs": [{"value": "not json"}]}
+
+        assert load_patron_identifiers(client) == ["barcode"]
+
+    def test_falls_back_on_client_error_with_response(self):
+        client = Mock()
+        error = folioclient.FolioClientError(
+            "boom", request=Mock(), response=Mock(text="server said no")
+        )
+        client.folio_get_single_object.side_effect = error
+
+        assert load_patron_identifiers(client) == ["barcode"]
+
+
+class TestFetchErrors:
+    @pytest.mark.asyncio
+    async def test_fetch_error_marks_patron_invalid(self):
+        client = Mock()
+        client.folio_get_async = AsyncMock(side_effect=RuntimeError("down"))
+
+        assert await validate_patron_barcodes(client, {"P1"}, ["barcode"]) == {}
+
+    @pytest.mark.asyncio
+    async def test_fetch_error_with_response_text(self):
+        client = Mock()
+        error = RuntimeError("down")
+        error.response = Mock(text="gateway timeout")
+        client.folio_get_async = AsyncMock(side_effect=error)
+
+        assert await validate_patron_barcodes(client, {"P1"}, ["barcode"]) == {}
+
+    @pytest.mark.asyncio
+    async def test_progress_logged_every_hundred(self):
+        client = Mock()
+        client.folio_get_async = AsyncMock(return_value=[])
+
+        result = await validate_patron_barcodes(client, {f"P{i}" for i in range(100)}, ["barcode"])
+
+        assert result == {}
+
+    def test_item_batch_error_is_logged_and_skipped(self):
+        client = Mock()
+        error = folioclient.FolioClientError("boom", request=Mock(), response=Mock(text="bad"))
+        client.folio_post.side_effect = error
 
         assert validate_item_barcodes(client, {"I1"}) == set()
