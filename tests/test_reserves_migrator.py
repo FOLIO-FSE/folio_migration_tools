@@ -1,4 +1,4 @@
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock
 
 import httpx
 import pytest
@@ -20,24 +20,37 @@ class TestFolioPutPost:
     def migrator(self):
         m = Mock(spec=ReservesMigrator)
         m.folio_client = Mock()
-        m.folio_client.gateway_url = "http://folio"
-        m.folio_client.okapi_headers = {}
         m.migration_report = Mock()
+        m.http_client = Mock()
         return m
 
-    @pytest.mark.parametrize("status", [201, 204])
+    @pytest.mark.parametrize("status", [200, 201, 204])
     def test_success(self, migrator, status):
-        with patch("httpx.post", return_value=_response(status, "")):
-            assert ReservesMigrator.folio_put_post(migrator, "/x", {}, "POST", "act")
+        migrator.http_client.post.return_value = _response(status, "")
+        assert ReservesMigrator.folio_put_post(migrator, "/x", {}, "POST", "act")
+        details = [c.args[1] for c in migrator.migration_report.add.call_args_list]
+        assert any("Successfully" in d for d in details)
+        assert not any("error" in d for d in details)
 
     @pytest.mark.parametrize("status", [422, 500])
     def test_http_error_returns_false(self, migrator, status):
-        with patch("httpx.post", return_value=_response(status)):
-            assert not ReservesMigrator.folio_put_post(migrator, "/x", {}, "POST", "act")
+        migrator.http_client.post.return_value = _response(status)
+        assert not ReservesMigrator.folio_put_post(migrator, "/x", {}, "POST", "act")
+
+    def test_422_with_non_json_body_returns_false(self, migrator):
+        migrator.http_client.post.return_value = _response(422, "<html>Bad gateway</html>")
+        assert not ReservesMigrator.folio_put_post(migrator, "/x", {}, "POST", "act")
 
     def test_connection_error_returns_false(self, migrator):
-        with patch("httpx.put", side_effect=httpx.ConnectError("boom")):
-            assert not ReservesMigrator.folio_put_post(migrator, "/x", {}, "PUT", "act")
+        migrator.http_client.put.side_effect = httpx.ConnectError("boom")
+        assert not ReservesMigrator.folio_put_post(migrator, "/x", {}, "PUT", "act")
+
+    def test_posts_relative_path_with_client_headers(self, migrator):
+        migrator.http_client.post.return_value = _response(201, "")
+        ReservesMigrator.folio_put_post(migrator, "/coursereserves/x", {}, "POST", "act")
+        call = migrator.http_client.post.call_args
+        assert call.args[0] == "/coursereserves/x"
+        assert "headers" not in call.kwargs
 
 
 class _Reserve:
@@ -52,7 +65,7 @@ def _make_migrator(reserves, skip=False):
     m.semi_valid_reserves = reserves
     m.skip_barcode_prevalidation = skip
     m.migration_report = Mock()
-    m.folio_client = Mock()
+    m.folio_client = MagicMock()
     m.check_barcodes = lambda: ReservesMigrator.check_barcodes(m)
     return m
 

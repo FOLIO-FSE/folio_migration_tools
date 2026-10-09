@@ -144,6 +144,7 @@ Failed records are saved to `failed_records_<task_name>_<timestamp>.txt`.
 2. **Update dates**: Updates `loanDate` and `dueDate` to match original values
 3. **Handle special statuses**: If item status prevents checkout (Aged to lost, Declared lost, Claimed returned), temporarily changes status to Available
 4. **Handle inactive patrons**: If patron is inactive, temporarily activates for checkout then deactivates
+5. **Record follow-ups**: If a step after the checkout fails, the loan is listed in the follow-up file instead of the failed records file
 
 ```{tip}
 Migrate items with loanable statuses (like "Available" or "Checked out") rather than non-loanable statuses to improve performance. The task can handle non-loanable statuses but it's significantly slower.
@@ -156,7 +157,31 @@ Files are created in `iterations/<iteration>/results/`:
 | File | Description |
 |------|-------------|
 | `failed_records_<task_name>_<timestamp>.txt` | Records that failed validation or posting |
+| `loans_needing_followup_<task_name>_<timestamp>.tsv` | Checked out loans that need a manual fix. Only created when there are any |
 | Report files | Migration statistics and error logs |
+
+### Follow-up File
+
+A loan is listed in the follow-up file when the checkout succeeded but a later step failed. Do not re-run these loans: they already exist in FOLIO, and a re-run would try to check them out again. Fix them by hand, or with a script, using the columns below.
+
+| Column | Description |
+|--------|-------------|
+| `item_barcode` | Item barcode from the source data |
+| `patron_barcode` | Patron barcode from the source data |
+| `loan_id` | FOLIO loan UUID, when known |
+| `followup_type` | The step that failed (see below) |
+| `detail` | What was not done, with the values to apply |
+
+| `followup_type` | Meaning |
+|-----------------|---------|
+| `update_loan` | The loan's `renewalCount`, `dueDate` and `loanDate` could not be updated |
+| `declare_lost` | The loan could not be declared lost |
+| `claim_returned` | The loan could not be set to Claimed returned |
+| `set_item_status` | The item status could not be set to `next_item_status` |
+| `restore_item_status` | The checkout failed after the item was set to Available, and the item's original status could not be put back |
+| `deactivate_user` | An inactive patron was activated for the checkout and could not be deactivated again |
+
+The count of rows is reported as "Loan follow-up actions needed" in the migration report.
 
 ## Examples
 
@@ -261,9 +286,18 @@ The task checks if SMTP is disabled before starting. If not, you'll get a 10-sec
 
 Items in non-loanable statuses will be temporarily changed to "Available", have the loan created, then have their status reset. This is logged but significantly slows processing.
 
+- If the item cannot be set to "Available", no checkout is attempted and the loan is written to the failed records file.
+- If the checkout fails after the item was set to "Available", the item's original status is put back. If that also fails, the loan is listed in the follow-up file as `restore_item_status`.
+
 ### Inactive Patrons
 
 Inactive patrons will be temporarily activated for the checkout, then deactivated. This is handled automatically.
+
+- While the patron is active, their `expirationDate` is set to one day in the future. On deactivation the original `expirationDate` is restored, or removed if the patron had none.
+- If the checkout after activation fails for a reason that can be handled, such as the item status (for example, Claimed returned), it is handled as described above before the patron is deactivated.
+- If the checkout after activation fails because the patron is still inactive, it is not retried again, and the loan is written to the failed records file.
+- If the patron cannot be found or activated, no checkout is attempted and the loan is written to the failed records file.
+- If the patron cannot be deactivated again, it is logged as a data issue and listed in the follow-up file as `deactivate_user`. Check these patrons in FOLIO, since they are still active.
 
 ## See Also
 
