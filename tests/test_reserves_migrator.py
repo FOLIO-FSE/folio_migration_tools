@@ -73,3 +73,16 @@ def test_prevalidation_can_be_skipped():
 
     assert m.valid_reserves == reserves
     m.folio_client.folio_post.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_do_work_posts_only_prevalidated_reserves():
+    good, bad = _Reserve("I1"), _Reserve("I2")
+    m = _make_migrator([good, bad])
+    m.folio_client.folio_post.return_value = {"items": [{"barcode": "I1"}]}
+    m.t0 = 0
+    m._pre_validate_barcodes = lambda: ReservesMigrator._pre_validate_barcodes(m)
+
+    await ReservesMigrator.do_work(m)
+
+    m.post_single_reserve.assert_called_once_with(good)
