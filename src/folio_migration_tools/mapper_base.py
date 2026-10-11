@@ -556,15 +556,7 @@ class MapperBase:
 
     @property
     def base_string_for_folio_uuid(self):
-        if (
-            self.library_configuration.use_gateway_url_for_uuids
-            and not self.library_configuration.is_ecs
-        ):
-            return self.folio_client.gateway_url
-        elif self.library_configuration.ecs_tenant_id:
-            return self.library_configuration.ecs_tenant_id
-        else:
-            return self.library_configuration.tenant_id
+        return self.library_configuration.folio_uuid_base_string(self.folio_client.gateway_url)
 
     @staticmethod
     def validate_location_map(location_map: List[Dict], locations: List[Dict]) -> List[Dict]:

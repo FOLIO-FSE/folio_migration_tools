@@ -45,6 +45,7 @@ from folio_migration_tools.transaction_migration.legacy_loan import LegacyLoan
 from folio_migration_tools.transaction_migration.transaction_result import (
     TransactionResult,
 )
+from folio_migration_tools.utils import cql_quote
 
 logger = logging.getLogger(__name__)
 
@@ -994,7 +995,8 @@ class LoansMigrator(MigrationTaskBase):
 
     def get_user_by_barcode(self, barcode) -> Optional[dict]:
         try:
-            resp = self.http_client.get("/users", params={"query": f'(barcode=="{barcode}")'})
+            query = f"(barcode=={cql_quote(barcode)})"
+            resp = self.http_client.get("/users", params={"query": query})
             resp.raise_for_status()
             users = resp.json().get("users", [])
         except (httpx.HTTPError, ValueError) as ee:

@@ -30,7 +30,11 @@ from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapper_base import MapperBase
 from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
-from folio_migration_tools.utils import normalize_for_compare
+from folio_migration_tools.utils import (
+    _split_path_token,
+    get_from_path,
+    normalize_for_compare,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1362,56 +1366,6 @@ def set_deep(dictionary, key, value):
     for k in keys:
         dd = dd.setdefault(k, {})
     dd.setdefault(latest, value)
-
-
-def _split_path_token(path_part: str) -> tuple[str, int | None]:
-    """Parse a path token into a dictionary key and optional list index.
-
-    Args:
-        path_part (str): A single path token such as "addresses" or
-            "addresses[0]".
-
-    Returns:
-        tuple[str, int | None]: A tuple containing the dictionary key and an
-            optional list index. If the token does not match the expected
-            pattern, returns ``(path_part, None)``.
-    """
-    match = re.match(r"^([^\[\]]+)(?:\[(\d+)\])?$", path_part)
-    if not match:
-        return path_part, None
-    key = match.group(1)
-    idx = int(match.group(2)) if match.group(2) is not None else None
-    return key, idx
-
-
-def get_from_path(dictionary, path: str, default=None):
-    """Read a value from a nested mapping/list structure by path.
-
-    Supports dot notation for dictionaries (for example, ``a.b``) and bracket
-    notation for list indexes (for example, ``a[0].b``).
-
-    Args:
-        dictionary (Any): Root object to read from.
-        path (str): Dot/bracket path expression.
-        default (Any, optional): Value returned when the path is missing or
-            type-incompatible.
-
-    Returns:
-        Any: The value at the path if present; otherwise ``default``.
-    """
-    current = dictionary
-    for part in path.split("."):
-        key, idx = _split_path_token(part)
-        if not isinstance(current, dict):
-            return default
-        if key not in current:
-            return default
-        current = current.get(key)
-        if idx is not None:
-            if not isinstance(current, list) or idx >= len(current):
-                return default
-            current = current[idx]
-    return current
 
 
 def set_at_path(dictionary, path: str, value):

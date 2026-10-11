@@ -121,13 +121,17 @@ By default, the task validates patron and item barcodes directly against the FOL
 
 ### Item barcode validation
 
-Item barcodes from the loan data are validated in batches against FOLIO's `/item-storage/items/retrieve` endpoint. Barcodes that do not match an existing item are logged and the corresponding loans are set aside.
+Item barcodes from the loan data are validated in batches against FOLIO's `/item-storage/items/retrieve` endpoint. Barcodes are matched case-insensitively. Barcodes that do not match an existing item are logged and the corresponding loans are set aside.
 
 ### Patron barcode validation
 
 Patron barcodes (including proxy patron barcodes) are validated individually against FOLIO's `/users` endpoint using the tenant's configured preferred patron identifier fields (from `mod-configuration`). This ensures that lookup barcodes are resolved to the patron's actual FOLIO barcode before checkout.
 
 Patrons that cannot be found, or where a lookup barcode matches multiple users, are logged and the corresponding loans are set aside.
+
+### Lookup failures
+
+If an item batch or a patron lookup fails, for example because FOLIO is unavailable, it is retried once. If the retry fails too, the task halts. A lookup that failed cannot be told apart from a missing record, so carrying on could set aside loans whose records exist.
 
 ### Validation outcomes
 
