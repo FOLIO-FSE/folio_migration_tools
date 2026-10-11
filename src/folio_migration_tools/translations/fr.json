@@ -251,6 +251,7 @@
   "Rerun succeeded": "Relance réussie",
   "Reserve discarded. Could not find migrated barcode": "Réservation rejetée. Code-barres migré introuvable",
   "Reserve verified against migrated item": "Réservation vérifiée par rapport à l'exemplaire migré",
+  "Reserves discarded by barcode pre-validation": "Réservations rejetées par la pré-validation des codes-barres",
   "Reserves migration report": "Rapport de migration des réservations",
   "Retention policy 6 indicates a limited period. Specific retention period will be mapped from 008/13-15": "La politique de conservation 6 indique une période limitée. La période de conservation spécifique sera mappée depuis 008/13-15",
   "Rows merged to create Purchase Orders": "Lignes fusionnées pour créer des commandes d'achat",

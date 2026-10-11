@@ -271,3 +271,20 @@ class LibraryConfiguration(BaseModel):
             values["failed_percentage_threshold"] = 100
             values["generic_exception_threshold"] = 10_000_000
         return values
+
+    def folio_uuid_base_string(self, gateway_url: str) -> str:
+        """Return the base string used to generate deterministic FOLIO UUIDs.
+
+        Args:
+            gateway_url (str): The FOLIO API gateway URL, used when use_gateway_url_for_uuids
+                is set and this is not an ECS environment.
+
+        Returns:
+            str: The gateway URL, the ECS tenant ID, or the tenant ID.
+        """
+        if self.use_gateway_url_for_uuids and not self.is_ecs:
+            return gateway_url
+        elif self.ecs_tenant_id:
+            return self.ecs_tenant_id
+        else:
+            return self.tenant_id

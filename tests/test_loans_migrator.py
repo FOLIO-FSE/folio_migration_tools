@@ -6,9 +6,12 @@ from io import StringIO
 from unittest.mock import AsyncMock, Mock, patch
 from zoneinfo import ZoneInfo
 
+import httpx
 import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
+from folio_migration_tools import circulation_prevalidation
+from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
@@ -315,18 +318,20 @@ class TestPreValidatePatronBarcodesAsync:
         await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
         m.folio_client.folio_get_async.assert_called_once_with(
-            "/users", key="users", query="barcode==P001 OR externalSystemId==P001",
+            "/users", key="users", query='barcode=="P001" OR externalSystemId=="P001"',
         )
 
     @pytest.mark.asyncio
-    async def test_handles_exception_gracefully(self):
+    async def test_lookup_error_halts_after_retry(self, monkeypatch):
+        monkeypatch.setattr(circulation_prevalidation, "RETRY_DELAY_SECONDS", 0)
         loans = [DummyLegacyLoan(patron_barcode="P001")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get_async.side_effect = Exception("Connection refused")
+        m.folio_client.folio_get_async.side_effect = httpx.ConnectError("Connection refused")
 
-        await LoansMigrator.pre_validate_patron_barcodes_async(m)
+        with pytest.raises(TransformationProcessError):
+            await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
-        assert m.valid_patron_map == {}
+        assert m.folio_client.folio_get_async.await_count == 2
 
 
 # --- Tests for pre_validate_item_barcodes ---

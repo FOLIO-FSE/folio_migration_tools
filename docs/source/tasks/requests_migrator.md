@@ -111,7 +111,11 @@ By default, the task validates request barcodes directly against FOLIO before at
 - **Missing items**: Rows with item barcodes not found in FOLIO are set aside
 - **Missing patrons**: Rows with patron barcodes not found in FOLIO are set aside
 
+Item barcodes are matched case-insensitively.
+
 Failed records are saved for review.
+
+If an item batch or a patron lookup fails, for example because FOLIO is unavailable, it is retried once. If the retry fails too, the task halts. A lookup that failed cannot be told apart from a missing record, so carrying on would set aside requests whose records exist.
 
 Set `skipBarcodePrevalidation` to `true` to bypass this step.
 

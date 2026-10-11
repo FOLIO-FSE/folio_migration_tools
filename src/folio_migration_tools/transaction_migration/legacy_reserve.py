@@ -1,7 +1,7 @@
 """Legacy course reserve data model and validation.
 
 Defines the LegacyReserve class for representing course reserves from legacy ILS systems.
-Handles validation, course listing lookups, and transformation to FOLIO course reserve
+Handles validation, course listing ID generation, and transformation to FOLIO course reserve
 format. Links items to course listings via barcode lookups.
 """
 
@@ -10,18 +10,18 @@ from typing import Dict, List, Tuple
 
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
-from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 
 
 class LegacyReserve(object):
-    def __init__(self, legacy_request_dict: Dict, folio_client: FolioClient, row: int = 0):
+    def __init__(self, legacy_request_dict: Dict, uuid_base_string: str, row: int = 0):
         """Initialize LegacyReserve from legacy reserve data.
 
         Args:
             legacy_request_dict (Dict): Dictionary containing legacy reserve data.
-            folio_client (FolioClient): FOLIO API client for lookups.
+            uuid_base_string (str): Base string for deterministic UUIDs. Must match the one
+                CoursesMigrator used, so the course listing ID points at the migrated listing.
             row (int): Row number in source data for error reporting.
         """
         # validate
@@ -47,7 +47,7 @@ class LegacyReserve(object):
             self.errors.append(("Missing data.", "legacy_identifier"))
         self.course_listing_id: str = str(
             FolioUUID(
-                folio_client.gateway_url,
+                uuid_base_string,
                 FOLIONamespaces.course_listing,
                 legacy_request_dict["legacy_identifier"],
             )
@@ -58,4 +58,10 @@ class LegacyReserve(object):
             "courseListingId": self.course_listing_id,
             "copiedItem": {"barcode": self.item_barcode},
             "id": self.id,
+        }
+
+    def to_source_dict(self):
+        return {
+            "legacy_identifier": self.legacy_identifier,
+            "item_barcode": self.item_barcode,
         }

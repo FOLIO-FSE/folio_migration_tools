@@ -9,7 +9,7 @@ import json
 import logging
 import sys
 import time
-from typing import Annotated, Dict
+from typing import Annotated
 
 import httpx
 import i18n
@@ -102,6 +102,9 @@ class ReservesMigrator(MigrationTaskBase):
         self.semi_valid_reserves = []
         super().__init__(library_config, task_configuration, folio_client)
         self.skip_barcode_prevalidation = task_configuration.skip_barcode_prevalidation
+        self.uuid_base_string = self.library_configuration.folio_uuid_base_string(
+            self.folio_client.gateway_url
+        )
         with open(
             self.folder_structure.legacy_records_folder
             / task_configuration.course_reserve_file_path.file_name,
@@ -118,7 +121,7 @@ class ReservesMigrator(MigrationTaskBase):
                 len(self.semi_valid_reserves),
             )
         self.t0 = time.time()
-        self.failed: Dict = {}
+        self.failed_reserves: list[LegacyReserve] = []
         logger.info("Init completed")
 
     async def do_work(self):
@@ -132,30 +135,28 @@ class ReservesMigrator(MigrationTaskBase):
                     self.post_single_reserve(legacy_reserve)
                 except Exception as ee:
                     logger.exception(
-                        f"Error in row {num_reserves}  Reserve: {json.dumps(legacy_reserve)} {ee}"
+                        "Error in row %s  Reserve: %s %s",
+                        num_reserves,
+                        json.dumps(legacy_reserve.to_source_dict()),
+                        ee,
                     )
+                    self.failed_reserves.append(legacy_reserve)
                 if num_reserves % 50 == 0:
                     logger.info(f"{timings(self.t0, t0_migration, num_reserves)} {num_reserves}")
 
     def post_single_reserve(self, legacy_reserve: LegacyReserve):
-        try:
-            path = f"/coursereserves/courselistings/{legacy_reserve.course_listing_id}/reserves"
-            if self.folio_put_post(
-                path, legacy_reserve.to_dict(), "POST", i18n.t("Posted reserves")
-            ):
-                self.migration_report.add_general_statistics(
-                    i18n_t("Successfully posted reserves")
-                )
-            else:
-                self.migration_report.add_general_statistics(i18n_t("Failure to post reserve"))
-        except Exception as ee:
-            logger.exception(ee)
+        path = f"/coursereserves/courselistings/{legacy_reserve.course_listing_id}/reserves"
+        if self.folio_put_post(path, legacy_reserve.to_dict(), "POST", i18n.t("Posted reserves")):
+            self.migration_report.add_general_statistics(i18n_t("Successfully posted reserves"))
+        else:
+            self.migration_report.add_general_statistics(i18n_t("Failure to post reserve"))
+            self.failed_reserves.append(legacy_reserve)
 
     async def wrap_up(self):
         self.extradata_writer.flush()
-        for k, v in self.failed.items():
-            self.failed_and_not_dupe[k] = [v.to_dict()]
-        self.migration_report.set("GeneralStatistics", i18n_t("Failed reserves"), len(self.failed))
+        self.migration_report.set(
+            "GeneralStatistics", i18n_t("Failed reserves"), len(self.failed_reserves)
+        )
         self.write_failed_reserves_to_file()
 
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
@@ -167,15 +168,13 @@ class ReservesMigrator(MigrationTaskBase):
         self.clean_out_empty_logs()
 
     def write_failed_reserves_to_file(self):
-        # POST /coursereserves/courselistings/40a085bd-b44b-42b3-b92f-61894a75e3ce/reserves
-        # Match on legacy course number ()
-
-        csv_columns = ["legacy_identifier", "barcode"]
+        """Write failed reserves with the source file's headers, so they can be rerun."""
+        csv_columns = ["legacy_identifier", "item_barcode"]
         with open(self.folder_structure.failed_recs_path, "w+") as failed_reserves_file:
             writer = csv.DictWriter(failed_reserves_file, fieldnames=csv_columns, dialect="tsv")
             writer.writeheader()
-            for _k, failed_reserve in self.failed.items():
-                writer.writerow(failed_reserve[0])
+            for failed_reserve in self.failed_reserves:
+                writer.writerow(failed_reserve.to_source_dict())
 
     def _pre_validate_barcodes(self):
         if self.skip_barcode_prevalidation:
@@ -206,15 +205,20 @@ class ReservesMigrator(MigrationTaskBase):
                     "DiscardedReserves",
                     i18n_t("Reserve discarded. Could not find migrated barcode"),
                 )
+                self.migration_report.add_general_statistics(
+                    i18n_t("Reserves discarded by barcode pre-validation")
+                )
+                self.failed_reserves.append(reserve)
 
     def load_and_validate_legacy_reserves(self, reserves_reader):
         num_bad = 0
+        legacy_reserve_count = 0
         logger.info("Validating legacy reserves in file...")
-        for legacy_reserve_count, legacy_reserve_dict in enumerate(reserves_reader):
+        for legacy_reserve_count, legacy_reserve_dict in enumerate(reserves_reader, start=1):
             try:
                 legacy_reserve = LegacyReserve(
                     legacy_reserve_dict,
-                    self.folio_client,
+                    self.uuid_base_string,
                     legacy_reserve_count,
                 )
                 if any(legacy_reserve.errors):
@@ -229,7 +233,7 @@ class ReservesMigrator(MigrationTaskBase):
         logger.info(
             f"Done validating {legacy_reserve_count} legacy reserves with {num_bad} rotten apples"
         )
-        if num_bad / legacy_reserve_count > 0.5:
+        if legacy_reserve_count and num_bad / legacy_reserve_count > 0.5:
             q = num_bad / legacy_reserve_count
             logger.error("%s percent of reserves failed to validate.", (q * 100))
             self.migration_report.log_me()

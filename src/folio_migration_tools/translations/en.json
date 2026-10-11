@@ -251,6 +251,7 @@
   "Rerun succeeded": "Rerun succeeded",
   "Reserve discarded. Could not find migrated barcode": "Reserve discarded. Could not find migrated barcode",
   "Reserve verified against migrated item": "Reserve verified against migrated item",
+  "Reserves discarded by barcode pre-validation": "Reserves discarded by barcode pre-validation",
   "Reserves migration report": "Reserves migration report",
   "Retention policy 6 indicates a limited period. Specific retention period will be mapped from 008/13-15": "Retention policy 6 indicates a limited period. Specific retention period will be mapped from 008/13-15",
   "Rows merged to create Purchase Orders": "Rows merged to create Purchase Orders",

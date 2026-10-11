@@ -1,3 +1,4 @@
+import csv
 from unittest.mock import MagicMock, Mock
 
 import httpx
@@ -54,8 +55,16 @@ class TestFolioPutPost:
 
 
 class _Reserve:
-    def __init__(self, item_barcode):
+    def __init__(self, item_barcode, legacy_identifier="C1"):
         self.item_barcode = item_barcode
+        self.legacy_identifier = legacy_identifier
+        self.course_listing_id = "cl-1"
+
+    def to_dict(self):
+        return {"copiedItem": {"barcode": self.item_barcode}}
+
+    def to_source_dict(self):
+        return {"legacy_identifier": self.legacy_identifier, "item_barcode": self.item_barcode}
 
 
 def _make_migrator(reserves, skip=False):
@@ -67,6 +76,7 @@ def _make_migrator(reserves, skip=False):
     m.migration_report = Mock()
     m.folio_client = MagicMock()
     m.check_barcodes = lambda: ReservesMigrator.check_barcodes(m)
+    m.failed_reserves = []
     return m
 
 
@@ -99,3 +109,120 @@ async def test_do_work_posts_only_prevalidated_reserves():
     await ReservesMigrator.do_work(m)
 
     m.post_single_reserve.assert_called_once_with(good)
+
+
+def _general_stats(m):
+    return [c.args[0] for c in m.migration_report.add_general_statistics.call_args_list]
+
+
+def test_check_barcodes_records_discarded_reserves_as_failed():
+    good, bad = _Reserve("I1"), _Reserve("I2")
+    m = _make_migrator([good, bad])
+    m.folio_client.folio_post.return_value = {"items": [{"barcode": "I1"}]}
+
+    list(ReservesMigrator.check_barcodes(m))
+
+    assert m.failed_reserves == [bad]
+    assert "Reserves discarded by barcode pre-validation" in _general_stats(m)
+
+
+def test_failed_post_is_recorded():
+    reserve = _Reserve("I1")
+    m = _make_migrator([reserve])
+    m.folio_put_post.return_value = False
+
+    ReservesMigrator.post_single_reserve(m, reserve)
+
+    assert m.failed_reserves == [reserve]
+    assert "Failure to post reserve" in _general_stats(m)
+
+
+@pytest.mark.asyncio
+async def test_do_work_records_reserve_when_posting_raises():
+    reserve = _Reserve("I1")
+    m = _make_migrator([reserve], skip=True)
+    m.t0 = 0
+    m._pre_validate_barcodes = lambda: ReservesMigrator._pre_validate_barcodes(m)
+    m.post_single_reserve.side_effect = RuntimeError("boom")
+
+    await ReservesMigrator.do_work(m)
+
+    assert m.failed_reserves == [reserve]
+
+
+@pytest.mark.asyncio
+async def test_wrap_up_writes_failed_file_with_input_headers(tmp_path):
+    csv.register_dialect("tsv", delimiter="\t")
+    discarded, not_posted = _Reserve("I1", "C1"), _Reserve("I2", "C2")
+    m = _make_migrator([discarded, not_posted])
+    m.failed_reserves = [discarded, not_posted]
+    m.extradata_writer = Mock()
+    m.start_datetime = None
+    m.folder_structure = Mock(
+        failed_recs_path=tmp_path / "failed.tsv",
+        migration_reports_file=tmp_path / "report.md",
+        migration_reports_raw_file=tmp_path / "report.json",
+    )
+    m.write_failed_reserves_to_file = lambda: ReservesMigrator.write_failed_reserves_to_file(m)
+
+    await ReservesMigrator.wrap_up(m)
+
+    m.migration_report.set.assert_called_once_with("GeneralStatistics", "Failed reserves", 2)
+    with open(tmp_path / "failed.tsv") as failed_file:
+        rows = list(csv.DictReader(failed_file, dialect="tsv"))
+    assert rows == [
+        {"legacy_identifier": "C1", "item_barcode": "I1"},
+        {"legacy_identifier": "C2", "item_barcode": "I2"},
+    ]
+
+
+@pytest.mark.parametrize("rows", [[], [{"legacy_identifier": "C1", "item_barcode": "I1"}]])
+def test_load_and_validate_small_files(rows):
+    m = _make_migrator([])
+    m.uuid_base_string = "test_tenant"
+
+    reserves = list(ReservesMigrator.load_and_validate_legacy_reserves(m, iter(rows)))
+
+    assert [r.item_barcode for r in reserves] == [row["item_barcode"] for row in rows]
+
+
+@pytest.mark.parametrize(
+    "update",
+    [
+        {},
+        {"use_gateway_url_for_uuids": True},
+        {"use_gateway_url_for_uuids": True, "is_ecs": True, "ecs_tenant_id": "member_tenant"},
+    ],
+)
+def test_course_listing_ids_match_courses_migrator(tmp_path, monkeypatch, update):
+    """Reserves must point at the course listing IDs that CoursesMigrator created."""
+    from folio_migration_tools.mapper_base import MapperBase
+    from folio_migration_tools.mapping_file_transformation.courses_mapper import CoursesMapper
+    from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+
+    from .test_infrastructure import mocked_classes
+
+    library_config = mocked_classes.get_mocked_library_config().model_copy(update=update)
+    folio_client = Mock()
+    folio_client.gateway_url = "https://folio-gateway.example.com"
+    (tmp_path / "reserves.tsv").write_text("legacy_identifier\titem_barcode\nC1\tI1\n")
+
+    def fake_base_init(self, library_configuration, task_configuration, folio_client):
+        self.library_configuration = library_configuration
+        self.folio_client = folio_client
+        self.folder_structure = Mock(legacy_records_folder=tmp_path)
+
+    monkeypatch.setattr(MigrationTaskBase, "__init__", fake_base_init)
+    task_config = Mock(skip_barcode_prevalidation=False)
+    task_config.course_reserve_file_path.file_name = "reserves.tsv"
+    migrator = ReservesMigrator(task_config, library_config, folio_client)
+
+    mapper = Mock(spec=MapperBase)
+    mapper.base_string_for_folio_uuid = MapperBase.base_string_for_folio_uuid.fget(
+        Mock(library_configuration=library_config, folio_client=folio_client)
+    )
+    course_listing_id = CoursesMapper.get_uuid(
+        mapper, ({}, "C1"), FOLIONamespaces.course_listing
+    )
+
+    assert [r.course_listing_id for r in migrator.semi_valid_reserves] == [course_listing_id]

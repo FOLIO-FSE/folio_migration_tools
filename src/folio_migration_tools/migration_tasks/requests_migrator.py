@@ -36,6 +36,7 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
 from folio_migration_tools.task_configuration import AbstractTaskConfiguration
 from folio_migration_tools.transaction_migration.legacy_request import LegacyRequest
+from folio_migration_tools.utils import cql_quote
 
 logger = logging.getLogger(__name__)
 
@@ -410,7 +411,7 @@ class RequestsMigrator(MigrationTaskBase):
             dict | None: User object if found, None otherwise.
         """
         try:
-            query = f'barcode=="{barcode}"'
+            query = f"barcode=={cql_quote(barcode)}"
             users = self.folio_client.folio_get("/users", "users", query=query)
             return users[0] if users else None
         except Exception as e:
