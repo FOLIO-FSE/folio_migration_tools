@@ -37,6 +37,9 @@ logger = logging.getLogger(__name__)
 MARC8_SIGNAL_BYTES = (b"\x8e", b"\x8f")
 MARC8_WARNING_PREFIX = "Multi-byte position "
 MARC8_UNPARSEABLE_PREFIX = "Unable to parse character"
+# pymarc has no mapping for a space inside a non-ASCII G0 set (Hebrew, Cyrillic, Arabic...)
+# and warns about it, but the space it substitutes is the correct result.
+MARC8_UNPARSEABLE_SPACE_PREFIX = "Unable to parse character 0x20 "
 # Character set escape sequences the MARC-8 decoder can translate: ESC b/p/g/s
 # (subscripts, superscripts, Greek symbols, ASCII), G0/G1 designations of the
 # single-byte sets (Hebrew, Arabic, ASCII, ANSEL, Cyrillic, Greek) and EACC.
@@ -262,6 +265,16 @@ class MARCReaderWrapper:
                             ),
                         )
                         record = redecoded_record
+                    elif MARCReaderWrapper.has_escape_characters(record):
+                        MARCReaderWrapper.log_untranslated_marc8_escape_sequences(
+                            source_file,
+                            idx,
+                            record,
+                            processor.mapper.migration_report,
+                            record_label=MARCReaderWrapper.get_record_label(
+                                processor, record, source_file, idx
+                            ),
+                        )
                 # Normal successful decode path.
                 if record is not None:
                     # Log MARC-8 truncation warnings, but do not alter decoding.
@@ -375,7 +388,8 @@ class MARCReaderWrapper:
 
         * the record has bytes >= 0x80, i.e. it contains real UTF-8 that MARC-8 would mangle;
         * any ESC is not a recognized MARC-8 escape sequence;
-        * the MARC-8 decoder could not translate part of the record.
+        * the MARC-8 decoder could not translate part of the record. A space that pymarc
+          cannot map inside a non-ASCII character set does not count, as it decodes correctly.
         """
         if not isinstance(chunk, bytes) or len(chunk) < 10 or chunk[9:10] != b" ":
             return None
@@ -392,6 +406,7 @@ class MARCReaderWrapper:
             )
         if redecoded_record is None or any(
             line.startswith((MARC8_WARNING_PREFIX, MARC8_UNPARSEABLE_PREFIX))
+            and not line.startswith(MARC8_UNPARSEABLE_SPACE_PREFIX)
             for line in stderr_buffer.getvalue().splitlines()
         ):
             return None
@@ -424,6 +439,35 @@ class MARCReaderWrapper:
             i18n.t("MARC-8 escape sequences translated to Unicode"),
             f"subfields_changed={len(changed)}; first_before={before[:80]!r}; "
             f"first_after={after[:80]!r}; source={source_file.file_name}:{idx}",
+        )
+
+    @staticmethod
+    def has_escape_characters(record: Record) -> bool:
+        return any("\x1b" in value for value in MARCReaderWrapper.iter_text_values(record))
+
+    @staticmethod
+    def log_untranslated_marc8_escape_sequences(
+        source_file: FileDefinition,
+        idx: int,
+        record: Record,
+        migration_report: MigrationReport,
+        record_label: str | None = None,
+    ):
+        """Log a record whose MARC-8 escape sequences could not be safely translated.
+
+        The text is passed on unchanged, so the escape characters end up in the FOLIO record.
+        """
+        migration_report.add_general_statistics(
+            i18n.t("Records with untranslated MARC-8 escape sequences"),
+        )
+        affected = [
+            value for value in MARCReaderWrapper.iter_text_values(record) if "\x1b" in value
+        ]
+        Helper.log_data_issue(
+            record_label or f"{source_file.file_name}:{idx}",
+            i18n.t("MARC-8 escape sequences could not be translated"),
+            f"subfields_affected={len(affected)}; first={affected[0][:80]!r}; "
+            f"source={source_file.file_name}:{idx}",
         )
 
     @staticmethod
