@@ -5,6 +5,7 @@ encoding detection, and record validation. Supports multiple MARC file formats
 and handles corrupted records gracefully.
 """
 
+import copy
 import json
 import logging
 import sys
@@ -223,6 +224,9 @@ class MARCReaderWrapper:
                         processor.mapper.migration_report,
                         recovered=bool(recovered_record),
                         recovery_strategy=recovery_strategy,
+                        record_label=MARCReaderWrapper.get_record_label(
+                            processor, recovered_record, source_file, idx
+                        ),
                     )
                     if recovered_record is None:
                         report_failed_parsing(
@@ -247,15 +251,26 @@ class MARCReaderWrapper:
                             record,
                             redecoded_record,
                             processor.mapper.migration_report,
+                            record_label=MARCReaderWrapper.get_record_label(
+                                processor, redecoded_record, source_file, idx
+                            ),
                         )
                         record = redecoded_record
                 # Normal successful decode path.
                 if record is not None:
                     # Log MARC-8 truncation warnings, but do not alter decoding.
+                    stderr_output = stderr_buffer.getvalue()
                     MARCReaderWrapper.log_marc8_decoding_warnings(
                         source_file,
                         idx,
-                        stderr_buffer.getvalue(),
+                        stderr_output,
+                        record_label=(
+                            MARCReaderWrapper.get_record_label(
+                                processor, record, source_file, idx
+                            )
+                            if MARC8_WARNING_PREFIX in stderr_output
+                            else None
+                        ),
                     )
                     if recovery_strategy in TEXT_FIDELITY_CHECK_STRATEGIES:
                         MARCReaderWrapper.log_record_text_fidelity_warnings(
@@ -264,6 +279,9 @@ class MARCReaderWrapper:
                             record,
                             processor.mapper.migration_report,
                             recovery_strategy,
+                            record_label=MARCReaderWrapper.get_record_label(
+                                processor, record, source_file, idx
+                            ),
                         )
                     record = MARCReaderWrapper.preprocess_record(
                         record,
@@ -281,6 +299,38 @@ class MARCReaderWrapper:
             except ValueError as error:
                 logger.exception(error)
         logger.info("Done reading %s records from file", idx + 1)
+
+    @staticmethod
+    def get_record_label(
+        processor: MarcFileProcessor,
+        record: Record | None,
+        source_file: FileDefinition,
+        idx: int,
+    ) -> str:
+        """Identify a record in data issue logs by its legacy ID(s), if it can be resolved.
+
+        Falls back to ``file_name:idx`` when there is no decoded record or no legacy ID.
+        """
+        fallback = f"{source_file.file_name}:{idx}"
+        if record is None:
+            return fallback
+        mapper = processor.mapper
+        # Some mappers count the source of the legacy ID; do not count it twice.
+        report = mapper.migration_report.report
+        stats_snapshot = copy.deepcopy(report.get("GeneralStatistics"))
+        try:
+            legacy_ids = mapper.get_legacy_ids(record, idx)
+        except Exception:
+            return fallback
+        finally:
+            if stats_snapshot is None:
+                report.pop("GeneralStatistics", None)
+            else:
+                report["GeneralStatistics"] = stats_snapshot
+        if getattr(mapper.task_configuration, "ils_flavour", None) == "none":
+            return fallback
+        legacy_ids = [str(legacy_id) for legacy_id in legacy_ids or [] if legacy_id]
+        return "-".join(legacy_ids) if legacy_ids else fallback
 
     @staticmethod
     def set_leader(marc_record: Record, migration_report: MigrationReport):
@@ -337,6 +387,7 @@ class MARCReaderWrapper:
         original_record: Record,
         redecoded_record: Record,
         migration_report: MigrationReport,
+        record_label: str | None = None,
     ):
         migration_report.add_general_statistics(
             i18n.t("Records with encoding errors - repaired"),
@@ -350,10 +401,10 @@ class MARCReaderWrapper:
         ]
         before, after = changed[0] if changed else ("", "")
         Helper.log_data_issue(
-            f"{source_file.file_name}:{idx}",
+            record_label or f"{source_file.file_name}:{idx}",
             i18n.t("MARC-8 escape sequences translated to Unicode"),
             f"subfields_changed={len(changed)}; first_before={before[:80]!r}; "
-            f"first_after={after[:80]!r}",
+            f"first_after={after[:80]!r}; source={source_file.file_name}:{idx}",
         )
 
     @staticmethod
@@ -547,9 +598,13 @@ class MARCReaderWrapper:
         migration_report: MigrationReport,
         recovered: bool,
         recovery_strategy: str,
+        record_label: str | None = None,
     ):
-        legacy_id = f"{source_file.file_name}:{idx}"
-        context = MARCReaderWrapper.build_parsing_issue_context(reader)
+        legacy_id = record_label or f"{source_file.file_name}:{idx}"
+        context = (
+            f"{MARCReaderWrapper.build_parsing_issue_context(reader)}; "
+            f"source={source_file.file_name}:{idx}"
+        )
         if recovered:
             migration_report.add_general_statistics(
                 i18n.t("Records with encoding errors - repaired"),
@@ -586,14 +641,15 @@ class MARCReaderWrapper:
         source_file: FileDefinition,
         idx: int,
         stderr_output: str,
+        record_label: str | None = None,
     ):
         for line in stderr_output.splitlines():
             if not line.startswith(MARC8_WARNING_PREFIX):
                 continue
             Helper.log_data_issue(
-                f"{source_file.file_name}:{idx}",
+                record_label or f"{source_file.file_name}:{idx}",
                 i18n.t("MARC-8 decoding warning"),
-                line,
+                f"{line}; source={source_file.file_name}:{idx}",
             )
 
     @staticmethod
@@ -650,6 +706,7 @@ class MARCReaderWrapper:
         record: Record,
         migration_report: MigrationReport,
         recovery_strategy: str,
+        record_label: str | None = None,
     ):
         signals = MARCReaderWrapper.detect_text_fidelity_signals(record)
         if not signals:
@@ -658,9 +715,12 @@ class MARCReaderWrapper:
         migration_report.add_general_statistics(
             i18n.t("Records with text fidelity warnings"),
         )
-        context = f"recovery_strategy={recovery_strategy}; signals={'; '.join(signals)}"
+        context = (
+            f"recovery_strategy={recovery_strategy}; signals={'; '.join(signals)}; "
+            f"source={source_file.file_name}:{idx}"
+        )
         Helper.log_data_issue(
-            f"{source_file.file_name}:{idx}",
+            record_label or f"{source_file.file_name}:{idx}",
             i18n.t("MARC text fidelity warning"),
             context,
         )
