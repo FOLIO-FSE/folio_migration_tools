@@ -54,9 +54,13 @@ TEXT_FIDELITY_CHECK_STRATEGIES = {
     "latin1_leader_heuristic",
 }
 REPLACEMENT_CHAR = "\ufffd"
+# "Ã" and "Â" are also real letters (Moyen Âge, AÇÃO), so they only count when not followed by
+# an ASCII letter. Mojibake continuation characters (Ã©, Â°) are never ASCII letters.
+MOJIBAKE_LETTER_PATTERNS = {
+    "Ã": re.compile(r"Ã(?![A-Za-z])"),
+    "Â": re.compile(r"Â(?![A-Za-z])"),
+}
 MOJIBAKE_PATTERNS = (
-    "Ã",
-    "Â",
     "â€™",
     "â€œ",
     "â€",
@@ -757,6 +761,9 @@ class MARCReaderWrapper:
                 replacement_found = True
             for token in MOJIBAKE_PATTERNS:
                 if token in value:
+                    strong_mojibake_hits.add(token)
+            for token, pattern in MOJIBAKE_LETTER_PATTERNS.items():
+                if pattern.search(value):
                     strong_mojibake_hits.add(token)
             for token in WEAK_MOJIBAKE_PATTERNS:
                 if token in value:
