@@ -719,6 +719,32 @@ def test_detect_text_fidelity_signals_ignores_weak_symbols_without_strong_marker
     assert signals == []
 
 
+@pytest.mark.parametrize(
+    "text, flagged",
+    [
+        ("Moyen \u00c2ge", False),
+        ("A\u00c7\u00c3O", False),
+        ("Caf\u00c3\u00a9", True),
+        ("5\u00c2\u00b0 C", True),
+        ("Mojibake \u00c3 alone", True),
+    ],
+)
+def test_detect_text_fidelity_signals_handles_a_tilde_and_a_circumflex_in_context(text, flagged):
+    record = Record()
+    record.add_field(Field(tag="001", data="anon-letters"))
+    record.add_field(
+        Field(
+            tag="245",
+            indicators=Indicators(*["1", "0"]),
+            subfields=[Subfield(code="a", value=text)],
+        )
+    )
+
+    signals = MARCReaderWrapper.detect_text_fidelity_signals(record)
+
+    assert bool(signals) is flagged
+
+
 def test_detect_text_fidelity_signals_includes_weak_symbols_when_strong_marker_present():
     record = Record()
     record.add_field(Field(tag="001", data="anon-weak-with-strong"))

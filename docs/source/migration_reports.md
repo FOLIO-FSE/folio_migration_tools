@@ -288,6 +288,8 @@ Notes:
   as informational diagnostics.
 - `MARC text fidelity warning` is emitted only after a successful non-UTF8 recovery
   strategy (currently MARC-8 leader or Latin-1 heuristic).
+- `Ã` and `Â` are only treated as mojibake when they are not followed by an ASCII letter, so
+  genuine text such as "Moyen Âge" or "AÇÃO" does not trigger the warning, while `Ã©` or `Â°` does.
 
 ### Data Issues Log
 
