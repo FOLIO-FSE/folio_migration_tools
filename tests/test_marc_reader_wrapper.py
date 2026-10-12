@@ -397,7 +397,7 @@ def test_read_records_logs_marc8_warning_without_attempting_repair(monkeypatch):
         (
             "warnings.mrc:0",
             "MARC-8 decoding warning",
-            "Multi-byte position 93 exceeds length of marc8 string 92",
+            "Multi-byte position 93 exceeds length of marc8 string 92; source=warnings.mrc:0",
         )
     ]
 
@@ -825,6 +825,50 @@ def test_read_records_logs_data_issue_for_marc8_escape_redecode(monkeypatch):
     assert logged_issues[0][0] == "x.mrc:0"
     assert "escape sequences" in logged_issues[0][1]
     assert "subfields_changed=1" in logged_issues[0][2]
+
+
+def test_data_issue_for_marc8_escape_redecode_uses_legacy_id(monkeypatch):
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.mapper.get_legacy_ids = lambda record, idx: [record["001"].value()]
+    processor.process_record = lambda idx, record, source_file: None
+    reader = MARCReader(
+        BytesIO(build_marc8_escape_chunk()),
+        to_unicode=True,
+        permissive=True,
+        utf8_handling="strict",
+    )
+    reader.hide_utf8_warnings = False
+    reader.force_utf8 = True
+
+    MARCReaderWrapper.read_records(reader, FileDefinition(file_name="x.mrc"), BytesIO(), processor)
+
+    assert logged_issues[0][0] == "marc8-esc"
+    assert logged_issues[0][2].endswith("source=x.mrc:0")
+
+
+def test_get_record_label_falls_back_and_does_not_double_count_stats():
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    source_file = FileDefinition(file_name="x.mrc")
+    report = processor.mapper.migration_report
+
+    def counting_legacy_ids(record, idx):
+        report.add_general_statistics("legacy id from 998$b")
+        raise ValueError("no id")
+
+    processor.mapper.get_legacy_ids = counting_legacy_ids
+    label = MARCReaderWrapper.get_record_label(processor, get_test_record(), source_file, 7)
+
+    assert label == "x.mrc:7"
+    assert "GeneralStatistics" not in report.report
+    assert MARCReaderWrapper.get_record_label(processor, None, source_file, 7) == "x.mrc:7"
 
 
 def build_ansel_chunk(title: bytes) -> bytes:
