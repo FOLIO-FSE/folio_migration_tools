@@ -271,9 +271,7 @@ class MARCReaderWrapper:
                         idx,
                         stderr_output,
                         record_label=(
-                            MARCReaderWrapper.get_record_label(
-                                processor, record, source_file, idx
-                            )
+                            MARCReaderWrapper.get_record_label(processor, record, source_file, idx)
                             if MARC8_WARNING_PREFIX in stderr_output
                             else None
                         ),
@@ -347,7 +345,7 @@ class MARCReaderWrapper:
         candidate_chunk: bytes,
         strategy: str,
         hide_utf8_warnings: bool = True,
-        **decode_kwargs,
+        encoding: str = "iso8859-1",
     ) -> tuple[Record | None, str]:
         try:
             recovered_record = Record()
@@ -357,7 +355,7 @@ class MARCReaderWrapper:
                 force_utf8=False,
                 hide_utf8_warnings=hide_utf8_warnings,
                 utf8_handling="strict",
-                **decode_kwargs,
+                encoding=encoding,
             )
             return recovered_record, strategy
         except Exception:
@@ -441,7 +439,7 @@ class MARCReaderWrapper:
                     current_chunk,
                 ),
                 MARCReaderWrapper.get_non_utf8_candidate_chunk(current_chunk),
-                {},
+                "iso8859-1",
             ),
             (
                 "dagger_subfield_heuristic",
@@ -450,7 +448,7 @@ class MARCReaderWrapper:
                     current_chunk,
                 ),
                 MARCReaderWrapper.repair_dagger_subfield_markers(current_chunk),
-                {},
+                "iso8859-1",
             ),
             (
                 "latin1_leader_heuristic",
@@ -459,17 +457,17 @@ class MARCReaderWrapper:
                     current_chunk,
                 ),
                 MARCReaderWrapper.get_non_utf8_candidate_chunk(current_chunk),
-                {"encoding": "iso8859-1"},
+                "iso8859-1",
             ),
         ]
 
-        for strategy, should_attempt, candidate_chunk, decode_kwargs in strategies:
+        for strategy, should_attempt, candidate_chunk, encoding in strategies:
             if not should_attempt or candidate_chunk is None:
                 continue
             recovered_record, _ = MARCReaderWrapper.decode_candidate_chunk(
                 candidate_chunk,
                 strategy,
-                **decode_kwargs,
+                encoding=encoding,
             )
             if recovered_record is not None:
                 return recovered_record, strategy
