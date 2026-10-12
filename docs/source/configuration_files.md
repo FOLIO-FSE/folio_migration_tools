@@ -68,6 +68,8 @@ Both tasks above are defined in the same file. The task name you pass on the com
 | `ecsCentralIterationIdentifier` | no | `""` | The central tenant's `iterationIdentifier` matching this one, used to reach the central `instances_id_map`. Required when `ecsTenantId` is set. |
 | `isEcs` | no | `false` | Marks the tenant as running ECS FOLIO. Forced to `true` when `ecsTenantId` is set. |
 | `multiFieldDelimiter` | no | `"<delimiter>"` | Separator for multiple values inside one delimited-text field. |
+| `booleanTrueTokens` | no | — | List of values read as `true` for boolean FOLIO properties in mapping-file transformations. Replaces the defaults. See [Boolean properties](mapping_file_based_mapping.md#boolean-properties). |
+| `booleanFalseTokens` | no | — | List of values read as `false` for boolean FOLIO properties in mapping-file transformations. Replaces the defaults. See [Boolean properties](mapping_file_based_mapping.md#boolean-properties). |
 | `logLevelDebug` | no | `false` | Enables DEBUG logging. Also raises all error thresholds so a debugging run does not shut itself down. See [Logging](logging.md). |
 | `failedRecordsThreshold` | no | `5000` | Number of failed records before the run aborts. |
 | `failedPercentageThreshold` | no | `20` | Percentage of failed records before the run aborts. |

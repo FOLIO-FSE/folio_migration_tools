@@ -45,11 +45,53 @@ _DEFAULT_TRUE_TOKENS = ("true", "t", "yes", "y", "1")
 _DEFAULT_FALSE_TOKENS = ("false", "f", "no", "n", "0")
 
 
-def _boolean_tokens(env_var: str, defaults) -> frozenset:
-    raw = os.environ.get(env_var)
-    if raw is None or not raw.strip():
-        return frozenset(defaults)
-    return frozenset(t.strip().lower() for t in raw.split(",") if t.strip())
+def _boolean_tokens(configured, env_var: str, defaults) -> tuple[frozenset, str]:
+    """Return the accepted tokens for one side of a boolean, and where they came from.
+
+    The library configuration wins over the environment variable, which wins over the
+    defaults. Tokens are lowercased and stripped, and empty tokens are dropped.
+    """
+    if isinstance(configured, (list, tuple)):
+        tokens, source = configured, "library configuration"
+    elif (raw := os.environ.get(env_var)) is not None and raw.strip():
+        tokens, source = raw.split(","), f"{env_var} environment variable"
+    else:
+        tokens, source = defaults, "defaults"
+    return frozenset(str(t).strip().lower() for t in tokens if str(t).strip()), source
+
+
+def resolve_boolean_tokens(library_configuration) -> tuple[frozenset, frozenset]:
+    """Resolve and validate the true and false tokens used for boolean coercion.
+
+    Raises:
+        TransformationProcessError: If either set is empty, or a token is in both.
+    """
+    true_tokens, true_source = _boolean_tokens(
+        getattr(library_configuration, "boolean_true_tokens", None),
+        "FOLIO_BOOLEAN_TRUE_TOKENS",
+        _DEFAULT_TRUE_TOKENS,
+    )
+    false_tokens, false_source = _boolean_tokens(
+        getattr(library_configuration, "boolean_false_tokens", None),
+        "FOLIO_BOOLEAN_FALSE_TOKENS",
+        _DEFAULT_FALSE_TOKENS,
+    )
+    if not true_tokens or not false_tokens:
+        raise TransformationProcessError(
+            "",
+            "Boolean true and false tokens must each contain at least one value",
+            f"true: {sorted(true_tokens)} ({true_source}), "
+            f"false: {sorted(false_tokens)} ({false_source})",
+        )
+    if overlap := true_tokens & false_tokens:
+        raise TransformationProcessError(
+            "",
+            "Boolean tokens cannot be both true and false",
+            ", ".join(sorted(overlap)),
+        )
+    logger.info("Boolean true tokens (%s): %s", true_source, sorted(true_tokens))
+    logger.info("Boolean false tokens (%s): %s", false_source, sorted(false_tokens))
+    return true_tokens, false_tokens
 
 
 # Sentinel used to distinguish "no replaceValues rule matched" from a rule that
@@ -140,6 +182,9 @@ class MappingFileMapperBase(MapperBase):
         logger.info(
             "Mapped FOLIO fields:\n%s",
             json.dumps(self.folio_keys, indent=4, sort_keys=True),
+        )
+        self.boolean_true_tokens, self.boolean_false_tokens = resolve_boolean_tokens(
+            self.library_configuration
         )
         csv.register_dialect("tsv", delimiter="\t")
 
@@ -591,32 +636,103 @@ class MappingFileMapperBase(MapperBase):
     def is_boolean_schema_property(schema_property) -> bool:
         schema_type = schema_property.get("type", "")
         if isinstance(schema_type, list):
-            return "boolean" in schema_type
+            # Coerce only pure boolean types such as ["boolean", "null"]. A union with
+            # another type, such as "string", accepts values that are not booleans.
+            non_null_types = [t for t in schema_type if t != "null"]
+            return bool(non_null_types) and all(t == "boolean" for t in non_null_types)
         return schema_type == "boolean"
 
-    @staticmethod
-    def coerce_boolean(value, property_name: str, index_or_id):
+    def coerce_boolean(self, value, property_name: str, index_or_id):
         """Convert a mapped string (e.g. from a replaceValues rule) to a bool.
 
         Non-string values (already bool) and empty strings are returned unchanged.
-        Accepted tokens can be overridden with the FOLIO_BOOLEAN_TRUE_TOKENS and
-        FOLIO_BOOLEAN_FALSE_TOKENS environment variables (comma-separated).
+        The accepted tokens are resolved once, when the mapper is created
+        (see resolve_boolean_tokens).
         """
         if not isinstance(value, str) or not value.strip():
             return value
-        true_tokens = _boolean_tokens("FOLIO_BOOLEAN_TRUE_TOKENS", _DEFAULT_TRUE_TOKENS)
-        false_tokens = _boolean_tokens("FOLIO_BOOLEAN_FALSE_TOKENS", _DEFAULT_FALSE_TOKENS)
         normalized = value.strip().lower()
-        if normalized in true_tokens:
+        if normalized in self.boolean_true_tokens:
             return True
-        if normalized in false_tokens:
+        if normalized in self.boolean_false_tokens:
             return False
         raise TransformationRecordFailedError(
             index_or_id,
             f"Could not interpret value as a boolean for {property_name}. "
-            f"Accepted values: {sorted(true_tokens | false_tokens)}. Value found: ",
+            f"Accepted values: {sorted(self.boolean_true_tokens | self.boolean_false_tokens)}. "
+            "Value found: ",
             value,
         )
+
+    def _coerce_boolean_value(self, value, folio_prop_name, index_or_id, delimited):
+        """Coerce one mapped value for get_boolean_prop.
+
+        Returns (value, key). value is what gets mapped: a bool, an empty value or, with
+        delimited, the raw string of a delimited value. key is what the values of several
+        map entries are compared by: for a delimited value, the coerced pieces, with None
+        for an empty piece.
+        """
+        delimiter = self.library_configuration.multi_field_delimiter
+        if delimited and isinstance(value, str) and delimiter and delimiter in value:
+            pieces = [
+                self.coerce_boolean(piece, folio_prop_name, index_or_id)
+                for piece in value.split(delimiter)
+            ]
+            return value, tuple(p if isinstance(p, bool) else None for p in pieces)
+        coerced = self.coerce_boolean(value, folio_prop_name, index_or_id)
+        return coerced, coerced
+
+    def get_boolean_prop(
+        self, legacy_object, folio_prop_name, index_or_id, schema_default_value, delimited=False
+    ):
+        """Get a boolean property, coerced to a bool.
+
+        With several map entries for the property, each non-empty value is coerced. They
+        must all agree, and the record fails if they don't. With a single entry, this is
+        get_prop followed by coerce_boolean.
+
+        If delimited is True, a value containing the multi-field delimiter is returned as
+        a string, after checking that each piece is a valid boolean. The caller coerces the
+        pieces once the value is split (see map_objects_array_props).
+        """
+        map_entries = list(
+            MappingFileMapperBase.get_map_entries_by_folio_prop_name(
+                folio_prop_name, self.record_map["data"]
+            )
+        )
+        if len(map_entries) <= 1:
+            value = self.get_prop(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            )
+            return self._coerce_boolean_value(value, folio_prop_name, index_or_id, delimited)[0]
+        results = [
+            self._coerce_boolean_value(
+                MappingFileMapperBase.get_legacy_value(
+                    legacy_object,
+                    map_entry,
+                    self.migration_report,
+                    index_or_id,
+                    self.library_configuration.multi_field_delimiter,
+                ),
+                folio_prop_name,
+                index_or_id,
+                delimited,
+            )
+            for map_entry in map_entries
+        ]
+        results = [(v, key) for v, key in results if v or isinstance(v, bool)]
+        if not results:
+            return self._coerce_boolean_value(
+                schema_default_value, folio_prop_name, index_or_id, delimited
+            )[0]
+        first_key = results[0][1]
+        if any(key != first_key or type(key) is not type(first_key) for _, key in results):
+            raise TransformationRecordFailedError(
+                index_or_id,
+                f"Conflicting boolean values for {folio_prop_name}. Values found: ",
+                [v for v, _ in results],
+            )
+        return results[0][0]
 
     def map_object_props(
         self,
@@ -681,12 +797,18 @@ class MappingFileMapperBase(MapperBase):
                 ):
                     set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
                 # temp_object[child_property_name] = p
+            elif self.is_boolean_schema_property(child_property):
+                default = child_property.get("default", "")
+                # A false default alone must not create an otherwise empty nested object.
+                p = self.get_boolean_prop(
+                    legacy_object, sub_prop_path, index_or_id, "" if default is False else default
+                )
+                if p or isinstance(p, bool):
+                    set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
             else:
                 p = self.get_prop(
                     legacy_object, sub_prop_path, index_or_id, child_property.get("default", "")
                 )
-                if self.is_boolean_schema_property(child_property):
-                    p = self.coerce_boolean(p, sub_prop_path, index_or_id)
                 if p or isinstance(p, bool):
                     set_at_path(folio_object, _normalize_local_object_path(sub_prop_path), p)
         if temp_object:
@@ -721,9 +843,13 @@ class MappingFileMapperBase(MapperBase):
             }
             if not any(keys_to_map):
                 break
+            temp_object: dict = {}
+            multi_field_props: List[str] = []
+            boolean_props: List[str] = []
             for _ in keys_to_map:
                 temp_object = {}
-                multi_field_props: List[str] = []
+                multi_field_props = []
+                boolean_props = []
                 for sub_prop_name, sub_prop in (
                     (k, p)
                     for k, p in sub_properties.items()
@@ -732,17 +858,25 @@ class MappingFileMapperBase(MapperBase):
                     prop_path = f"{prop_name}[{i}].{sub_prop_name}"
                     if prop_path in self.folio_keys:
                         # We have reached the end of the prop path?
-                        res = self.get_prop(
-                            legacy_object,
-                            prop_path,
-                            index_or_id,
-                            sub_properties[sub_prop_name].get("default", ""),
-                        )
+                        if self.is_boolean_schema_property(sub_prop):
+                            boolean_props.append(sub_prop_name)
+                            res = self.get_boolean_prop(
+                                legacy_object,
+                                prop_path,
+                                index_or_id,
+                                sub_properties[sub_prop_name].get("default", ""),
+                                delimited=True,
+                            )
+                        else:
+                            res = self.get_prop(
+                                legacy_object,
+                                prop_path,
+                                index_or_id,
+                                sub_properties[sub_prop_name].get("default", ""),
+                            )
                         self.report_legacy_mapping(
                             self.legacy_basic_property(prop_path), True, True
                         )
-                        if self.is_boolean_schema_property(sub_prop):
-                            res = self.coerce_boolean(res, prop_path, index_or_id)
 
                         if (
                             isinstance(res, str)
@@ -814,10 +948,15 @@ class MappingFileMapperBase(MapperBase):
 
             if any(multi_field_props):
                 resulting_array.extend(
-                    self.split_obj_by_delim(
-                        self.library_configuration.multi_field_delimiter,
-                        temp_object,
-                        multi_field_props,
+                    self.coerce_split_booleans(
+                        self.split_obj_by_delim(
+                            self.library_configuration.multi_field_delimiter,
+                            temp_object,
+                            multi_field_props,
+                        ),
+                        set(boolean_props) & set(multi_field_props),
+                        f"{prop_name}[{i - 1}]",
+                        index_or_id,
                     )
                 )
             else:
@@ -827,6 +966,24 @@ class MappingFileMapperBase(MapperBase):
             set_deep2(folio_object, prop_name, resulting_array)
 
         return static_only_props
+
+    def coerce_split_booleans(
+        self, split_objects: List[dict], boolean_props: Set[str], path: str, index_or_id
+    ) -> List[dict]:
+        """Coerce delimited booleans, which split_obj_by_delim leaves as strings.
+
+        An empty piece removes the property from that object.
+        """
+        for split_object in split_objects:
+            for sub_prop_name in boolean_props:
+                value = self.coerce_boolean(
+                    split_object.get(sub_prop_name, ""), f"{path}.{sub_prop_name}", index_or_id
+                )
+                if isinstance(value, bool):
+                    split_object[sub_prop_name] = value
+                else:
+                    split_object.pop(sub_prop_name, None)
+        return split_objects
 
     @staticmethod
     def split_obj_by_delim(delimiter: str, folio_obj: dict, delimited_props: List[str]):
@@ -881,11 +1038,14 @@ class MappingFileMapperBase(MapperBase):
         self, legacy_object, property_name, folio_object, index_or_id, schema_property
     ):
         if self.has_basic_property(legacy_object, property_name):  # is there a match in the csv?
-            mapped_prop = self.get_prop(
-                legacy_object, property_name, index_or_id, schema_property.get("default", "")
-            )
             if self.is_boolean_schema_property(schema_property):
-                mapped_prop = self.coerce_boolean(mapped_prop, property_name, index_or_id)
+                mapped_prop = self.get_boolean_prop(
+                    legacy_object, property_name, index_or_id, schema_property.get("default", "")
+                )
+            else:
+                mapped_prop = self.get_prop(
+                    legacy_object, property_name, index_or_id, schema_property.get("default", "")
+                )
             # Implementation note: a property resolved to "" (e.g. via a replaceValues rule
             # that intentionally clears a value) is not written to the output record here.
             # get_prop() can't distinguish "a rule cleared it" from "nothing was mapped",
