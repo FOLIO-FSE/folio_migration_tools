@@ -17,7 +17,7 @@ Q: How should I troubleshoot MARC decoding warnings and parsing failures during 
 	- If you see `MARC-8 decoding warning`, processing continued for those records.
 	- If you see `MARC text fidelity warning`, a recovered record was processed but may contain replacement/mojibake artifacts that should be reviewed.
 	- If you see `MARC-8 escape sequences translated to Unicode`, a record with raw MARC-8 escape sequences was re-decoded as MARC-8. Check `first_before` and `first_after` in the message to confirm the result looks right.
-	- If you see `MARC-8 escape sequences could not be translated`, the record contains escape sequences that cannot be converted safely (typically a faulty conversion in the source system). The text is transformed as-is, so the raw escape characters will be in the FOLIO record. Fix the record in the source system and re-export it.
+	- If you see `MARC-8 escape sequences could not be translated`, the record contains escape sequences that cannot be converted safely (typically a faulty conversion in the source system, including bogus multibyte codes that would otherwise turn letters like "ä" into a CJK character). The text is transformed as-is, so the raw escape characters will be in the FOLIO record. Fix the record in the source system and re-export it.
 	- If you see `Records with encoding errors - repaired`, built-in heuristics repaired records and processing continued.
 	- If you see `Records with encoding errors - parsing failed`, those records could not be repaired and were skipped.
 

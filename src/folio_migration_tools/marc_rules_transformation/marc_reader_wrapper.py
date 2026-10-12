@@ -43,6 +43,11 @@ MARC8_UNPARSEABLE_SPACE_PREFIX = "Unable to parse character 0x20 "
 # Character set escape sequences the MARC-8 decoder can translate: ESC b/p/g/s
 # (subscripts, superscripts, Greek symbols, ASCII), G0/G1 designations of the
 # single-byte sets (Hebrew, Arabic, ASCII, ANSEL, Cyrillic, Greek) and EACC.
+# A CJK character touching an ASCII letter, or a {uXXXX} placeholder, means the EACC codes were
+# a mangled Latin letter (e.g. "Sch\u8bf0fer"), not real CJK text.
+MARC8_FALSE_EACC_TRANSLATION = re.compile(
+    r"[A-Za-z][\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\U00020000-\U0002fa1f]|[\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\U00020000-\U0002fa1f][A-Za-z]|\{u[0-9A-Fa-f]{4,6}\}"
+)
 MARC8_ESCAPE_SEQUENCE = re.compile(rb"\x1b(?:[bpgs]|[(),-][2-4BENQS]|\$[,-]?1)")
 TEXT_FIDELITY_CHECK_STRATEGIES = {
     "marc8_leader_heuristic",
@@ -389,7 +394,10 @@ class MARCReaderWrapper:
         * the record has bytes >= 0x80, i.e. it contains real UTF-8 that MARC-8 would mangle;
         * any ESC is not a recognized MARC-8 escape sequence;
         * the MARC-8 decoder could not translate part of the record. A space that pymarc
-          cannot map inside a non-ASCII character set does not count, as it decodes correctly.
+          cannot map inside a non-ASCII character set does not count, as it decodes correctly;
+        * the result has a CJK character touching an ASCII letter, or a ``{uXXXX}`` placeholder.
+          Some source systems wrote a Latin letter with a diacritic as a bogus EACC code that
+          pymarc maps to an unrelated ideograph without any warning.
         """
         if not isinstance(chunk, bytes) or len(chunk) < 10 or chunk[9:10] != b" ":
             return None
@@ -411,6 +419,11 @@ class MARCReaderWrapper:
         ):
             return None
         if any("\x1b" in value for value in MARCReaderWrapper.iter_text_values(redecoded_record)):
+            return None
+        if any(
+            MARC8_FALSE_EACC_TRANSLATION.search(value)
+            for value in MARCReaderWrapper.iter_text_values(redecoded_record)
+        ):
             return None
         return redecoded_record
 
