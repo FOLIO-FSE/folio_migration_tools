@@ -16,8 +16,9 @@ Q: How should I troubleshoot MARC decoding warnings and parsing failures during 
 : Start with the task's `data_issues_log_<task_name>.tsv` and `report_<task_name>.md`.
 	- If you see `MARC-8 decoding warning`, processing continued for those records.
 	- If you see `MARC text fidelity warning`, a recovered record was processed but may contain replacement/mojibake artifacts that should be reviewed.
+	- If you see `MARC-8 escape sequences translated to Unicode`, a record with raw MARC-8 escape sequences was re-decoded as MARC-8. Check `first_before` and `first_after` in the message to confirm the result looks right.
 	- If you see `Records with encoding errors - repaired`, built-in heuristics repaired records and processing continued.
 	- If you see `Records with encoding errors - parsing failed`, those records could not be repaired and were skipped.
 
 	For unrecoverable records, review the failed MARC output file in the results folder and correct source MARC issues before rerunning.
-	When filing an issue, include the data issues log message, the record index/file name, and a minimal MARC sample that reproduces the problem.
+	When filing an issue, include the data issues log message (the second column is the record's legacy ID, or file name and record index when the record could not be decoded), and a minimal MARC sample that reproduces the problem.

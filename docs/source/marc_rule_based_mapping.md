@@ -22,6 +22,19 @@ For each source record, the reader:
 If any heuristic succeeds, processing continues for that record. If all heuristics fail,
 the record is marked as failed and skipped from transformation output.
 
+#### MARC-8 escape sequences
+
+A record with a MARC-8 leader (position 9 blank) can decode without error as UTF-8 and still
+contain raw MARC-8 escape sequences, for example for superscripts and subscripts. Such records
+are re-decoded as MARC-8 and logged as `MARC-8 escape sequences translated to Unicode`.
+
+The re-decode is only applied when it cannot damage a record that already decoded successfully.
+The record keeps its original text if any of the following is true:
+
+- It contains bytes above 0x7F, meaning it holds real UTF-8 that MARC-8 decoding would mangle.
+- It contains an escape character that is not a recognized MARC-8 escape sequence.
+- The MARC-8 decoder reports characters it could not translate.
+
 ### Warnings vs failures
 
 - MARC-8 decoding warnings do not stop processing.
@@ -31,6 +44,9 @@ the record is marked as failed and skipped from transformation output.
 ### Where to inspect outcomes
 
 - `reports/data_issues_log_<task_name>.tsv` for per-record warning and recovery messages.
+    The second column (after `DATA ISSUE`) identifies the record by its legacy ID, resolved the same way as in the transformation.
+    If the record could not be decoded, or has no legacy ID, it is `<file name>:<record index>`
+    instead. For MARC decoding issues (warnings, repairs, escape-sequence translations and text fidelity warnings), the last column also ends with `source=<file name>:<record index>`, so the original position in the file is still available.
 - `reports/report_<task_name>.md` for aggregate decoding statistics.
 - `results/failed_records_decode_<task_name>.mrc` for records that failed MARC decoding.
 - `results/failed_records_transformation_<task_name>.mrc` for records that failed transformation.
