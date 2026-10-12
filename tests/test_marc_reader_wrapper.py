@@ -11,6 +11,7 @@ from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import (
     DEFAULT_MARC_RECORD_PREPROCESSORS,
+    MARC8_FALSE_EACC_TRANSLATION,
     MARCReaderWrapper,
 )
 from folio_migration_tools.migration_report import MigrationReport
@@ -862,6 +863,27 @@ def test_redecode_translates_non_ascii_set_containing_a_space():
     assert "\x1b" not in record["245"]["a"]
     assert record["245"]["a"][0] == "\u05d4"
     assert " " in record["245"]["a"]
+
+
+def test_redecode_skips_bogus_eacc_code_mapped_to_ideograph():
+    # pymarc maps this 3-byte payload to U+8BF0 without a warning; the source meant "Schäfer".
+    chunk = build_raw_chunk(b"Komm, Gott Sch\x1b$1'Xs\x1b(Bfer, heilige Geist /")
+
+    assert MARCReaderWrapper.redecode_marc8_escape_sequences(chunk) is None
+    assert "\x1b" in read_one_record(chunk)["245"]["a"]
+
+
+@pytest.mark.parametrize(
+    "text, flagged",
+    [
+        ("Sch\u8bf0fer", True),
+        ("Mu{u3864}diq", True),
+        ("Tokyo \u65e5\u672c Japan", False),
+        ("\u65e5\u672c.", False),
+    ],
+)
+def test_false_eacc_translation_pattern(text, flagged):
+    assert bool(MARC8_FALSE_EACC_TRANSLATION.search(text)) is flagged
 
 
 def test_redecode_skips_unrecognized_escape_sequence():
