@@ -827,6 +827,44 @@ def test_read_records_logs_data_issue_for_marc8_escape_redecode(monkeypatch):
     assert "subfields_changed=1" in logged_issues[0][2]
 
 
+def build_raw_chunk(data: bytes, leader9: str = " ") -> bytes:
+    """Build a record whose 245$a holds the given raw bytes."""
+    field = b"10\x1fa" + data + b"\x1e"
+    directory = b"245%04d%05d" % (len(field), 0) + b"\x1e"
+    base = 24 + len(directory)
+    total = base + len(field) + 1
+    leader = b"%05d" % total + b"nam " + leader9.encode() + b"22" + b"%05d" % base + b" a 4500"
+    return leader + directory + field + b"\x1d"
+
+
+def test_redecode_skips_real_utf8_with_escape_bytes():
+    chunk = build_raw_chunk("caf\u00e9 x".encode() + b"\x1bp1\x1bs")
+
+    assert MARCReaderWrapper.redecode_marc8_escape_sequences(chunk) is None
+    assert read_one_record(chunk)["245"]["a"] == "caf\u00e9 x\x1bp1\x1bs"
+
+
+def test_redecode_skips_untranslatable_eacc_sequence():
+    chunk = build_raw_chunk(b"31\x1b$1'+q\x1b(B38 cm.")
+
+    assert MARCReaderWrapper.redecode_marc8_escape_sequences(chunk) is None
+
+
+def test_redecode_skips_unrecognized_escape_sequence():
+    chunk = build_raw_chunk(b"foo\x1bXbar")
+
+    assert MARCReaderWrapper.redecode_marc8_escape_sequences(chunk) is None
+    assert read_one_record(chunk)["245"]["a"] == "foo\x1bXbar"
+
+
+def test_redecode_translates_superscript_sequences():
+    chunk = build_raw_chunk(b"x\x1bp1\x1bsy")
+
+    record = MARCReaderWrapper.redecode_marc8_escape_sequences(chunk)
+
+    assert record["245"]["a"] == "x\u00b9y"
+
+
 def test_data_issue_for_marc8_escape_redecode_uses_legacy_id(monkeypatch):
     logged_issues = []
     monkeypatch.setattr(

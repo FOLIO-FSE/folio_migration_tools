@@ -8,6 +8,7 @@ and handles corrupted records gracefully.
 import copy
 import json
 import logging
+import re
 import sys
 from contextlib import redirect_stderr
 from io import IOBase, StringIO
@@ -35,6 +36,11 @@ logger = logging.getLogger(__name__)
 
 MARC8_SIGNAL_BYTES = (b"\x8e", b"\x8f")
 MARC8_WARNING_PREFIX = "Multi-byte position "
+MARC8_UNPARSEABLE_PREFIX = "Unable to parse character"
+# Character set escape sequences the MARC-8 decoder can translate: ESC b/p/g/s
+# (subscripts, superscripts, Greek symbols, ASCII), G0/G1 designations of the
+# single-byte sets (Hebrew, Arabic, ASCII, ANSEL, Cyrillic, Greek) and EACC.
+MARC8_ESCAPE_SEQUENCE = re.compile(rb"\x1b(?:[bpgs]|[(),-][2-4BENQS]|\$[,-]?1)")
 TEXT_FIDELITY_CHECK_STRATEGIES = {
     "marc8_leader_heuristic",
     "latin1_leader_heuristic",
@@ -340,6 +346,7 @@ class MARCReaderWrapper:
     def decode_candidate_chunk(
         candidate_chunk: bytes,
         strategy: str,
+        hide_utf8_warnings: bool = True,
         **decode_kwargs,
     ) -> tuple[Record | None, str]:
         try:
@@ -348,7 +355,7 @@ class MARCReaderWrapper:
                 candidate_chunk,
                 to_unicode=True,
                 force_utf8=False,
-                hide_utf8_warnings=True,
+                hide_utf8_warnings=hide_utf8_warnings,
                 utf8_handling="strict",
                 **decode_kwargs,
             )
@@ -365,18 +372,32 @@ class MARCReaderWrapper:
     def redecode_marc8_escape_sequences(chunk: bytes) -> Record | None:
         """Re-decode a MARC-8 record (leader/09 blank) that still contains ESC characters.
 
-        Returns None if the record does not need it or the re-decode fails.
+        Forced UTF-8 decoding succeeded for this chunk, so the re-decode must not make it
+        worse. Returns None, keeping the forced UTF-8 result, if:
+
+        * the record has bytes >= 0x80, i.e. it contains real UTF-8 that MARC-8 would mangle;
+        * any ESC is not a recognized MARC-8 escape sequence;
+        * the MARC-8 decoder could not translate part of the record.
         """
         if not isinstance(chunk, bytes) or len(chunk) < 10 or chunk[9:10] != b" ":
             return None
         if b"\x1b" not in chunk:
             return None
-        redecoded_record, _ = MARCReaderWrapper.decode_candidate_chunk(
-            chunk, "marc8_escape_sequence_redecode"
-        )
+        if any(byte >= 0x80 for byte in chunk):
+            return None
+        if len(MARC8_ESCAPE_SEQUENCE.findall(chunk)) != chunk.count(b"\x1b"):
+            return None
+        stderr_buffer = StringIO()
+        with redirect_stderr(stderr_buffer):
+            redecoded_record, _ = MARCReaderWrapper.decode_candidate_chunk(
+                chunk, "marc8_escape_sequence_redecode", hide_utf8_warnings=False
+            )
         if redecoded_record is None or any(
-            "\x1b" in value for value in MARCReaderWrapper.iter_text_values(redecoded_record)
+            line.startswith((MARC8_WARNING_PREFIX, MARC8_UNPARSEABLE_PREFIX))
+            for line in stderr_buffer.getvalue().splitlines()
         ):
+            return None
+        if any("\x1b" in value for value in MARCReaderWrapper.iter_text_values(redecoded_record)):
             return None
         return redecoded_record
 
