@@ -347,7 +347,7 @@ If more than one mapping targets the same boolean property, each non-empty value
 
 ### Schema defaults on nested objects
 
-A schema default of `false` on a boolean inside a nested object is not applied on its own, so it does not create an otherwise empty object. An explicit `false` from the legacy data or a mapped value is kept.
+A schema default of `false` on a boolean inside a nested object is not applied, even when the object gets other values. This keeps it from creating objects that hold nothing else. An explicit `false` from the legacy data or a mapped value is kept, and a `true` default is still applied.
 
 ### Changing the accepted values
 
