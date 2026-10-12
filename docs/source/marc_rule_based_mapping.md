@@ -34,6 +34,10 @@ The record keeps its original text if any of the following is true:
 - It contains bytes above 0x7F, meaning it holds real UTF-8 that MARC-8 decoding would mangle.
 - It contains an escape character that is not a recognized MARC-8 escape sequence.
 - The MARC-8 decoder reports characters it could not translate.
+- The result has a CJK character directly next to an ASCII letter (for example `Sch诰fer`), or a
+  `{uXXXX}` placeholder. Some source systems wrote a Latin letter with a diacritic as a bogus
+  multibyte (EACC) code that the decoder maps to an unrelated ideograph without any warning.
+  Genuine CJK text, which is separated from Latin text by spaces or punctuation, is not affected.
 
 When the re-decode is skipped and escape characters remain in the text, the record is still
 transformed unchanged. It is logged as `MARC-8 escape sequences could not be translated`, with the
