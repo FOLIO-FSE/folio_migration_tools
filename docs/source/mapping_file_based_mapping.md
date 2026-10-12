@@ -326,12 +326,48 @@ When a mapping targets a boolean-typed FOLIO property (including properties insi
 
 Matching is case-insensitive and ignores surrounding whitespace. Empty values are treated as unmapped. Any other value fails the record with an error naming the property and the value found.
 
-To change the accepted values, set the `FOLIO_BOOLEAN_TRUE_TOKENS` and/or `FOLIO_BOOLEAN_FALSE_TOKENS` environment variables to comma-separated lists. A list replaces the defaults for that side rather than adding to them.
+Every non-empty value in a boolean column must be one of the accepted values, even if the rest of the object is empty. For example, a patron address slot with no address lines but a primary-address flag of `P` fails the user. Use `rules.replaceValues` to map such values to accepted ones, or clear them with an empty string.
+
+A property is treated as boolean only if its schema type is `boolean`, or a list of types where everything apart from `null` is `boolean` (such as `["boolean", "null"]`). A type that also allows other values, such as `["boolean", "string"]`, is not converted.
+
+### Delimited values
+
+In arrays of objects, a boolean can hold several values separated by `multiFieldDelimiter`, in parallel with the other delimited properties of the object. The value is split into one object per piece, and each piece is converted separately. An empty piece leaves the property out of that object.
+
+```
+notes[0].note      = "First note<delimiter>Second note"
+notes[0].staffOnly = "yes<delimiter>no"
+```
+
+gives two notes, the first with `staffOnly: true` and the second with `staffOnly: false`.
+
+### Several mappings for one property
+
+If more than one mapping targets the same boolean property, each non-empty value is converted. If they all agree, that value is used. If they disagree, the record fails with "Conflicting boolean values". Unlike other properties, the values are not joined with a space.
+
+### Schema defaults on nested objects
+
+A schema default of `false` on a boolean inside a nested object is not applied on its own, so it does not create an otherwise empty object. An explicit `false` from the legacy data or a mapped value is kept.
+
+### Changing the accepted values
+
+To change the accepted values, set `booleanTrueTokens` and/or `booleanFalseTokens` in `libraryInformation`:
+
+```json
+"libraryInformation": {
+    "booleanTrueTokens": ["active", "current"],
+    "booleanFalseTokens": ["inactive", "expired"]
+}
+```
+
+A list replaces the defaults for that side rather than adding to them. If a setting is not in the library configuration, the `FOLIO_BOOLEAN_TRUE_TOKENS` or `FOLIO_BOOLEAN_FALSE_TOKENS` environment variable (a comma-separated list) is used, and then the defaults:
 
 ```bash
 export FOLIO_BOOLEAN_TRUE_TOKENS="active,current"
 export FOLIO_BOOLEAN_FALSE_TOKENS="inactive,expired"
 ```
+
+Prefer the library configuration, so the values are recorded with the run. The tokens are read once, when the transformation starts, and logged. The task halts if either list ends up empty, or if a value is in both lists.
 
 ## Validation of Hardcoded Note Type Values
 

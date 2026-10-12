@@ -1653,6 +1653,49 @@ def test_boolean_values_mapped_value(mocked_folio_client):
     )
 
 
+def test_junk_primary_address_on_empty_address_fails_user(mocked_folio_client):
+    """An unrecognized boolean fails the user, even in an otherwise empty address slot.
+
+    This is deliberate: boolean columns must hold recognized values.
+    """
+    user_map = {
+        "data": [
+            {"folio_field": "username", "legacy_field": "user_name", "value": "",
+             "description": ""},
+            {"folio_field": "externalSystemId", "legacy_field": "ext_id", "value": "",
+             "description": ""},
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "",
+             "description": ""},
+            {"folio_field": "personal.lastName", "legacy_field": "", "value": "Last name",
+             "description": ""},
+            {"folio_field": "personal.addresses[0].addressLine1", "legacy_field": "addr1",
+             "value": "", "description": ""},
+            {"folio_field": "personal.addresses[0].primaryAddress", "legacy_field": "primary1",
+             "value": "", "description": ""},
+            {"folio_field": "personal.addresses[1].addressLine1", "legacy_field": "addr2",
+             "value": "", "description": ""},
+            {"folio_field": "personal.addresses[1].primaryAddress", "legacy_field": "primary2",
+             "value": "", "description": ""},
+        ]
+    }
+    legacy_user = {
+        "ext_id": "externalid_1",
+        "user_name": "user_name_1",
+        "id": "test_junk_primary_address_1",
+        "addr1": "Line 1",
+        "primary1": "y",
+        "addr2": "",
+        "primary2": "P",
+    }
+    mock_library_conf = mocked_classes.get_mocked_library_config()
+    mock_task_config = Mock(spec=UserTransformer.TaskConfiguration)
+    user_mapper = UserMapper(
+        mocked_folio_client, mock_task_config, mock_library_conf, user_map, None, None
+    )
+    with pytest.raises(TransformationRecordFailedError, match="interpret value as a boolean"):
+        user_mapper.do_map(legacy_user, legacy_user["id"], FOLIONamespaces.users)
+
+
 def test_json_load_s_booleans(mocked_folio_client):
     json_str = '{"a": true, "b": "true", "c": false, "d": "false", "e": "True", "f": "False"}'
     my_json = json.loads(json_str)

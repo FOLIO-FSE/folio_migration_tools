@@ -178,6 +178,30 @@ class LibraryConfiguration(BaseModel):
             ),
         ),
     ] = "<delimiter>"
+    boolean_true_tokens: Annotated[
+        list[str] | None,
+        Field(
+            title="Boolean true tokens",
+            description=(
+                "Values that mapping-file transformations read as true for boolean FOLIO "
+                "properties. Matching is case-insensitive. Replaces the defaults "
+                "(true, t, yes, y, 1). If not set, the FOLIO_BOOLEAN_TRUE_TOKENS environment "
+                "variable (comma-separated) is used, then the defaults."
+            ),
+        ),
+    ] = None
+    boolean_false_tokens: Annotated[
+        list[str] | None,
+        Field(
+            title="Boolean false tokens",
+            description=(
+                "Values that mapping-file transformations read as false for boolean FOLIO "
+                "properties. Matching is case-insensitive. Replaces the defaults "
+                "(false, f, no, n, 0). If not set, the FOLIO_BOOLEAN_FALSE_TOKENS environment "
+                "variable (comma-separated) is used, then the defaults."
+            ),
+        ),
+    ] = None
     failed_records_threshold: Annotated[
         int,
         Field(description=("Number of failed records until the process shuts down")),

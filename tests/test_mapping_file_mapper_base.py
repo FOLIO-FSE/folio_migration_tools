@@ -3607,6 +3607,259 @@ def test_map_booleans_env_token_override(
         mapper.do_map({"id": "x2", "f": "yes"}, "x2", FOLIONamespaces.organizations)
 
 
+_SIMPLE_BOOL_SCHEMA = {
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "type": "object",
+    "properties": {"id": {"type": "string"}, "flag": {"type": "boolean"}},
+}
+
+
+def test_map_booleans_delimited_in_array_objects(mocked_folio_client, mocked_file_mapper):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "notes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "note": {"type": "string"},
+                        "staffOnly": {"type": "boolean"},
+                    },
+                },
+            },
+        },
+    }
+    mapper = _bool_mapper(
+        mocked_folio_client,
+        mocked_file_mapper,
+        schema,
+        [("notes[0].note", "n"), ("notes[0].staffOnly", "s")],
+    )
+    rec, _ = mapper.do_map(
+        {"id": "x1", "n": "a<delimiter>b", "s": "Yes<delimiter>n"},
+        "x1",
+        FOLIONamespaces.organizations,
+    )
+    assert rec["notes"] == [
+        {"note": "a", "staffOnly": True},
+        {"note": "b", "staffOnly": False},
+    ]
+    assert all(isinstance(n["staffOnly"], bool) for n in rec["notes"])
+
+    # A single value is coerced before the split and repeated on every note
+    rec, _ = mapper.do_map(
+        {"id": "x0", "n": "a<delimiter>b<delimiter>c", "s": "Y"},
+        "x0",
+        FOLIONamespaces.organizations,
+    )
+    assert rec["notes"] == [
+        {"note": "a", "staffOnly": True},
+        {"note": "b", "staffOnly": True},
+        {"note": "c", "staffOnly": True},
+    ]
+    assert all(n["staffOnly"] is True for n in rec["notes"])
+
+    # An empty piece leaves staffOnly out of that note
+    rec, _ = mapper.do_map(
+        {"id": "x2", "n": "a<delimiter>b", "s": "true<delimiter>"},
+        "x2",
+        FOLIONamespaces.organizations,
+    )
+    assert rec["notes"] == [{"note": "a", "staffOnly": True}, {"note": "b"}]
+
+    # A bad piece still fails the record
+    with pytest.raises(TransformationRecordFailedError, match="interpret value as a boolean"):
+        mapper.do_map(
+            {"id": "x3", "n": "a<delimiter>b", "s": "true<delimiter>maybe"},
+            "x3",
+            FOLIONamespaces.organizations,
+        )
+
+
+def test_map_booleans_multiple_map_entries(mocked_folio_client, mocked_file_mapper):
+    mapper = _bool_mapper(
+        mocked_folio_client,
+        mocked_file_mapper,
+        _SIMPLE_BOOL_SCHEMA,
+        [("flag", "f1"), ("flag", "f2")],
+    )
+    rec, _ = mapper.do_map({"id": "x1", "f1": "true", "f2": "yes"}, "x1", FOLIONamespaces.items)
+    assert rec["flag"] is True
+    # An empty value doesn't count against the other
+    rec, _ = mapper.do_map({"id": "x2", "f1": "", "f2": "no"}, "x2", FOLIONamespaces.items)
+    assert rec["flag"] is False
+    with pytest.raises(TransformationRecordFailedError, match="Conflicting boolean values"):
+        mapper.do_map({"id": "x3", "f1": "true", "f2": "no"}, "x3", FOLIONamespaces.items)
+
+
+def test_map_booleans_delimited_multiple_map_entries(mocked_folio_client, mocked_file_mapper):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "notes": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "note": {"type": "string"},
+                        "staffOnly": {"type": "boolean"},
+                    },
+                },
+            },
+        },
+    }
+    mapper = _bool_mapper(
+        mocked_folio_client,
+        mocked_file_mapper,
+        schema,
+        [("notes[0].note", "n"), ("notes[0].staffOnly", "s1"), ("notes[0].staffOnly", "s2")],
+    )
+    # Different spellings of the same pieces agree
+    rec, _ = mapper.do_map(
+        {"id": "x1", "n": "a<delimiter>b", "s1": "yes<delimiter>no", "s2": "TRUE<delimiter>f"},
+        "x1",
+        FOLIONamespaces.organizations,
+    )
+    assert rec["notes"] == [
+        {"note": "a", "staffOnly": True},
+        {"note": "b", "staffOnly": False},
+    ]
+    with pytest.raises(TransformationRecordFailedError, match="Conflicting boolean values"):
+        mapper.do_map(
+            {"id": "x2", "n": "a<delimiter>b", "s1": "yes<delimiter>no", "s2": "no<delimiter>no"},
+            "x2",
+            FOLIONamespaces.organizations,
+        )
+
+
+@pytest.mark.parametrize(
+    "schema_type,value,expected",
+    [
+        (["boolean", "string"], "sometimes", "sometimes"),
+        (["boolean", "null"], "Y", True),
+        (["null"], "Y", "Y"),
+    ],
+)
+def test_map_booleans_union_types(
+    mocked_folio_client, mocked_file_mapper, schema_type, value, expected
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {"id": {"type": "string"}, "flag": {"type": schema_type}},
+    }
+    mapper = _bool_mapper(mocked_folio_client, mocked_file_mapper, schema, [("flag", "f")])
+    rec, _ = mapper.do_map({"id": "x1", "f": value}, "x1", FOLIONamespaces.items)
+    assert rec["flag"] == expected
+    assert type(rec["flag"]) is type(expected)
+
+
+def _bool_mapper_with_config(mocked_folio_client, mocked_file_mapper, **config):
+    library_config = mocked_classes.get_mocked_library_config().model_copy(update=config)
+    the_map = {
+        "data": [
+            {"folio_field": "legacyIdentifier", "legacy_field": "id", "value": "",
+             "description": ""},
+            {"folio_field": "flag", "legacy_field": "f", "value": "", "description": ""},
+        ]
+    }
+    return MappingFileMapperBase(
+        mocked_folio_client,
+        _SIMPLE_BOOL_SCHEMA,
+        the_map,
+        None,
+        FOLIONamespaces.items,
+        library_config,
+        mocked_file_mapper.task_configuration,
+    )
+
+
+def test_map_booleans_config_tokens_override_env(
+    mocked_folio_client, mocked_file_mapper, monkeypatch
+):
+    monkeypatch.setenv("FOLIO_BOOLEAN_TRUE_TOKENS", "active")
+    monkeypatch.setenv("FOLIO_BOOLEAN_FALSE_TOKENS", "inactive")
+    mapper = _bool_mapper_with_config(
+        mocked_folio_client,
+        mocked_file_mapper,
+        boolean_true_tokens=[" Current "],
+        boolean_false_tokens=["expired"],
+    )
+    rec, _ = mapper.do_map({"id": "x1", "f": "CURRENT"}, "x1", FOLIONamespaces.items)
+    assert rec["flag"] is True
+    rec, _ = mapper.do_map({"id": "x2", "f": "Expired"}, "x2", FOLIONamespaces.items)
+    assert rec["flag"] is False
+    with pytest.raises(TransformationRecordFailedError):
+        mapper.do_map({"id": "x3", "f": "active"}, "x3", FOLIONamespaces.items)
+
+
+def test_map_booleans_config_one_side_only(mocked_folio_client, mocked_file_mapper):
+    mapper = _bool_mapper_with_config(
+        mocked_folio_client, mocked_file_mapper, boolean_true_tokens=["current"]
+    )
+    rec, _ = mapper.do_map({"id": "x1", "f": "current"}, "x1", FOLIONamespaces.items)
+    assert rec["flag"] is True
+    # The false side keeps its defaults
+    rec, _ = mapper.do_map({"id": "x2", "f": "no"}, "x2", FOLIONamespaces.items)
+    assert rec["flag"] is False
+
+
+def test_map_booleans_tokens_read_once(mocked_folio_client, mocked_file_mapper, monkeypatch):
+    monkeypatch.setenv("FOLIO_BOOLEAN_TRUE_TOKENS", "active")
+    mapper = _bool_mapper(
+        mocked_folio_client, mocked_file_mapper, _SIMPLE_BOOL_SCHEMA, [("flag", "f")]
+    )
+    monkeypatch.setenv("FOLIO_BOOLEAN_TRUE_TOKENS", "something_else")
+    rec, _ = mapper.do_map({"id": "x1", "f": "active"}, "x1", FOLIONamespaces.items)
+    assert rec["flag"] is True
+
+
+@pytest.mark.parametrize(
+    "env,config,message",
+    [
+        ({"FOLIO_BOOLEAN_TRUE_TOKENS": "yes,maybe", "FOLIO_BOOLEAN_FALSE_TOKENS": "no,maybe"},
+         {}, "both true and false"),
+        ({}, {"boolean_true_tokens": ["yes"], "boolean_false_tokens": ["Yes"]},
+         "both true and false"),
+        ({}, {"boolean_true_tokens": [" ", ""]}, "at least one value"),
+        ({"FOLIO_BOOLEAN_FALSE_TOKENS": " , "}, {}, "at least one value"),
+    ],
+)
+def test_map_booleans_invalid_tokens(
+    mocked_folio_client, mocked_file_mapper, monkeypatch, env, config, message
+):
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    with pytest.raises(TransformationProcessError, match=message):
+        _bool_mapper_with_config(mocked_folio_client, mocked_file_mapper, **config)
+
+
+def test_map_booleans_nested_false_default_creates_no_object(
+    mocked_folio_client, mocked_file_mapper
+):
+    schema = {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "type": "object",
+        "properties": {
+            "id": {"type": "string"},
+            "obj": {
+                "type": "object",
+                "properties": {"inner": {"type": "boolean", "default": False}},
+            },
+        },
+    }
+    mapper = _bool_mapper(mocked_folio_client, mocked_file_mapper, schema, [("obj.inner", "i")])
+    rec, _ = mapper.do_map({"id": "x1", "i": ""}, "x1", FOLIONamespaces.items)
+    assert "obj" not in rec
+    rec, _ = mapper.do_map({"id": "x2", "i": "false"}, "x2", FOLIONamespaces.items)
+    assert rec["obj"]["inner"] is False
+
+
 def test_map_booleans_with_replace_values(mocked_folio_client: FolioClient, mocked_file_mapper):
     schema = {
         "$schema": "http://json-schema.org/draft-04/schema#",
