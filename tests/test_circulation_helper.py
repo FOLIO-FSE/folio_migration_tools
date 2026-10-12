@@ -184,3 +184,25 @@ def test_check_out_by_barcode_connection_error(caplog):
     assert result.should_be_retried is False
     assert result.error_message == "Connection error"
     assert "boom" in caplog.text
+
+
+def test_extend_open_loan_puts_with_folio_http_client():
+    folio_client = MagicMock()
+    http_client = folio_client.get_folio_http_client.return_value.__enter__.return_value
+    http_client.put.return_value = MagicMock(status_code=204)
+    loan = {"id": "loan-1", "metadata": {"createdDate": "x"}}
+    due = datetime(2026, 1, 2, tzinfo=timezone.utc)
+    out = datetime(2026, 1, 1, tzinfo=timezone.utc)
+
+    assert CirculationHelper.extend_open_loan(folio_client, loan, due, out) is True
+
+    args, kwargs = http_client.put.call_args
+    assert args == ("/circulation/loans/loan-1",)
+    assert kwargs["json"] == {
+        "id": "loan-1",
+        "dueDate": due.isoformat(),
+        "loanDate": out.isoformat(),
+    }
+    assert kwargs["timeout"] is None
+    assert "headers" not in kwargs
+    assert "metadata" in loan

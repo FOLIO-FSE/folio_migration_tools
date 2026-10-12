@@ -9,7 +9,6 @@ import json
 import logging
 from typing import Set
 
-import httpx
 import i18n
 from folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
@@ -177,12 +176,8 @@ class HRIDHandler:
             self.hrid_settings["instances"]["startNumber"] = self.instance_hrid_counter
             self.hrid_settings["holdings"]["startNumber"] = self.holdings_hrid_counter
             self.hrid_settings["items"]["startNumber"] = self.items_hrid_counter
-            url = self.folio_client.gateway_url + self.hrid_path
-            resp = httpx.put(
-                url,
-                json=self.hrid_settings,
-                headers=self.folio_client.okapi_headers,
-            )
+            with self.folio_client.get_folio_http_client() as http_client:
+                resp = http_client.put(self.hrid_path, json=self.hrid_settings)
             resp.raise_for_status()
             logger.info("%s Successfully set HRID settings.", resp.status_code)
             a = self.folio_client.folio_get_single_object(self.hrid_path)

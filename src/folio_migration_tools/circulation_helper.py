@@ -13,7 +13,6 @@ import time
 from http import HTTPStatus
 from typing import Set
 
-import httpx
 import i18n
 from folioclient import (
     FolioClient,
@@ -383,11 +382,10 @@ class CirculationHelper:
             del loan_to_put["metadata"]
             loan_to_put["dueDate"] = extension_due_date.isoformat()
             loan_to_put["loanDate"] = extend_out_date.isoformat()
-            url = f"{folio_client.gateway_url}/circulation/loans/{loan_to_put['id']}"
+            url = f"/circulation/loans/{loan_to_put['id']}"
 
-            req = httpx.put(
-                url, headers=folio_client.okapi_headers, json=loan_to_put, timeout=None
-            )
+            with folio_client.get_folio_http_client() as http_client:
+                req = http_client.put(url, json=loan_to_put, timeout=None)
             logger.info(
                 "%s\tPUT Extend loan %s to %s\t %s",
                 req.status_code,
