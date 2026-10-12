@@ -769,7 +769,9 @@ def test_read_records_skips_text_fidelity_warning_without_recovery_strategy(monk
     )
 
 
-def build_marc8_escape_chunk(leader9: str = " ") -> bytes:
+def build_marc8_escape_chunk(
+    leader9: str = " ", text: str = "\x1bp40\x1bsAr/\x1bp39\x1bsAr ages"
+) -> bytes:
     """Build a MARC-8 chunk whose only special characters are ESC-based (superscripts)."""
     record = Record()
     record.add_field(Field(tag="001", data="marc8-esc"))
@@ -777,7 +779,7 @@ def build_marc8_escape_chunk(leader9: str = " ") -> bytes:
         Field(
             tag="245",
             indicators=Indicators(*["1", "0"]),
-            subfields=[Subfield(code="a", value="\x1bp40\x1bsAr/\x1bp39\x1bsAr ages")],
+            subfields=[Subfield(code="a", value=text)],
         )
     )
     chunk = bytearray(record.as_marc())
@@ -850,6 +852,18 @@ def test_redecode_skips_untranslatable_eacc_sequence():
     assert MARCReaderWrapper.redecode_marc8_escape_sequences(chunk) is None
 
 
+def test_redecode_translates_non_ascii_set_containing_a_space():
+    # pymarc warns about the space inside the Hebrew set but still decodes it correctly.
+    chunk = build_raw_chunk(b"\x1b(2dqd dxno\x1b(B")
+
+    record = MARCReaderWrapper.redecode_marc8_escape_sequences(chunk)
+
+    assert record is not None
+    assert "\x1b" not in record["245"]["a"]
+    assert record["245"]["a"][0] == "\u05d4"
+    assert " " in record["245"]["a"]
+
+
 def test_redecode_skips_unrecognized_escape_sequence():
     chunk = build_raw_chunk(b"foo\x1bXbar")
 
@@ -890,6 +904,43 @@ def test_data_issue_for_marc8_escape_redecode_uses_legacy_id(monkeypatch):
 
     assert logged_issues[0][0] == "marc8-esc"
     assert logged_issues[0][2].endswith("source=x.mrc:0")
+
+
+def read_logged_issues(chunk: bytes, monkeypatch) -> list[tuple]:
+    logged_issues = []
+    monkeypatch.setattr(
+        Helper,
+        "log_data_issue",
+        lambda index_or_id, message, legacy_value: logged_issues.append(
+            (index_or_id, message, legacy_value)
+        ),
+    )
+    processor = build_processor(DEFAULT_MARC_RECORD_PREPROCESSORS)
+    processor.mapper.get_legacy_ids = lambda record, idx: [record["001"].value()]
+    processor.process_record = lambda idx, record, source_file: None
+    reader = MARCReader(BytesIO(chunk), to_unicode=True, permissive=True, utf8_handling="strict")
+    reader.hide_utf8_warnings = False
+    reader.force_utf8 = True
+    MARCReaderWrapper.read_records(reader, FileDefinition(file_name="x.mrc"), BytesIO(), processor)
+    return logged_issues
+
+
+def test_untranslatable_marc8_escape_sequences_are_logged_with_legacy_id(monkeypatch):
+    chunk = build_marc8_escape_chunk(text="31\x1b$1'+q\x1b(B38 cm.")
+
+    logged_issues = read_logged_issues(chunk, monkeypatch)
+
+    assert len(logged_issues) == 1
+    assert logged_issues[0][0] == "marc8-esc"
+    assert logged_issues[0][1] == "MARC-8 escape sequences could not be translated"
+    assert "31\\x1b$1'+q" in logged_issues[0][2]
+    assert logged_issues[0][2].endswith("source=x.mrc:0")
+
+
+def test_clean_record_logs_nothing_about_escape_sequences(monkeypatch):
+    chunk = build_marc8_escape_chunk(text="plain ascii title")
+
+    assert read_logged_issues(chunk, monkeypatch) == []
 
 
 def test_get_record_label_falls_back_and_does_not_double_count_stats():

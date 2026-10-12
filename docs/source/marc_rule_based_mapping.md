@@ -35,6 +35,13 @@ The record keeps its original text if any of the following is true:
 - It contains an escape character that is not a recognized MARC-8 escape sequence.
 - The MARC-8 decoder reports characters it could not translate.
 
+When the re-decode is skipped and escape characters remain in the text, the record is still
+transformed unchanged. It is logged as `MARC-8 escape sequences could not be translated`, with the
+first affected text, and counted under `Records with untranslated MARC-8 escape sequences` in
+the migration report. These usually come from a faulty conversion in the source system and need
+to be fixed there. A space inside a non-ASCII character set (Hebrew, Cyrillic, Arabic) is not
+treated as untranslatable.
+
 ### Warnings vs failures
 
 - MARC-8 decoding warnings do not stop processing.
