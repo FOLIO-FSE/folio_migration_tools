@@ -10,6 +10,7 @@ import json
 import logging
 import re
 import time
+from datetime import timedelta
 from http import HTTPStatus
 from typing import Set
 
@@ -147,13 +148,21 @@ class CirculationHelper:
             TransactionResult: The result of the check-out transaction.
         """
         t0_function = time.time()
+        # FOLIO refuses a checkout override with a due date that is not after the loan date.
+        # Loans with inverted legacy dates get a placeholder due date here and their legacy
+        # dates are set by a loan update after checkout.
+        due_date = (
+            legacy_loan.out_date + timedelta(days=1)
+            if legacy_loan.has_inverted_dates
+            else legacy_loan.due_date
+        )
         data = {
             "itemBarcode": legacy_loan.item_barcode,
             "userBarcode": legacy_loan.patron_barcode,
             "loanDate": legacy_loan.out_date.isoformat(),
             "servicePointId": legacy_loan.service_point_id,
             "overrideBlocks": {
-                "itemNotLoanableBlock": {"dueDate": legacy_loan.due_date.isoformat()},
+                "itemNotLoanableBlock": {"dueDate": due_date.isoformat()},
                 "patronBlock": {},
                 "itemLimitBlock": {},
                 "comment": "Migrated from legacy system",

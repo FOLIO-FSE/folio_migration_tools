@@ -145,7 +145,45 @@ def _checkout_loan(sp_id):
     legacy_loan.service_point_id = sp_id
     legacy_loan.out_date = datetime.now(timezone.utc)
     legacy_loan.due_date = datetime.now(timezone.utc)
+    legacy_loan.has_inverted_dates = False
     return legacy_loan
+
+
+def test_check_out_by_barcode_sends_legacy_dates():
+    mocked_folio = mocked_classes.mocked_folio_client()
+    sp_id = str(uuid.uuid4())
+    circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
+    legacy_loan = _checkout_loan(sp_id)
+    legacy_loan.out_date = datetime(2024, 1, 1, 0, 1, tzinfo=timezone.utc)
+    legacy_loan.due_date = datetime(2024, 1, 15, 23, 59, tzinfo=timezone.utc)
+    mocked_folio.folio_post = MagicMock(return_value={"id": "l1"})
+
+    circ_helper.check_out_by_barcode(legacy_loan)
+
+    payload = mocked_folio.folio_post.call_args[0][1]
+    assert payload["loanDate"] == "2024-01-01T00:01:00+00:00"
+    assert payload["overrideBlocks"]["itemNotLoanableBlock"]["dueDate"] == (
+        "2024-01-15T23:59:00+00:00"
+    )
+
+
+def test_check_out_by_barcode_sends_placeholder_due_date_for_inverted_dates():
+    mocked_folio = mocked_classes.mocked_folio_client()
+    sp_id = str(uuid.uuid4())
+    circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
+    legacy_loan = _checkout_loan(sp_id)
+    legacy_loan.out_date = datetime(2024, 1, 10, 0, 1, tzinfo=timezone.utc)
+    legacy_loan.due_date = datetime(2024, 1, 5, 23, 59, tzinfo=timezone.utc)
+    legacy_loan.has_inverted_dates = True
+    mocked_folio.folio_post = MagicMock(return_value={"id": "l1"})
+
+    circ_helper.check_out_by_barcode(legacy_loan)
+
+    payload = mocked_folio.folio_post.call_args[0][1]
+    assert payload["loanDate"] == "2024-01-10T00:01:00+00:00"
+    assert payload["overrideBlocks"]["itemNotLoanableBlock"]["dueDate"] == (
+        "2024-01-11T00:01:00+00:00"
+    )
 
 
 def test_check_out_by_barcode_client_error_reports_actual_status():
