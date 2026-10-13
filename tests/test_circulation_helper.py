@@ -95,7 +95,9 @@ def test_get_active_loan_by_item_id_exception(caplog):
 def test_get_holding_by_uuid_exception(caplog):
     """Test that get_holding_by_uuid logs error and returns empty dict on exception."""
     mocked_folio = mocked_classes.mocked_folio_client()
-    mocked_folio.folio_get_single_object = MagicMock(side_effect=Exception("Holdings lookup failed"))
+    mocked_folio.folio_get_single_object = MagicMock(
+        side_effect=Exception("Holdings lookup failed")
+    )
     sp_id = str(uuid.uuid4())
     circ_helper = CirculationHelper(mocked_folio, sp_id, MigrationReport())
 
@@ -244,3 +246,14 @@ def test_extend_open_loan_puts_with_folio_http_client():
     assert kwargs["timeout"] is None
     assert "headers" not in kwargs
     assert "metadata" in loan
+
+
+def test_create_request_only_overrides_patron_block():
+    legacy_request = MagicMock()
+    legacy_request.serialize.return_value = {}
+    folio_client = MagicMock()
+    CirculationHelper.create_request(folio_client, legacy_request, MagicMock())
+    blocks = folio_client.folio_post.call_args[0][1]["requestProcessingParameters"][
+        "overrideBlocks"
+    ]
+    assert blocks == {"patronBlock": {}, "comment": "Migrated from legacy system"}
