@@ -45,8 +45,9 @@ MARC8_UNPARSEABLE_SPACE_PREFIX = "Unable to parse character 0x20 "
 # single-byte sets (Hebrew, Arabic, ASCII, ANSEL, Cyrillic, Greek) and EACC.
 # A CJK character touching an ASCII letter, or a {uXXXX} placeholder, means the EACC codes were
 # a mangled Latin letter (e.g. "Sch\u8bf0fer"), not real CJK text.
+CJK_RANGES = "\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\U00020000-\U0002fa1f"
 MARC8_FALSE_EACC_TRANSLATION = re.compile(
-    r"[A-Za-z][\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\U00020000-\U0002fa1f]|[\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\U00020000-\U0002fa1f][A-Za-z]|\{u[0-9A-Fa-f]{4,6}\}"
+    f"[A-Za-z][{CJK_RANGES}]|[{CJK_RANGES}][A-Za-z]|\\{{u[0-9A-Fa-f]{{4,6}}\\}}"
 )
 MARC8_ESCAPE_SEQUENCE = re.compile(rb"\x1b(?:[bpgs]|[(),-][2-4BENQS]|\$[,-]?1)")
 TEXT_FIDELITY_CHECK_STRATEGIES = {
