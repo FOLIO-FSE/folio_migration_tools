@@ -276,3 +276,51 @@ class TestInactiveUserHandling:
         assert result is False
         # User should still be deactivated even though request failed
         assert m.folio_client.folio_put.call_count == 2
+
+
+def _validation_error(errors):
+    import httpx
+
+    response = httpx.Response(
+        422,
+        json={"errors": errors},
+        request=httpx.Request("POST", "http://folio/circulation/requests"),
+    )
+    return FolioValidationError("Validation failed", request=response.request, response=response)
+
+
+class TestFailedRequestLogging:
+    def _make_migrator(self):
+        m = TestInactiveUserHandling()._make_migrator()
+        m._log_failed_request = RequestsMigrator._log_failed_request.__get__(m, RequestsMigrator)
+        return m
+
+    def _request(self):
+        request = DummyLegacyRequest()
+        request.to_source_dict = lambda: {"item_barcode": "item-1"}
+        return request
+
+    def test_validation_failure_logs_every_error_and_fails_request(self):
+        m = self._make_migrator()
+        m.circulation_helper.create_request.side_effect = _validation_error(
+            [{"message": "Blocked", "code": "BLOCK"}, {"message": "Already requested"}]
+        )
+        with patch(
+            "folio_migration_tools.migration_tasks.requests_migrator.Helper.log_data_issue"
+        ) as log_issue:
+            assert m._create_request_with_inactive_user_retry(self._request()) is False
+        assert log_issue.call_args[0][1] == "Blocked [BLOCK]; Already requested"
+
+    def test_failed_retry_still_deactivates_user(self):
+        m = self._make_migrator()
+        m.circulation_helper.create_request.side_effect = _validation_error(
+            [{"message": "Inactive users cannot make requests"}]
+        )
+        m.get_user_by_barcode = Mock(return_value={"id": "u1", "expirationDate": "2020-01-01"})
+        m.activate_user = Mock()
+        m.deactivate_user = Mock()
+        with patch(
+            "folio_migration_tools.migration_tasks.requests_migrator.Helper.log_data_issue"
+        ):
+            assert m._create_request_with_inactive_user_retry(self._request()) is False
+        m.deactivate_user.assert_called_once()

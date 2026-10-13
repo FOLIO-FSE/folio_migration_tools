@@ -19,13 +19,14 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioValidationError
 from pydantic import Field
 
-from folio_migration_tools.circulation_helper import CirculationHelper
+from folio_migration_tools.circulation_helper import CirculationHelper, request_error_messages
 from folio_migration_tools.circulation_prevalidation import (
     load_patron_identifiers,
     validate_item_barcodes,
     validate_patron_barcodes,
 )
 from folio_migration_tools.custom_dict import InsensitiveDictReader
+from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
@@ -257,7 +258,15 @@ class RequestsMigrator(MigrationTaskBase):
             try:
                 res, legacy_request = self.prepare_legacy_request(legacy_request)
                 if res:
-                    logger.debug(json.dumps(legacy_request.serialize(), indent=2))
+                    try:
+                        logger.debug(json.dumps(legacy_request.serialize(), indent=2))
+                    except TransformationRecordFailedError as trfe:
+                        trfe.log_it()
+                        self.migration_report.add_general_statistics(
+                            i18n_t("Unsuccessfully migrated requests")
+                        )
+                        self.failed_requests.add(legacy_request)
+                        continue
                     success = self._create_request_with_inactive_user_retry(legacy_request)
                     if success:
                         self.migration_report.add_general_statistics(
@@ -328,14 +337,24 @@ class RequestsMigrator(MigrationTaskBase):
                 self.folio_client, legacy_request, self.migration_report
             )
         except FolioValidationError as fve:
-            error_response = self.folio_client.handle_json_response(fve.response)
-            error_message = error_response.get("errors", [{}])[0].get("message", "")
-            if "Inactive users cannot make requests" in error_message:
+            messages = request_error_messages(fve)
+            if any("Inactive users cannot make requests" in m for m in messages):
                 logger.info(
                     "Inactive user detected. Attempting to reactivate for request creation."
                 )
                 return self._retry_request_for_inactive_user(legacy_request)
+            self._log_failed_request(legacy_request, messages)
             return False
+
+    def _log_failed_request(self, legacy_request: LegacyRequest, messages: list[str]):
+        """Record why a request failed in the data issues log and the migration report."""
+        for message in messages:
+            self.migration_report.add_general_statistics(message)
+        Helper.log_data_issue(
+            legacy_request.item_barcode,
+            "; ".join(messages),
+            json.dumps(legacy_request.to_source_dict()),
+        )
 
     def _retry_request_for_inactive_user(self, legacy_request: LegacyRequest) -> bool:
         """Retry request creation for inactive user by temporarily activating.
@@ -354,13 +373,18 @@ class RequestsMigrator(MigrationTaskBase):
             user["expirationDate"] = (datetime.now() + timedelta(days=1)).isoformat()
             self.activate_user(user)
             logger.debug("Temporarily activated user for request creation")
-            success = self.circulation_helper.create_request(
-                self.folio_client, legacy_request, self.migration_report
-            )
+            try:
+                success = self.circulation_helper.create_request(
+                    self.folio_client, legacy_request, self.migration_report
+                )
+            except FolioValidationError as fve:
+                self._log_failed_request(legacy_request, request_error_messages(fve))
+                success = False
+            finally:
+                self.deactivate_user(user, original_expiration)
+                logger.debug("Deactivated user again")
             if success:
                 self.migration_report.add("Details", i18n_t("Handled inactive users"))
-            self.deactivate_user(user, original_expiration)
-            logger.debug("Deactivated user again")
             return success
         except Exception:
             logger.exception(

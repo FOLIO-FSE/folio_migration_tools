@@ -116,6 +116,10 @@ Item barcodes are matched case-insensitively.
 
 Failed records are saved for review.
 
+### Requests that FOLIO rejects
+
+When FOLIO refuses to create a request, for example because the patron is blocked or the item is already requested, every error FOLIO returns is added to the migration report and to the data issues log, together with the error code when there is one and the source row. The request is also written to the failed records file, in the same format as the input file, so it can be corrected and loaded again. Server errors (HTTP 5xx) and connection problems are handled the same way. A request with an inactive patron is retried after temporarily activating the patron, and the patron is deactivated again whether or not the retry succeeds.
+
 If an item batch or a patron lookup fails, for example because FOLIO is unavailable, it is retried once. If the retry fails too, the task halts. A lookup that failed cannot be told apart from a missing record, so carrying on would set aside requests whose records exist.
 
 Set `skipBarcodePrevalidation` to `true` to bypass this step.
