@@ -257,3 +257,56 @@ def test_create_request_only_overrides_patron_block():
         "overrideBlocks"
     ]
     assert blocks == {"patronBlock": {}, "comment": "Migrated from legacy system"}
+
+
+def _validation_error(errors):
+    import httpx
+    from folioclient import FolioValidationError
+
+    response = httpx.Response(
+        422,
+        json={"errors": errors},
+        request=httpx.Request("POST", "http://folio/circulation/requests"),
+    )
+    return FolioValidationError("Validation failed", request=response.request, response=response)
+
+
+def test_request_error_messages_returns_every_error_with_its_code():
+    from folio_migration_tools.circulation_helper import request_error_messages
+
+    error = _validation_error(
+        [
+            {"message": "Patron is blocked", "code": "USER_IS_BLOCKED_AUTOMATICALLY"},
+            {"message": "Item is already requested"},
+        ]
+    )
+    assert request_error_messages(error) == [
+        "Patron is blocked [USER_IS_BLOCKED_AUTOMATICALLY]",
+        "Item is already requested",
+    ]
+
+
+def test_request_error_messages_falls_back_when_body_has_no_errors():
+    from folio_migration_tools.circulation_helper import request_error_messages
+
+    error = _validation_error([])
+    assert request_error_messages(error) == ["Validation failed"]
+
+
+def test_create_request_server_error_is_logged_and_returns_false():
+    import httpx
+    from folioclient import FolioInternalServerError
+
+    response = httpx.Response(
+        500, text="boom", request=httpx.Request("POST", "http://folio/circulation/requests")
+    )
+    legacy_request = MagicMock()
+    legacy_request.serialize.return_value = {}
+    legacy_request.to_source_dict.return_value = {}
+    folio_client = MagicMock()
+    folio_client.folio_post.side_effect = FolioInternalServerError(
+        "boom", request=response.request, response=response
+    )
+    with patch("folio_migration_tools.circulation_helper.Helper.log_data_issue") as log_issue:
+        assert not CirculationHelper.create_request(folio_client, legacy_request, MagicMock())
+    log_issue.assert_called_once()

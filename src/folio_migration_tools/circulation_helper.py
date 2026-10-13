@@ -20,6 +20,7 @@ from folioclient import (
     FolioClientError,
     FolioConnectionError,
     FolioInternalServerError,
+    FolioServerError,
     FolioValidationError,
 )
 
@@ -36,6 +37,22 @@ logger = logging.getLogger(__name__)
 
 
 date_time_format = "%Y-%m-%dT%H:%M:%S.%f+0000"
+
+
+def request_error_messages(error: FolioValidationError) -> list[str]:
+    """Return every error message from a failed request, with its error code if there is one.
+
+    mod-circulation can report several problems in one 422 response (e.g. a blocked patron
+    and an item that is already requested), so reading only the first error loses information.
+    """
+    body = FolioClient.handle_json_response(error.response)
+    errors = body.get("errors") if isinstance(body, dict) else None
+    messages = []
+    for err in errors or []:
+        message = err.get("message", "")
+        code = err.get("code")
+        messages.append(f"{message} [{code}]" if code else message)
+    return messages or [str(error.message)]
 
 
 class CirculationHelper:
@@ -330,9 +347,9 @@ class CirculationHelper:
             )
             return True
         except FolioValidationError as fve:
-            message = folio_client.handle_json_response(fve.response)["errors"][0]["message"]
-            logger.exception(message)
-            migration_report.add_general_statistics(message)
+            # The migrator decides what to do with validation errors (e.g. inactive users),
+            # and is responsible for logging the failure if it is final.
+            logger.error("Request validation failed: %s", "; ".join(request_error_messages(fve)))
             raise
         except (FolioConnectionError, FolioClientError) as fce:
             if client_response := getattr(fce, "response", None):
@@ -340,16 +357,32 @@ class CirculationHelper:
                     f"HTTP {client_response.status_code} Error creating request: "
                     f"{client_response.text}"
                 )
-                logger.exception(message)
+                logger.error(message)
                 migration_report.add_general_statistics(
                     i18n.t("HTTP %{code} Error creating request", code=client_response.status_code)
                     + f": {client_response.text}"
                 )
             else:
-                logger.exception(f"Connection error creating request: {fce}")
+                message = f"Connection error creating request: {fce}"
+                logger.error(message)
                 migration_report.add_general_statistics(
                     i18n_t("Connection error creating request")
                 )
+            Helper.log_data_issue(
+                legacy_request.item_barcode, message, json.dumps(legacy_request.to_source_dict())
+            )
+            return False
+        except FolioServerError as fse:
+            message = f"HTTP {fse.response.status_code} Server error creating request"
+            logger.error("%s: %s", message, fse.response.text)
+            migration_report.add_general_statistics(
+                i18n.t("HTTP %{code} Error creating request", code=fse.response.status_code)
+            )
+            Helper.log_data_issue(
+                legacy_request.item_barcode,
+                f"{message}: {fse.response.text}",
+                json.dumps(legacy_request.to_source_dict()),
+            )
             return False
         except Exception as exception:
             logger.exception(exception, exc_info=True)
