@@ -314,13 +314,10 @@ class CirculationHelper:
         try:
             path = "/circulation/requests"
             data = legacy_request.serialize()
+            # mod-circulation only honors the patron block override when creating requests.
             data["requestProcessingParameters"] = {
                 "overrideBlocks": {
-                    "itemNotLoanableBlock": {
-                        "dueDate": legacy_request.request_expiration_date.isoformat()
-                    },
                     "patronBlock": {},
-                    "itemLimitBlock": {},
                     "comment": "Migrated from legacy system",
                 }
             }
