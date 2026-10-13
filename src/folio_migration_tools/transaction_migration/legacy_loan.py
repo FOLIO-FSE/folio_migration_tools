@@ -172,12 +172,14 @@ class LegacyLoan(object):
             except ValueError:
                 Helper.log_data_issue(
                     self.row,
-                    i18n.t("Unresolvable %{renewal_count=} was replaced with 0."),
+                    "Unresolvable renewal_count was replaced with 0.",
                     json.dumps(loan),
                 )
         else:
             Helper.log_data_issue(
-                self.row, i18n.t("Missing renewal count was replaced with 0."), json.dumps(loan)
+                self.row,
+                "Missing renewal count was replaced with 0.",
+                json.dumps(loan),
             )
         return 0
 
@@ -194,7 +196,7 @@ class LegacyLoan(object):
             if self.allow_due_date_before_out_date:
                 Helper.log_data_issue(
                     self.row,
-                    i18n.t("Due date is before out date. Legacy dates will be kept"),
+                    "Due date is before out date. Legacy dates will be kept",
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(i18n.t("Due date is before out date. Legacy dates will be kept"))
@@ -202,7 +204,7 @@ class LegacyLoan(object):
         if self.due_date <= self.out_date:
             raise TransformationRecordFailedError(
                 self.row,
-                i18n.t("Due date is before out date, or date information is missing from both"),
+                "Due date is before out date, or date information is missing from both",
                 json.dumps(self.legacy_loan_dict, indent=2),
             )
 
