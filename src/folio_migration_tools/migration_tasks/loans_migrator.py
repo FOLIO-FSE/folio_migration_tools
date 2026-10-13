@@ -134,6 +134,18 @@ class LoansMigrator(MigrationTaskBase):
                 ),
             ),
         ] = ""
+        allow_due_date_before_out_date: Annotated[
+            bool,
+            Field(
+                title="Allow due date before out date",
+                description=(
+                    "Do not reject loans whose due_date is earlier than their out_date. The "
+                    "legacy dates are loaded as given. Use this when the legacy data "
+                    "legitimately contains such loans. Leave off to catch date and timezone "
+                    "mangling in the source data. Loans with missing dates are always rejected."
+                ),
+            ),
+        ] = False
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -309,7 +321,7 @@ class LoansMigrator(MigrationTaskBase):
         if res_checkout.was_successful:
             self.migration_report.add("Details", i18n_t("Checked out on first try"))
             self.migration_report.add_general_statistics(i18n_t("Successfully checked out"))
-            self.set_renewal_count(legacy_loan, res_checkout)
+            self.apply_post_checkout_updates(legacy_loan, res_checkout)
             self.set_new_status(legacy_loan, res_checkout)
         elif res_checkout.should_be_retried:
             self.migration_report.add(
@@ -322,7 +334,7 @@ class LoansMigrator(MigrationTaskBase):
                 self.migration_report.add("Details", i18n_t("Checked out on second try"))
                 self.migration_report.add_general_statistics(i18n_t("Successfully checked out"))
                 logger.info("Checked out on second try")
-                self.set_renewal_count(legacy_loan, res_checkout2)
+                self.apply_post_checkout_updates(legacy_loan, res_checkout2)
                 self.set_new_status(legacy_loan, res_checkout2)
             elif legacy_loan.item_barcode not in self.failed:
                 if res_checkout2.error_message == "Aged to lost and checked out":
@@ -392,23 +404,40 @@ class LoansMigrator(MigrationTaskBase):
                 res_checkout.folio_loan,
             )
 
-    def set_renewal_count(self, legacy_loan: LegacyLoan, res_checkout: TransactionResult):
+    def apply_post_checkout_updates(
+        self, legacy_loan: LegacyLoan, res_checkout: TransactionResult
+    ):
+        """Updates the checked out loan with values that cannot be set at checkout.
+
+        That is the renewal count, and the legacy dates for loans whose due date is before
+        their out date.
+        """
+        if not legacy_loan.needs_post_checkout_update:
+            return
+        # Loans with renewals keep the renewal wording, even if their dates are also inverted,
+        # so that the statistics stay comparable with earlier runs.
         if legacy_loan.renewal_count > 0:
-            if self.update_open_loan(res_checkout.folio_loan, legacy_loan):
-                self.migration_report.add_general_statistics(
-                    i18n_t("Updated renewal count for loan")
+            succeeded_stat = i18n_t("Updated renewal count for loan")
+            failed_stat = i18n_t("Failed to update renewal count for loan")
+        else:
+            succeeded_stat = i18n_t("Updated dates for loan with due date before out date")
+            failed_stat = i18n_t("Failed to update dates for loan with due date before out date")
+        if self.update_open_loan(res_checkout.folio_loan, legacy_loan):
+            self.migration_report.add_general_statistics(succeeded_stat)
+            if legacy_loan.has_inverted_dates:
+                self.migration_report.add(
+                    "Details",
+                    i18n_t("Applied legacy dates to loan with due date before out date"),
                 )
-            else:
-                self.migration_report.add_general_statistics(
-                    i18n_t("Failed to update renewal count for loan")
-                )
-                self.add_followup(
-                    legacy_loan,
-                    "update_loan",
-                    f"Set renewalCount={legacy_loan.renewal_count}, "
-                    f"dueDate={legacy_loan.due_date}, loanDate={legacy_loan.out_date}",
-                    res_checkout.folio_loan,
-                )
+        else:
+            self.migration_report.add_general_statistics(failed_stat)
+            self.add_followup(
+                legacy_loan,
+                "update_loan",
+                f"Set renewalCount={legacy_loan.renewal_count}, "
+                f"dueDate={legacy_loan.due_date}, loanDate={legacy_loan.out_date}",
+                res_checkout.folio_loan,
+            )
 
     def add_followup(
         self,
@@ -556,6 +585,7 @@ class LoansMigrator(MigrationTaskBase):
                     self.tenant_timezone,
                     legacy_loan_count,
                     self.service_point_mapping,
+                    self.task_configuration.allow_due_date_before_out_date,
                 )
                 if any(legacy_loan.errors):
                     num_bad += 1

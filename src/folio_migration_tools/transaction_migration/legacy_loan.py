@@ -36,6 +36,7 @@ class LegacyLoan(object):
         tenant_timezone=utc,
         row=0,
         service_point_mapping: RefDataMapping | None = None,
+        allow_due_date_before_out_date: bool = False,
     ):
         """Initialize LegacyLoan from legacy loan data.
 
@@ -46,8 +47,11 @@ class LegacyLoan(object):
             tenant_timezone: Timezone of the tenant (default: UTC).
             row (int): Row number in source data for error reporting.
             service_point_mapping: Optional RefDataMapping for service point code resolution.
+            allow_due_date_before_out_date (bool): Accept loans whose due date is earlier than
+                their out date, keeping the legacy dates as given (default: False).
         """
         self.migration_report: MigrationReport = migration_report
+        self.allow_due_date_before_out_date = allow_due_date_before_out_date
         # validate
         correct_headers = [
             "item_barcode",
@@ -178,17 +182,42 @@ class LegacyLoan(object):
         return 0
 
     def correct_for_1_day_loans(self):
-        if self.due_date.date() <= self.out_date.date():
+        if self.due_date.date() == self.out_date.date():
             if self.due_date.hour == 0:
                 self.due_date = self.due_date.replace(hour=23, minute=59)
             if self.out_date.hour == 0:
                 self.out_date = self.out_date.replace(hour=0, minute=1)
+        if self.due_date < self.out_date:
+            self.migration_report.add_general_statistics(
+                i18n.t("Loans with due date before out date")
+            )
+            if self.allow_due_date_before_out_date:
+                Helper.log_data_issue(
+                    self.row,
+                    i18n.t("Due date is before out date. Legacy dates will be kept"),
+                    json.dumps(self.legacy_loan_dict),
+                )
+                self.report(i18n.t("Due date is before out date. Legacy dates will be kept"))
+                return
         if self.due_date <= self.out_date:
             raise TransformationRecordFailedError(
                 self.row,
                 i18n.t("Due date is before out date, or date information is missing from both"),
                 json.dumps(self.legacy_loan_dict, indent=2),
             )
+
+    @property
+    def has_inverted_dates(self) -> bool:
+        """True if the loan's due date is earlier than its out date."""
+        return self.due_date < self.out_date
+
+    @property
+    def needs_post_checkout_update(self) -> bool:
+        """True if the loan needs an update after checkout to get its legacy values.
+
+        Inverted dates cannot be sent at checkout, and renewal counts cannot be sent at all.
+        """
+        return self.renewal_count > 0 or self.has_inverted_dates
 
     def to_dict(self):
         return {

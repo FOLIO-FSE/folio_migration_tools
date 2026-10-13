@@ -64,6 +64,7 @@ def test_load_and_validate_legacy_loans_set_in_source():
         mock_migrator.service_point_mapping = None
         mock_migrator.failed = {}
         mock_migrator.failed_and_not_dupe = {}
+        mock_migrator.task_configuration = Mock(allow_due_date_before_out_date=False)
         a = LoansMigrator.load_and_validate_legacy_loans(
             mock_migrator, reader, "Set on file or config"
         )
@@ -107,6 +108,7 @@ def test_load_and_validate_legacy_loans_set_centrally():
         mock_migrator.service_point_mapping = None
         mock_migrator.failed = {}
         mock_migrator.failed_and_not_dupe = {}
+        mock_migrator.task_configuration = Mock(allow_due_date_before_out_date=False)
         a = LoansMigrator.load_and_validate_legacy_loans(
             mock_migrator, reader, "Set on file or config"
         )
@@ -152,6 +154,7 @@ def test_load_and_validate_legacy_loans_with_proxy():
         mock_migrator.service_point_mapping = None
         mock_migrator.failed = {}
         mock_migrator.failed_and_not_dupe = {}
+        mock_migrator.task_configuration = Mock(allow_due_date_before_out_date=False)
         a = LoansMigrator.load_and_validate_legacy_loans(
             mock_migrator, reader, "Set on file or config"
         )
@@ -172,6 +175,11 @@ class DummyLegacyLoan:
         }
         self.next_item_status = ""
         self.renewal_count = 0
+        self.has_inverted_dates = False
+
+    @property
+    def needs_post_checkout_update(self):
+        return self.renewal_count > 0 or self.has_inverted_dates
 
 
 @pytest.fixture
@@ -179,7 +187,7 @@ def migrator():
     m = Mock(spec=LoansMigrator)
     m.failed = {}
     m.migration_report = Mock()
-    m.set_renewal_count = Mock()
+    m.apply_post_checkout_updates = Mock()
     m.set_new_status = Mock()
     m.handle_checkout_failure = Mock()
     m.circulation_helper = Mock()
@@ -198,7 +206,7 @@ def test_checkout_single_loan_success(mock_i18n, migrator):
     LoansMigrator.checkout_single_loan(migrator, legacy_loan)
 
     migrator.migration_report.add.assert_called_with("Details", mock_i18n.t.return_value)
-    migrator.set_renewal_count.assert_called_once_with(legacy_loan, res_checkout)
+    migrator.apply_post_checkout_updates.assert_called_once_with(legacy_loan, res_checkout)
     migrator.set_new_status.assert_called_once_with(legacy_loan, res_checkout)
 
 
@@ -219,7 +227,7 @@ def test_checkout_single_loan_retry_success(mock_i18n, migrator):
     LoansMigrator.checkout_single_loan(migrator, legacy_loan)
 
     migrator.migration_report.add.assert_any_call("Details", mock_i18n.t.return_value)
-    migrator.set_renewal_count.assert_called_once_with(legacy_loan, res_checkout2)
+    migrator.apply_post_checkout_updates.assert_called_once_with(legacy_loan, res_checkout2)
     migrator.set_new_status.assert_called_once_with(legacy_loan, res_checkout2)
 
 
@@ -1058,11 +1066,67 @@ class TestCheckoutFollowups:
         legacy_loan.out_date = "2024-01-01"
         m.update_open_loan = Mock(return_value=False)
 
-        LoansMigrator.set_renewal_count(m, legacy_loan, _result(True, folio_loan={"id": "l1"}))
+        LoansMigrator.apply_post_checkout_updates(
+            m, legacy_loan, _result(True, folio_loan={"id": "l1"})
+        )
 
         assert "Updated renewal count for loan" not in self._stats(m)
         assert "Failed to update renewal count for loan" in self._stats(m)
         assert [f["followup_type"] for f in m.followups] == ["update_loan"]
+
+    def test_post_checkout_update_skipped_for_plain_loan(self, m):
+        m.update_open_loan = Mock()
+
+        LoansMigrator.apply_post_checkout_updates(
+            m, DummyLegacyLoan(), _result(True, folio_loan={"id": "l1"})
+        )
+
+        m.update_open_loan.assert_not_called()
+        assert self._stats(m) == []
+
+    def test_post_checkout_update_for_inverted_dates(self, m):
+        legacy_loan = DummyLegacyLoan()
+        legacy_loan.has_inverted_dates = True
+        m.update_open_loan = Mock(return_value=True)
+
+        LoansMigrator.apply_post_checkout_updates(
+            m, legacy_loan, _result(True, folio_loan={"id": "l1"})
+        )
+
+        m.update_open_loan.assert_called_once()
+        assert "Updated dates for loan with due date before out date" in self._stats(m)
+        assert "Updated renewal count for loan" not in self._stats(m)
+        m.migration_report.add.assert_called_once_with(
+            "Details", "Applied legacy dates to loan with due date before out date"
+        )
+
+    def test_failed_inverted_dates_update_adds_followup(self, m):
+        legacy_loan = DummyLegacyLoan()
+        legacy_loan.has_inverted_dates = True
+        legacy_loan.due_date = "2024-01-01"
+        legacy_loan.out_date = "2024-01-02"
+        m.update_open_loan = Mock(return_value=False)
+
+        LoansMigrator.apply_post_checkout_updates(
+            m, legacy_loan, _result(True, folio_loan={"id": "l1"})
+        )
+
+        assert "Failed to update dates for loan with due date before out date" in self._stats(m)
+        assert [f["followup_type"] for f in m.followups] == ["update_loan"]
+
+    def test_inverted_dates_with_renewals_use_renewal_statistics(self, m):
+        legacy_loan = DummyLegacyLoan()
+        legacy_loan.has_inverted_dates = True
+        legacy_loan.renewal_count = 1
+        m.update_open_loan = Mock(return_value=True)
+
+        LoansMigrator.apply_post_checkout_updates(
+            m, legacy_loan, _result(True, folio_loan={"id": "l1"})
+        )
+
+        assert "Updated renewal count for loan" in self._stats(m)
+        assert "Updated dates for loan with due date before out date" not in self._stats(m)
+        m.migration_report.add.assert_called_once()
 
     @pytest.mark.parametrize(
         ("status", "method", "followup_type"),

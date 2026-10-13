@@ -23,3 +23,6 @@ Q: How should I troubleshoot MARC decoding warnings and parsing failures during 
 
 	For unrecoverable records, review the failed MARC output file in the results folder and correct source MARC issues before rerunning.
 	When filing an issue, include the data issues log message (the second column is the record's legacy ID, or file name and record index when the record could not be decoded), and a minimal MARC sample that reproduces the problem.
+
+Q: Why were my loans rejected with "Due date is before out date, or date information is missing from both"?
+: The LoansMigrator discards loans whose `due_date` is earlier than their `out_date`, since that usually means mangled dates or timezone problems in the source data. Check the dates in the data issues log first. If the loans are genuinely like that in your legacy system, set `allowDueDateBeforeOutDate` to `true` in the task configuration to load them with their legacy dates. Loans with missing or unparseable dates are still rejected. See [LoansMigrator](tasks/loans_migrator) for details.

@@ -40,6 +40,7 @@ This task creates real circulation transactions and **can generate thousands of 
 | `servicePointMapFileName` | string | No | Filename of a TSV mapping file for translating legacy service point codes to FOLIO codes |
 | `startingRow` | integer | No | Row number to start processing (for resuming). Default: 1 |
 | `skipBarcodePrevalidation` | boolean | No | Skip pre-validation of patron and item barcodes against FOLIO. Default: false |
+| `allowDueDateBeforeOutDate` | boolean | No | Load loans whose `due_date` is earlier than their `out_date`, keeping the legacy dates as given. Default: false. See [Due date before out date](#due-date-before-out-date) |
 | `itemFiles` | array | No | **Deprecated.** No longer used for pre-validation. |
 | `patronFiles` | array | No | **Deprecated.** No longer used for pre-validation. |
 
@@ -137,15 +138,47 @@ If an item batch or a patron lookup fails, for example because FOLIO is unavaila
 
 - **Missing items**: Loans with item barcodes not found in FOLIO are discarded
 - **Missing patrons**: Loans with patron barcodes not found in FOLIO are discarded
-- **Invalid dates**: Loans where `due_date` precedes `out_date` are discarded
+- **Invalid dates**: Loans where `due_date` precedes `out_date` are discarded, unless `allowDueDateBeforeOutDate` is set. Loans with missing dates are always discarded
 - **Barcode rewriting**: If a patron is found via a non-barcode identifier (e.g., `externalSystemId`), the loan's patron barcode is rewritten to the patron's actual FOLIO barcode for checkout
 
 Failed records are saved to `failed_records_<task_name>_<timestamp>.txt`.
 
+### Due date before out date
+
+By default, a loan whose `due_date` is earlier than its `out_date` is discarded, since this usually points to mangled dates or timezone problems in the source data. Such a loan is a valid state in FOLIO and in many legacy systems, though. If your data legitimately contains them, set `allowDueDateBeforeOutDate` to `true`:
+
+```json
+{
+    "name": "migrate_loans",
+    "migrationTaskType": "LoansMigrator",
+    "fallbackServicePointId": "a77b55e7-f9f3-40a1-83e0-241bc606a826",
+    "openLoansFiles": [{"file_name": "loans.tsv"}],
+    "allowDueDateBeforeOutDate": true
+}
+```
+
+With the option set:
+
+- The legacy `due_date` and `out_date` are loaded exactly as given. The midnight adjustment that is applied to same-day loans is not applied.
+- FOLIO refuses a check-out whose due date is not after the loan date, so these loans are checked out with a placeholder due date (one day after `out_date`). The legacy dates are then set in an update right after the check-out. If that update fails, the loan is listed in the follow-up file as `update_loan`.
+- Each such loan is written to the data issues log.
+
+Loans with the same due and out timestamp, or with missing or unparseable dates, are still discarded.
+
+The migration report counts these loans in all cases, also when the option is off:
+
+| Report line | Meaning |
+|-------------|---------|
+| Loans with due date before out date | Loans in the source data with `due_date` earlier than `out_date`, whether they were discarded or not |
+| Updated dates for loan with due date before out date | Loans that got their legacy dates after check-out |
+| Failed to update dates for loan with due date before out date | Loans where that update failed. See the follow-up file |
+
+Inverted loans that also have a renewal count are counted under "Updated renewal count for loan" and "Failed to update renewal count for loan" instead. They are listed in "Applied legacy dates to loan with due date before out date" under Details.
+
 ## How It Works
 
 1. **Check-out via API**: Creates loans via `/circulation/check-out-by-barcode` with all overrides enabled
-2. **Update dates**: Updates `loanDate` and `dueDate` to match original values
+2. **Update loan**: Updates `renewalCount` for loans with renewals, and `loanDate` and `dueDate` for loans with due date before out date. Other loans get their dates at check-out
 3. **Handle special statuses**: If item status prevents checkout (Aged to lost, Declared lost, Claimed returned), temporarily changes status to Available
 4. **Handle inactive patrons**: If patron is inactive, temporarily activates for checkout then deactivates
 5. **Record follow-ups**: If a step after the checkout fails, the loan is listed in the follow-up file instead of the failed records file
@@ -178,7 +211,7 @@ A loan is listed in the follow-up file when the checkout succeeded but a later s
 
 | `followup_type` | Meaning |
 |-----------------|---------|
-| `update_loan` | The loan's `renewalCount`, `dueDate` and `loanDate` could not be updated |
+| `update_loan` | The loan's `renewalCount`, `dueDate` and `loanDate` could not be updated after check-out |
 | `declare_lost` | The loan could not be declared lost |
 | `claim_returned` | The loan could not be set to Claimed returned |
 | `set_item_status` | The item status could not be set to `next_item_status` |

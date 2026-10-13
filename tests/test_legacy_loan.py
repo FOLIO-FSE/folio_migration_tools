@@ -314,6 +314,94 @@ def test_correct_for_1_day_loans_due_date_is_before_out_date() -> None:
         LegacyLoan(loan_dict, "", migration_report, tenant_timezone)
 
 
+def _inverted_loan_dict() -> dict:
+    return {
+        "item_barcode": "item1",
+        "patron_barcode": "patron1",
+        "due_date": "20250326",
+        "out_date": "20250327",
+        "renewal_count": "0",
+        "next_item_status": "Checked out",
+    }
+
+
+def test_inverted_dates_are_counted_when_rejected() -> None:
+    migration_report = MigrationReport()
+    with pytest.raises(TransformationRecordFailedError):
+        LegacyLoan(_inverted_loan_dict(), "", migration_report, ZoneInfo("UTC"))
+    assert migration_report.report["GeneralStatistics"]["Loans with due date before out date"] == 1
+
+
+def test_inverted_dates_allowed_keeps_legacy_dates() -> None:
+    migration_report = MigrationReport()
+    legacy_loan = LegacyLoan(
+        _inverted_loan_dict(),
+        "",
+        migration_report,
+        ZoneInfo("UTC"),
+        allow_due_date_before_out_date=True,
+    )
+    # No midnight nudging: the legacy values are kept as given
+    assert legacy_loan.due_date.isoformat() == "2025-03-26T23:59:00+00:00"
+    assert legacy_loan.out_date.isoformat() == "2025-03-27T00:00:00+00:00"
+    assert legacy_loan.has_inverted_dates
+    assert legacy_loan.needs_post_checkout_update
+    assert not legacy_loan.errors
+    assert migration_report.report["GeneralStatistics"]["Loans with due date before out date"] == 1
+
+
+def test_inverted_dates_allowed_converts_to_utc() -> None:
+    legacy_loan = LegacyLoan(
+        _inverted_loan_dict(),
+        "",
+        MigrationReport(),
+        ZoneInfo("America/Chicago"),
+        allow_due_date_before_out_date=True,
+    )
+    assert legacy_loan.due_date.isoformat() == "2025-03-27T04:59:00+00:00"
+    assert legacy_loan.out_date.isoformat() == "2025-03-27T05:00:00+00:00"
+
+
+def test_normal_loan_does_not_need_post_checkout_update() -> None:
+    loan_dict = _inverted_loan_dict() | {"due_date": "20250410", "out_date": "20250327"}
+    migration_report = MigrationReport()
+    legacy_loan = LegacyLoan(loan_dict, "", migration_report, ZoneInfo("UTC"))
+    assert not legacy_loan.has_inverted_dates
+    assert not legacy_loan.needs_post_checkout_update
+    assert "Loans with due date before out date" not in migration_report.report.get(
+        "GeneralStatistics", {}
+    )
+
+
+def test_renewals_need_post_checkout_update() -> None:
+    loan_dict = _inverted_loan_dict() | {
+        "due_date": "20250410",
+        "out_date": "20250327",
+        "renewal_count": "2",
+    }
+    legacy_loan = LegacyLoan(loan_dict, "", MigrationReport(), ZoneInfo("UTC"))
+    assert legacy_loan.needs_post_checkout_update
+
+
+def test_allow_option_still_rejects_same_timestamps() -> None:
+    loan_dict = _inverted_loan_dict() | {
+        "due_date": "2025-03-27 10:00",
+        "out_date": "2025-03-27 10:00",
+    }
+    migration_report = MigrationReport()
+    with pytest.raises(TransformationRecordFailedError):
+        LegacyLoan(
+            loan_dict,
+            "",
+            migration_report,
+            ZoneInfo("UTC"),
+            allow_due_date_before_out_date=True,
+        )
+    assert "Loans with due date before out date" not in migration_report.report.get(
+        "GeneralStatistics", {}
+    )
+
+
 def test_correct_for_1_day_loans_no_out_or_due_date_info() -> None:
     loan_dict = {
         "item_barcode": "the barcode with trailing spaces    ",
