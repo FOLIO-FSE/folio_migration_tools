@@ -100,3 +100,46 @@ def test_correct_for_1_day_requests_exception(caplog):
 
     assert "UTC conversion error" in caplog.text
     assert ("Time alignment issues", "both dates") in legacy_request.errors
+
+
+def _request_dict(**overrides):
+    request = {
+        "item_barcode": "ib",
+        "patron_barcode": "pb",
+        "request_date": "2022-09-01",
+        "request_expiration_date": "2022-10-01",
+        "comment": "comment",
+        "request_type": "Hold",
+        "pickup_servicepoint_id": str(uuid.uuid4()),
+    }
+    request.update(overrides)
+    return request
+
+
+@pytest.mark.parametrize("value", ["", "   "])
+def test_empty_expiration_date_is_not_an_error(value):
+    legacy_request = LegacyRequest(
+        _request_dict(request_expiration_date=value), ZoneInfo("America/Chicago")
+    )
+    assert not legacy_request.errors
+    assert legacy_request.request_expiration_date is None
+    assert "requestExpirationDate" not in legacy_request.to_dict()
+    assert legacy_request.to_source_dict()["request_expiration_date"] == ""
+
+
+def test_missing_expiration_date_column_is_not_an_error():
+    request = _request_dict()
+    del request["request_expiration_date"]
+    legacy_request = LegacyRequest(request)
+    assert not legacy_request.errors
+    assert "requestExpirationDate" not in legacy_request.to_dict()
+
+
+def test_unparseable_expiration_date_is_an_error():
+    legacy_request = LegacyRequest(_request_dict(request_expiration_date="not a date"))
+    assert ("Parse date failure", "request_expiration_date") in legacy_request.errors
+
+
+def test_provided_expiration_date_is_still_sent():
+    legacy_request = LegacyRequest(_request_dict())
+    assert legacy_request.to_dict()["requestExpirationDate"] == "2022-10-01T23:59:00+00:00"

@@ -52,15 +52,16 @@ This task creates real circulation transactions. Ensure items and users have bee
 | `patron_barcode` | Barcode of the requesting patron |
 | `request_type` | Type of request (Hold, Recall, Page) |
 | `request_date` | Date the request was placed |
+| `comment` | Patron comment on the request. The column must be present, but its value can be empty |
 
 ### Optional Columns
 
 | Column | Description |
 |--------|-------------|
-| `pickup_servicepoint_id` | Pickup location service point (UUID or code) |
-| `expiration_date` | Request expiration date |
-| `request_level` | Item or Title level request |
-| `fulfillment_preference` | Hold Shelf or Delivery |
+| `pickup_servicepoint_id` | Pickup location service point (UUID or code). Requests without one use `fallbackServicePointId` |
+| `request_expiration_date` | Request expiration date. Requests without one are loaded with no expiration date |
+
+All requests are created at Item level with a fulfillment preference of Hold Shelf.
 
 ### Service Point Values
 
