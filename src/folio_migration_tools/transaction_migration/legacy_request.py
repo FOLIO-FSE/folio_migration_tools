@@ -88,24 +88,27 @@ class LegacyRequest(object):
         except Exception:
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_date"))
             temp_request_date = datetime.now(ZoneInfo("UTC"))
-        # The expiration date is optional. Only a value that is present but unusable is an error.
-        temp_expiration_date: datetime.datetime | None = None
-        expiration_value = legacy_request_dict.get("request_expiration_date", "").strip()
-        if expiration_value:
-            try:
-                temp_expiration_date = parse(expiration_value)
-                if temp_expiration_date.tzinfo != tz.UTC:
-                    temp_expiration_date = temp_expiration_date.replace(
-                        tzinfo=self.tenant_timezone
-                    )
-                if temp_expiration_date.hour == 0 and temp_expiration_date.minute == 0:
-                    temp_expiration_date = temp_expiration_date.replace(hour=23, minute=59)
-            except Exception:
-                self.errors.append(("Parse date failure", "request_expiration_date"))
+        temp_expiration_date = self._parse_expiration_date(legacy_request_dict)
 
         self.request_date: datetime.datetime = temp_request_date
         self.request_expiration_date: datetime.datetime | None = temp_expiration_date
         self.correct_for_1_day_requests()
+
+    def _parse_expiration_date(self, legacy_request_dict) -> datetime.datetime | None:
+        """Parse the optional expiration date. Only a present but unusable value is an error."""
+        expiration_value = legacy_request_dict.get("request_expiration_date", "").strip()
+        if not expiration_value:
+            return None
+        try:
+            expiration_date = parse(expiration_value)
+            if expiration_date.tzinfo != tz.UTC:
+                expiration_date = expiration_date.replace(tzinfo=self.tenant_timezone)
+            if expiration_date.hour == 0 and expiration_date.minute == 0:
+                expiration_date = expiration_date.replace(hour=23, minute=59)
+            return expiration_date
+        except Exception:
+            self.errors.append(("Parse date failure", "request_expiration_date"))
+            return None
 
     def correct_for_1_day_requests(self):
         try:

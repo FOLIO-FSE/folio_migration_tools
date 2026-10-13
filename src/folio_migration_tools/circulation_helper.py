@@ -349,7 +349,9 @@ class CirculationHelper:
         except FolioValidationError as fve:
             # The migrator decides what to do with validation errors (e.g. inactive users),
             # and is responsible for logging the failure if it is final.
-            logger.error("Request validation failed: %s", "; ".join(request_error_messages(fve)))
+            logger.exception(
+                "Request validation failed: %s", "; ".join(request_error_messages(fve))
+            )
             raise
         except (FolioConnectionError, FolioClientError) as fce:
             if client_response := getattr(fce, "response", None):
@@ -357,14 +359,14 @@ class CirculationHelper:
                     f"HTTP {client_response.status_code} Error creating request: "
                     f"{client_response.text}"
                 )
-                logger.error(message)
+                logger.exception(message)
                 migration_report.add_general_statistics(
                     i18n.t("HTTP %{code} Error creating request", code=client_response.status_code)
                     + f": {client_response.text}"
                 )
             else:
                 message = f"Connection error creating request: {fce}"
-                logger.error(message)
+                logger.exception(message)
                 migration_report.add_general_statistics(
                     i18n_t("Connection error creating request")
                 )
@@ -374,7 +376,7 @@ class CirculationHelper:
             return False
         except FolioServerError as fse:
             message = f"HTTP {fse.response.status_code} Server error creating request"
-            logger.error("%s: %s", message, fse.response.text)
+            logger.exception("%s: %s", message, fse.response.text)
             migration_report.add_general_statistics(
                 i18n.t("HTTP %{code} Error creating request", code=fse.response.status_code)
             )
