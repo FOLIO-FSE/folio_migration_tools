@@ -47,7 +47,6 @@ class LegacyRequest(object):
             "item_barcode",
             "patron_barcode",
             "request_date",
-            "request_expiration_date",
             "comment",
             "request_type",
         ]
@@ -89,25 +88,31 @@ class LegacyRequest(object):
         except Exception:
             self.errors.append(("Parse date failure. Setting UTC NOW", "request_date"))
             temp_request_date = datetime.now(ZoneInfo("UTC"))
-        try:
-            temp_expiration_date: datetime.datetime = parse(
-                legacy_request_dict["request_expiration_date"]
-            )
-            if temp_expiration_date.tzinfo != tz.UTC:
-                temp_expiration_date = temp_expiration_date.replace(tzinfo=self.tenant_timezone)
-        except Exception:
-            temp_expiration_date = datetime.now(ZoneInfo("UTC"))
-            self.errors.append(("Parse date failure. Setting UTC NOW", "request_expiration_date"))
-        if temp_expiration_date.hour == 0 and temp_expiration_date.minute == 0:
-            temp_expiration_date = temp_expiration_date.replace(hour=23, minute=59)
+        # The expiration date is optional. Only a value that is present but unusable is an error.
+        temp_expiration_date: datetime.datetime | None = None
+        expiration_value = legacy_request_dict.get("request_expiration_date", "").strip()
+        if expiration_value:
+            try:
+                temp_expiration_date = parse(expiration_value)
+                if temp_expiration_date.tzinfo != tz.UTC:
+                    temp_expiration_date = temp_expiration_date.replace(
+                        tzinfo=self.tenant_timezone
+                    )
+                if temp_expiration_date.hour == 0 and temp_expiration_date.minute == 0:
+                    temp_expiration_date = temp_expiration_date.replace(hour=23, minute=59)
+            except Exception:
+                self.errors.append(("Parse date failure", "request_expiration_date"))
 
         self.request_date: datetime.datetime = temp_request_date
-        self.request_expiration_date: datetime.datetime = temp_expiration_date
+        self.request_expiration_date: datetime.datetime | None = temp_expiration_date
         self.correct_for_1_day_requests()
 
     def correct_for_1_day_requests(self):
         try:
-            if self.request_expiration_date.date() <= self.request_date.date():
+            if (
+                self.request_expiration_date
+                and self.request_expiration_date.date() <= self.request_date.date()
+            ):
                 if (
                     self.request_expiration_date.hour == 0
                     and self.request_expiration_date.minute == 0
@@ -123,7 +128,7 @@ class LegacyRequest(object):
             self.errors.append(("Time alignment issues", "both dates"))
 
     def to_dict(self):
-        return {
+        request = {
             "requestLevel": "Item",
             "requestType": self.request_type,
             "fulfillmentPreference": self.fulfillment_preference,
@@ -133,12 +138,14 @@ class LegacyRequest(object):
             "itemId": self.item_id,
             "instanceId": self.instance_id,
             "holdingsRecordId": self.holdings_record_id,
-            "requestExpirationDate": self.request_expiration_date.isoformat(),
             "patronComments": self.comment,
             "pickupServicePointId": self.pickup_servicepoint_id,
             "requestDate": self.request_date.isoformat(),
             "id": str(uuid.uuid4()),
         }
+        if self.request_expiration_date:
+            request["requestExpirationDate"] = self.request_expiration_date.isoformat()
+        return request
 
     def serialize(self):
         req = self.to_dict()
@@ -167,7 +174,9 @@ class LegacyRequest(object):
             "item_barcode": self.item_barcode,
             "patron_barcode": self.patron_barcode,
             "request_date": self.request_date.isoformat(),
-            "request_expiration_date": self.request_expiration_date.isoformat(),
+            "request_expiration_date": (
+                self.request_expiration_date.isoformat() if self.request_expiration_date else ""
+            ),
             "comment": self.comment,
             "request_type": self.request_type,
             "pickup_servicepoint_id": self.pickup_servicepoint_id,
@@ -177,8 +186,9 @@ class LegacyRequest(object):
         try:
             if self.tenant_timezone != ZoneInfo("UTC"):
                 self.request_date = self.request_date.astimezone(ZoneInfo("UTC"))
-                self.request_expiration_date = self.request_expiration_date.astimezone(
-                    ZoneInfo("UTC")
-                )
+                if self.request_expiration_date:
+                    self.request_expiration_date = self.request_expiration_date.astimezone(
+                        ZoneInfo("UTC")
+                    )
         except Exception:
             self.errors.append(("UTC correction issues", "both dates"))
