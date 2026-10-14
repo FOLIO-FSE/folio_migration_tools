@@ -50,6 +50,20 @@ MARC8_FALSE_EACC_TRANSLATION = re.compile(
     f"[A-Za-z][{CJK_RANGES}]|[{CJK_RANGES}][A-Za-z]|\\{{u[0-9A-Fa-f]{{4,6}}\\}}"
 )
 MARC8_ESCAPE_SEQUENCE = re.compile(rb"\x1b(?:[bpgs]|[(),-][2-4BENQS]|\$[,-]?1)")
+RECOVERY_ACTIONS = {
+    "marc8_leader_heuristic": (
+        "leader/09 changed from 'a' to blank and the record re-decoded as MARC-8 "
+        "(ISO-8859-1 byte mapping)"
+    ),
+    "dagger_subfield_heuristic": (
+        "MARCMaker dagger (U+2021) replaced with the subfield delimiter and the record "
+        "re-decoded"
+    ),
+    "latin1_leader_heuristic": (
+        "leader/09 changed from 'a' to blank and the record re-decoded as ISO-8859-1 (Latin-1)"
+    ),
+}
+
 TEXT_FIDELITY_CHECK_STRATEGIES = {
     "marc8_leader_heuristic",
     "latin1_leader_heuristic",
@@ -246,6 +260,7 @@ class MARCReaderWrapper:
                         record_label=MARCReaderWrapper.get_record_label(
                             processor, recovered_record, source_file, idx
                         ),
+                        recovered_record=recovered_record,
                     )
                     if recovered_record is None:
                         report_failed_parsing(
@@ -672,6 +687,40 @@ class MARCReaderWrapper:
         )
 
     @staticmethod
+    def describe_parsing_problem(reader) -> str:
+        current_chunk = getattr(reader, "current_chunk", b"") or b""
+        leader_09 = current_chunk[9:10].decode("ascii", errors="replace")
+        declared = {"a": "UTF-8 (Unicode)", " ": "MARC-8 (blank)"}.get(
+            leader_09, f"unrecognized ({leader_09!r})"
+        )
+        return (
+            f"record is not valid UTF-8 ({reader.current_exception}); "
+            f"leader/09 declares {declared}; record_length={len(current_chunk)}"
+        )
+
+    @staticmethod
+    def describe_non_ascii_content(record: Record | None, max_samples: int = 3) -> str:
+        """Summarize where non-ASCII text ended up after a repair, so it can be spot-checked."""
+        if record is None:
+            return "no record"
+        samples: list[str] = []
+        total = 0
+        for field in record.get_fields():
+            if field.is_control_field():
+                continue
+            for subfield in getattr(field, "subfields", []) or []:
+                code = getattr(subfield, "code", None)
+                value = getattr(subfield, "value", None)
+                if not isinstance(value, str) or value.isascii():
+                    continue
+                total += 1
+                if len(samples) < max_samples:
+                    samples.append(f"{field.tag}${code}={value[:60]!r}")
+        if total == 0:
+            return "no non-ASCII subfield text in repaired record"
+        return f"{total} subfield(s) with non-ASCII text, e.g. {'; '.join(samples)}"
+
+    @staticmethod
     def log_parsing_issue(
         reader,
         source_file: FileDefinition,
@@ -680,26 +729,35 @@ class MARCReaderWrapper:
         recovered: bool,
         recovery_strategy: str,
         record_label: str | None = None,
+        recovered_record: Record | None = None,
     ):
         legacy_id = record_label or f"{source_file.file_name}:{idx}"
-        context = (
-            f"{MARCReaderWrapper.build_parsing_issue_context(reader)}; "
-            f"source={source_file.file_name}:{idx}"
-        )
+        if recovered:
+            context = (
+                f"problem={MARCReaderWrapper.describe_parsing_problem(reader)}; "
+                f"action={RECOVERY_ACTIONS.get(recovery_strategy, 'record re-decoded')}; "
+                f"result={MARCReaderWrapper.describe_non_ascii_content(recovered_record)}; "
+                f"source={source_file.file_name}:{idx}"
+            )
+        else:
+            context = (
+                f"{MARCReaderWrapper.build_parsing_issue_context(reader)}; "
+                f"source={source_file.file_name}:{idx}"
+            )
         if recovered:
             migration_report.add_general_statistics(
                 i18n.t("Records with encoding errors - repaired"),
             )
             recovery_message = {
                 "marc8_leader_heuristic": i18n.t(
-                    "MARC parsing issue repaired with MARC-8 leader heuristic"
+                    "MARC parsing issue repaired by re-decoding record as MARC-8"
                 ),
                 "dagger_subfield_heuristic": i18n.t(
                     "MARC parsing issue repaired by converting MARCMaker dagger "
                     "to subfield delimiter"
                 ),
                 "latin1_leader_heuristic": i18n.t(
-                    "MARC parsing issue repaired with Latin-1 leader heuristic"
+                    "MARC parsing issue repaired by re-decoding record as Latin-1"
                 ),
             }.get(recovery_strategy, i18n.t("MARC parsing issue repaired after re-decode"))
             Helper.log_data_issue(
