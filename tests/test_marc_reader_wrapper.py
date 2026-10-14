@@ -362,8 +362,8 @@ def test_read_records_recovers_parse_failure_and_logs_data_issue(monkeypatch):
     MARCReaderWrapper.read_records(reader, file_def, BytesIO(), processor)
 
     assert len(logged_issues) == 1
-    assert "MARC-8 leader heuristic" in logged_issues[0][1]
-    assert "exception=" in logged_issues[0][2]
+    assert "re-decoding record as MARC-8" in logged_issues[0][1]
+    assert "problem=record is not valid UTF-8" in logged_issues[0][2]
     assert len(processed_records) == 1
     assert processed_records[0][0] == 0
     assert processed_records[0][1]["001"].value() == get_test_record()["001"].value()
