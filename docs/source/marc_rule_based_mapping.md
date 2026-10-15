@@ -51,6 +51,7 @@ treated as untranslatable.
 - MARC-8 decoding warnings do not stop processing.
 - Recoverable decoding failures are logged as repaired and continue.
 - Unrecoverable decoding failures are logged as failed and written to the failed MARC file.
+- Each repair is logged as `MARC parsing issue repaired by re-decoding record as MARC-8` or `... as Latin-1` (or `... by converting MARCMaker dagger to subfield delimiter`). The context column has `problem` (the decode error and what leader/09 declares), `action` (what was changed in the record) and `result` (the first non-ASCII subfields after repair, as `tag$code='value'`), so the outcome can be spot-checked.
 
 ### Where to inspect outcomes
 
