@@ -56,8 +56,7 @@ RECOVERY_ACTIONS = {
         "(ISO-8859-1 byte mapping)"
     ),
     "dagger_subfield_heuristic": (
-        "MARCMaker dagger (U+2021) replaced with the subfield delimiter and the record "
-        "re-decoded"
+        "MARCMaker dagger (U+2021) replaced with the subfield delimiter and the record re-decoded"
     ),
     "latin1_leader_heuristic": (
         "leader/09 changed from 'a' to blank and the record re-decoded as ISO-8859-1 (Latin-1)"
