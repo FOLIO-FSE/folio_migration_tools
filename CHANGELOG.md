@@ -1,4 +1,27 @@
 # Changelog
+## v1.13.1 (15/10/2026)
+
+#### Other Changes
+* Coerce mapped strings to booleans for all boolean-typed schema properties by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1055
+* Handle httpx errors in loans and reserves migrators by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1056
+* Consolidate barcode pre-validation for loans, requests and reserves by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1057
+* Bound inactive-patron retries and record circulation follow-ups by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1058
+* Harden circulation pre-validation and fix reserve course listing IDs by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1059
+* Fix boolean coercion for delimited values and multiple map entries by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1060
+* Guard MARC-8 escape re-decode and log legacy IDs in decoding data issues by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1062
+* Fix MARC-8 re-decode guard for non-ASCII sets and log untranslatable escape sequences by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1063
+* Reject bogus EACC re-decodes; fix Â/Ã fidelity false positives by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1065
+* Allow loans due before out date; optional request expiration; log failed requests by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1066
+* Make MARC parsing repair data issue messages more informative by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1067
+
+```{warning}
+**Breaking change (#1055):** Values mapped to any boolean-typed schema property (including nested objects, array items and list-form types such as `["boolean", "null"]`) are now coerced to booleans in every mapping-file-based transformation, not just users. Values that are not recognized as true or false now fail the record, where they previously passed through. Review the failed-records files and data issue logs of any in-process transformations after upgrading. The accepted tokens can be overridden with the `FOLIO_BOOLEAN_TRUE_TOKENS` and `FOLIO_BOOLEAN_FALSE_TOKENS` environment variables.
+```
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.13.0...v1.13.1
+
+---
+
 ## v1.13.0 (08/09/2026)
 
 ### What's Changed
