@@ -1,0 +1,89 @@
+name: Bug report
+description: Report incorrect behavior, a crash, or bad output from FOLIO Migration Tools
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. **Do not paste real patron data, credentials, or tenant secrets.** Anonymize any sample records and redact passwords/tokens from configs and logs.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem (including steps to reproduce, and results) and what you expected instead.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: task
+    attributes:
+      label: Migration task
+      options:
+        - BibsTransformer
+        - HoldingsCsvTransformer
+        - HoldingsMarcTransformer
+        - ItemsTransformer
+        - UserTransformer
+        - LoansMigrator
+        - RequestsMigrator
+        - ReservesMigrator
+        - CoursesMigrator
+        - OrdersTransformer
+        - OrganizationTransformer
+        - ManualFeeFinesTransformer
+        - BatchPoster / InventoryBatchPoster
+        - UserImporter
+        - MARC import
+        - Not task-specific / CLI / configuration
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The command you ran, the relevant task configuration (redacted), and the smallest anonymized input that triggers the problem.
+      placeholder: |
+        1. Command: uv run folio-migration-tools ...
+        2. Task config: ...
+        3. Input record(s): ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, traceback, or data issues log excerpt
+      description: Paste the relevant output. Redact secrets.
+      render: text
+
+  - type: input
+    id: version
+    attributes:
+      label: folio_migration_tools version
+      placeholder: "e.g. 1.13.1"
+    validations:
+      required: true
+
+  - type: input
+    id: folio-release
+    attributes:
+      label: FOLIO release
+      placeholder: "e.g. Sunflower"
+
+  - type: input
+    id: environment
+    attributes:
+      label: Python version and OS
+      placeholder: "e.g. Python 3.12, macOS 14"
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and did not find a duplicate
+          required: true
+        - label: I am willing to open a pull request for this

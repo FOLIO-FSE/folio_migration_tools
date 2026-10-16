@@ -1,0 +1,48 @@
+name: Documentation
+description: Report missing, unclear, or incorrect documentation
+title: "[Docs]: "
+labels: ["documentation"]
+body:
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of issue
+      options:
+        - Missing documentation
+        - Incorrect or outdated
+        - Unclear or confusing
+        - Typo or formatting
+        - Example or tutorial request
+    validations:
+      required: true
+
+  - type: input
+    id: location
+    attributes:
+      label: Page or file
+      description: Link or path to the affected documentation, or where you expected to find it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What is wrong or missing?
+      description: Quote the problematic text if applicable.
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested change
+      description: Proposed wording or content, if you have it.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I searched existing issues and did not find a duplicate
+          required: true
+        - label: I am willing to open a pull request for this
