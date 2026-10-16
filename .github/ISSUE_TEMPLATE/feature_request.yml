@@ -1,0 +1,93 @@
+name: New feature
+description: Propose a new feature or enhancement to FOLIO Migration Tools
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please fill in as much as you can; concrete examples of legacy data and desired FOLIO output make a request much easier to act on.
+        **Do not paste real patron data, credentials, or tenant secrets.** Anonymize any sample records.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to accomplish, and what is currently difficult, impossible, or manual? Describe the migration scenario rather than the solution.
+      placeholder: "When migrating items from our ILS, the barcode field contains ... which currently results in ..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: How would you like this to work? Include any new or changed configuration options, mapping file columns, or CLI behavior.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Which part of the tool does this touch? Select all that apply.
+      multiple: true
+      options:
+        - Bibs / instances (MARC)
+        - Holdings (MARC or CSV)
+        - Items
+        - Users
+        - Loans
+        - Requests
+        - Reserves / courses
+        - Orders / organizations
+        - Fees/fines
+        - Batch posting / inventory posting
+        - Mapping files / field mapping
+        - Reference data mapping
+        - Reports / data issues log
+        - Configuration / CLI
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example input and expected output
+      description: Anonymized legacy data (CSV rows, MARC, JSON) and the FOLIO record or behavior you expect. Use code fences.
+      render: text
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and workarounds
+      description: Other approaches you considered, or how you handle this today (e.g. pre-processing scripts, post-load SQL/API updates).
+
+  - type: input
+    id: folio-release
+    attributes:
+      label: FOLIO release / tool version
+      description: Target FOLIO release and folio_migration_tools version, if relevant.
+      placeholder: "e.g. Sunflower, folio_migration_tools 1.13.1"
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - Blocks a migration
+        - Significant manual effort without it
+        - Nice to have
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      options:
+        - label: I searched existing issues and did not find a duplicate
+          required: true
+        - label: I am willing to open a pull request for this
