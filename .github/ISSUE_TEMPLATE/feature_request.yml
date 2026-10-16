@@ -1,7 +1,7 @@
 name: New feature
 description: Propose a new feature or enhancement to FOLIO Migration Tools
 title: "[Feature]: "
-labels: ["enhancement"]
+labels: ["Tool enhancements"]
 body:
   - type: markdown
     attributes:
