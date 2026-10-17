@@ -26,9 +26,27 @@ from functools import lru_cache
 import i18n
 
 
+class TranslatedStr(str):
+    """A translated string that remembers the key and parameters it came from.
+
+    Behaves exactly like ``str``. The report store uses ``key`` and ``params`` to
+    persist locale-neutral data so reports can be re-rendered in another language.
+    The wrapper is lost as soon as the string is concatenated or formatted.
+    """
+
+    key: str
+    params: dict
+
+    def __new__(cls, text: str, key: str, params: dict):
+        obj = super().__new__(cls, text)
+        obj.key = key
+        obj.params = params
+        return obj
+
+
 @lru_cache(maxsize=2048)
-def _cached_t(key: str, locale: str, **kwargs) -> str:
-    return i18n.t(key, locale=locale, **kwargs)
+def _cached_t(key: str, locale: str, **kwargs) -> TranslatedStr:
+    return TranslatedStr(i18n.t(key, locale=locale, **kwargs), key, dict(kwargs))
 
 
 def i18n_t(key: str, **kwargs) -> str:

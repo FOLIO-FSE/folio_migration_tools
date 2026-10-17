@@ -129,6 +129,10 @@ class FolderStructure:
             self.raw_reports_folder / f"raw_report{self.file_template}.json"
         )
 
+        self.migration_report_db_path = (
+            self.raw_reports_folder / f"migration{self.file_template}.sqlite"
+        )
+
         self.srs_records_path = (
             self.results_folder / f"folio_srs_{object_type_string}{self.file_template}.json"
         )
