@@ -10,6 +10,7 @@ must inherit from. It handles common functionality including:
 """
 
 import csv
+import importlib.metadata
 import io
 import json
 import logging
@@ -23,6 +24,7 @@ from pathlib import Path
 from typing import Annotated, Dict, List, Optional
 
 import folioclient
+import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 from pydantic import Field
@@ -35,6 +37,7 @@ from folio_migration_tools.custom_exceptions import (
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.logging_config import setup_logging
+from folio_migration_tools.report_store import ReportStore, get_active_store, set_active_store
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
 )
@@ -120,8 +123,10 @@ class MigrationTaskBase:
 
         # Setup logging after folder_structure, library_configuration, and task_configuration
         # are initialized since setup_logging depends on all three
+        self.report_store: ReportStore | None = None
         if use_logging:
             self.setup_logging()
+            self.setup_report_store()
         logger.info("MigrationTaskBase init")
         logger.info(self.task_configuration.model_dump_json(indent=4))
         self.folder_structure.log_folder_structure()
@@ -131,7 +136,43 @@ class MigrationTaskBase:
     async def wrap_up(self):
         raise NotImplementedError()
 
+    def setup_report_store(self):
+        """Create the report database for this run and make it the active store.
+
+        Any existing database from an earlier run of the task is replaced. A failure
+        here is logged and the run continues without a database.
+        """
+        try:
+            self.report_store = ReportStore(self.folder_structure.migration_report_db_path)
+            self.report_store.start_run(
+                task_name=self.task_configuration.name,
+                task_type=type(self).__name__,
+                started=self.start_datetime.isoformat(),
+                tool_version=_tool_version(),
+                locale=i18n.get("locale") or "",
+                config=self.task_configuration.model_dump(mode="json"),
+            )
+            set_active_store(self.report_store)
+        except Exception as ex:
+            logger.warning("Could not create report database: %s", ex)
+            self.report_store = None
+            set_active_store(None)
+
+    def close_report_store(self):
+        """Write collected report statistics to the database and close it."""
+        store = self.report_store
+        if store is None:
+            return
+        try:
+            store.finalize(datetime.now(timezone.utc).isoformat())
+        except Exception as ex:
+            logger.warning("Could not write report database: %s", ex)
+        finally:
+            if get_active_store() is store or store.closed:
+                set_active_store(None)
+
     def clean_out_empty_logs(self):
+        self.close_report_store()
         _close_handler(self.data_issue_file_handler)
         if (
             self.folder_structure.data_issue_file_path.is_file()
@@ -713,6 +754,13 @@ class LevelFilter(logging.Filter):
 
     def filter(self, record):
         return record.levelno == self.level
+
+
+def _tool_version() -> str:
+    try:
+        return importlib.metadata.version("folio_migration_tools")
+    except importlib.metadata.PackageNotFoundError:
+        return ""
 
 
 def _close_handler(handler: logging.Handler | None):

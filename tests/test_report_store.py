@@ -37,7 +37,7 @@ def test_normalize_record_ref(value, ids, kind):
 
 
 def test_store_replaces_existing_db(tmp_path):
-    path = tmp_path / "r" / "m.sqlite"
+    path = tmp_path / "m.sqlite"
     store = ReportStore(path)
     store.start_run("t")
     store.add_issue("DATA ISSUE", "x", "m", "v")
@@ -68,3 +68,42 @@ def test_issues_and_stats_round_trip(tmp_path):
         for r in conn.execute("SELECT measure_key, translated, count FROM report_stat")
     }
     assert stats == {"Dup %{n}": (1, 3), "lit": (0, 2)}
+
+
+def test_active_store_collects_reports_and_issues(tmp_path):
+    from folio_migration_tools.helper import Helper
+    from folio_migration_tools.migration_report import MigrationReport
+    from folio_migration_tools.report_store import get_active_store, set_active_store
+
+    store = ReportStore(tmp_path / "m.sqlite")
+    store.start_run("task")
+    set_active_store(store)
+    try:
+        report = MigrationReport()
+        report.add_general_statistics(i18n_t("Number of records processed"))
+        report.add_general_statistics(i18n_t("Number of records processed"))
+        Helper.log_data_issue(["b1"], i18n_t("Some issue"), "val")
+        Helper.log_data_issue_failed("", "plain failure", "x")
+        store.finalize("done")
+    finally:
+        set_active_store(None)
+    assert get_active_store() is None
+    conn = sqlite3.connect(tmp_path / "m.sqlite")
+    assert conn.execute("SELECT section_id, measure_key, count FROM report_stat").fetchall() == [
+        ("GeneralStatistics", "Number of records processed", 2)
+    ]
+    assert conn.execute(
+        "SELECT issue_type, record_id, record_id_kind FROM data_issue ORDER BY id"
+    ).fetchall() == [("DATA ISSUE", "b1", "legacy_id"), ("RECORD FAILED", "", "none")]
+    assert conn.execute("SELECT finished FROM run").fetchone()[0] == "done"
+
+
+def test_helper_without_active_store_does_not_fail():
+    from folio_migration_tools.helper import Helper
+
+    Helper.log_data_issue("x", "m", "v")
+
+
+def test_store_requires_existing_folder(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        ReportStore(tmp_path / "missing" / "m.sqlite")

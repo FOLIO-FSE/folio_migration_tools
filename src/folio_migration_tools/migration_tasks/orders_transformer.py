@@ -348,6 +348,7 @@ class OrdersTransformer(MigrationTaskBase):
             )
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)
+        self.close_report_store()
         logger.info("All done!")
 
     def merge_into_orders_with_embedded_pols(self, folio_rec):

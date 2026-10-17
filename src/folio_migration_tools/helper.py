@@ -7,8 +7,10 @@ multiple migration tasks.
 
 import json
 import logging
+from datetime import datetime, timezone
 
 from folio_migration_tools.i18n_cache import i18n_t
+from folio_migration_tools.report_store import get_active_store
 
 
 class Helper:
@@ -64,10 +66,27 @@ class Helper:
     @staticmethod
     def log_data_issue(index_or_id, message, legacy_value):
         logging.log(26, "DATA ISSUE\t%s\t%s\t%s", index_or_id, message, legacy_value)
+        Helper._store_data_issue("DATA ISSUE", index_or_id, message, legacy_value)
 
     @staticmethod
     def log_data_issue_failed(index_or_id, message, legacy_value):
         logging.log(26, "RECORD FAILED\t%s\t%s\t%s", index_or_id, message, legacy_value)
+        Helper._store_data_issue("RECORD FAILED", index_or_id, message, legacy_value)
+
+    @staticmethod
+    def _store_data_issue(issue_type, index_or_id, message, legacy_value):
+        """Mirror a data issue into the report database. Never raises."""
+        if store := get_active_store():
+            try:
+                store.add_issue(
+                    issue_type,
+                    index_or_id,
+                    message,
+                    legacy_value,
+                    ts=datetime.now(timezone.utc).isoformat(),
+                )
+            except Exception as ex:  # a reporting failure must not stop a migration
+                logging.getLogger(__name__).warning("Could not store data issue: %s", ex)
 
     @staticmethod
     def write_to_file(file, folio_record):
