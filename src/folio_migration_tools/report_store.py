@@ -8,6 +8,7 @@ import ast
 import json
 import logging
 import sqlite3
+import weakref
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
@@ -131,8 +132,11 @@ class ReportStore:
 
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
+        if not self.db_path.parent.is_dir():
+            raise FileNotFoundError(
+                f"Report database folder does not exist: {self.db_path.parent}"
+            )
         self._remove_existing()
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         self.conn.execute("PRAGMA journal_mode=WAL")
         self.conn.execute("PRAGMA synchronous=OFF")
@@ -141,6 +145,21 @@ class ReportStore:
         self.conn.commit()
         self.run_id: Optional[int] = None
         self._issue_buffer: list = []
+        self._reports: "weakref.WeakSet" = weakref.WeakSet()
+        self.closed = False
+
+    def register_report(self, report):
+        """Track a MigrationReport so its stats are written when the run is finalized."""
+        self._reports.add(report)
+
+    def finalize(self, finished: str):
+        """Write the stats of all registered reports, finish the run and close."""
+        if self.closed:
+            return
+        for report in list(self._reports):
+            self.write_report_stats(report.report)
+        self.finish_run(finished)
+        self.close()
 
     def _remove_existing(self):
         for suffix in ("", "-wal", "-shm"):
@@ -196,8 +215,10 @@ class ReportStore:
                     )
                 )
         self.conn.executemany(
-            "INSERT OR REPLACE INTO report_stat (run_id, section_id, measure_key, params_json,"
-            " translated, count) VALUES (?, ?, ?, ?, ?, ?)",
+            "INSERT INTO report_stat (run_id, section_id, measure_key, params_json,"
+            " translated, count) VALUES (?, ?, ?, ?, ?, ?)"
+            " ON CONFLICT (run_id, section_id, measure_key, params_json)"
+            " DO UPDATE SET count = count + excluded.count",
             rows,
         )
         self.conn.commit()
@@ -248,5 +269,24 @@ class ReportStore:
         self.conn.commit()
 
     def close(self):
+        if self.closed:
+            return
         self.flush()
         self.conn.close()
+        self.closed = True
+
+
+_active_store: Optional[ReportStore] = None
+
+
+def set_active_store(store: Optional[ReportStore]):
+    """Set the store used by MigrationReport and Helper.log_data_issue."""
+    global _active_store
+    _active_store = store
+
+
+def get_active_store() -> Optional[ReportStore]:
+    """Return the active store, or None if the current run does not persist reports."""
+    if _active_store is not None and not _active_store.closed:
+        return _active_store
+    return None

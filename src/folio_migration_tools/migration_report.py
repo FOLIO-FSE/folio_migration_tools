@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 import i18n
 
 from folio_migration_tools.i18n_cache import i18n_t
+from folio_migration_tools.report_store import get_active_store
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,8 @@ class MigrationReport:
         """Initialize a new migration report for tracking statistics and issues."""
         self.report = {}
         self.stats = {}
+        if store := get_active_store():
+            store.register_report(self)
 
     def add(self, blurb_id, measure_to_add, number=1):
         """Add section header and values to migration report.

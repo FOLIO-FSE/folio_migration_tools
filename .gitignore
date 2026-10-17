@@ -119,6 +119,10 @@ archive/
 source_data/
 scratch_pad.*
 *.db
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+MagicMock/
 *.mrc
 
 .env.json
