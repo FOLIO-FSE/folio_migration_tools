@@ -43,14 +43,18 @@ class TranslatedStr(str):
         obj.params = params
         return obj
 
+    def __getnewargs__(self):
+        """Support copy and pickle, since __new__ needs the key and params."""
+        return (str(self), self.key, self.params)
+
 
 @lru_cache(maxsize=2048)
-def _cached_t(key: str, locale: str, **kwargs) -> TranslatedStr:
-    return TranslatedStr(i18n.t(key, locale=locale, **kwargs), key, dict(kwargs))
+def _cached_t(key: str, locale: str) -> TranslatedStr:
+    return TranslatedStr(i18n.t(key, locale=locale), key, {})
 
 
 def i18n_t(key: str, **kwargs) -> str:
-    """Cached wrapper around i18n.t() for static translations.
+    """Wrapper around i18n.t() that caches static (parameterless) translations.
 
     This function caches the results of i18n.t() calls to avoid repeated
     translation lookups. This is most beneficial for static translation strings
@@ -59,24 +63,28 @@ def i18n_t(key: str, **kwargs) -> str:
     The active locale is part of the cache key, so changing the locale with
     i18n.set("locale", ...) takes effect immediately without clearing the cache.
 
-    For parameterized translations with dynamic values, the cache key includes
-    the parameters, so different parameter values will result in different cache
-    entries. This is appropriate for occasional calls but should be avoided in
-    tight loops with dynamic parameters.
+    Parameterized translations are not cached, because their values can have a very
+    large number of distinct permutations. They are still returned as TranslatedStr,
+    so the key and params are preserved for the report store.
 
     Args:
         key: The translation key to look up
-        **kwargs: Keyword arguments passed to i18n.t(). Values must be hashable.
+        **kwargs: Interpolation parameters passed to i18n.t()
 
     Returns:
-        The translated string, cached on subsequent calls with identical key/locale/kwargs
+        A TranslatedStr. Parameterless results are cached per key and locale.
 
     Note:
         The cache is module-level and persists for the lifetime of the process.
         If translation files or load paths change at runtime, call
         clear_i18n_cache() to invalidate the cache.
     """
-    return _cached_t(key, kwargs.pop("locale", None) or i18n.get("locale"), **kwargs)
+    locale = kwargs.pop("locale", None) or i18n.get("locale")
+    if kwargs:
+        # Parameter values can have hundreds of thousands of distinct permutations,
+        # which would evict the static entries, so parameterized calls bypass the cache.
+        return TranslatedStr(i18n.t(key, locale=locale, **kwargs), key, dict(kwargs))
+    return _cached_t(key, locale)
 
 
 def clear_i18n_cache() -> None:

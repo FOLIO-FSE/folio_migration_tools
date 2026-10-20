@@ -12,7 +12,6 @@ import logging
 import sys
 from typing import TYPE_CHECKING
 
-import i18n
 from dateutil.parser import parse
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
@@ -21,6 +20,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -164,9 +164,9 @@ class UserMapper(MappingFileMapperBase):
                 )
             yield row
 
-    def get_prop(self, legacy_user, folio_prop_name, index_or_id, schema_default_value):
+    def get_prop(self, legacy_object, folio_prop_name, index_or_id, schema_default_value):
         mapped_value = super().get_prop(
-            legacy_user, folio_prop_name, index_or_id, schema_default_value
+            legacy_object, folio_prop_name, index_or_id, schema_default_value
         )
         if folio_prop_name == "personal.addresses.id":
             return ""
@@ -174,7 +174,7 @@ class UserMapper(MappingFileMapperBase):
             if self.groups_mapping:
                 return self.get_mapped_name(
                     self.groups_mapping,
-                    legacy_user,
+                    legacy_object,
                     index_or_id,
                     False,
                 )
@@ -189,10 +189,10 @@ class UserMapper(MappingFileMapperBase):
                 )
             if len(
                 self.departments_mapping.mapped_legacy_keys
-            ) == 1 and self.library_configuration.multi_field_delimiter in legacy_user.get(
+            ) == 1 and self.library_configuration.multi_field_delimiter in legacy_object.get(
                 self.departments_mapping.mapped_legacy_keys[0], ""
             ):
-                split_departments = legacy_user.get(
+                split_departments = legacy_object.get(
                     self.departments_mapping.mapped_legacy_keys[0], ""
                 ).split(self.library_configuration.multi_field_delimiter)
                 return self.library_configuration.multi_field_delimiter.join(
@@ -209,7 +209,7 @@ class UserMapper(MappingFileMapperBase):
             else:
                 return self.get_mapped_name(
                     self.departments_mapping,
-                    legacy_user,
+                    legacy_object,
                     index_or_id,
                     True,
                 )
@@ -226,7 +226,7 @@ class UserMapper(MappingFileMapperBase):
         except Exception as ee:
             v = mapped_value
             logger.exception(f"{folio_prop_name} {v} could not be parsed: {ee}")
-            fmt_string = i18n.t(
+            fmt_string = i18n_t(
                 "Parsing error! %{prop_name}: %{value}. The empty string was returned",
                 prop_name=folio_prop_name,
                 value=v,

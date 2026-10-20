@@ -37,7 +37,9 @@ from folio_migration_tools.custom_exceptions import (
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.logging_config import setup_logging
-from folio_migration_tools.report_store import ReportStore, get_active_store, set_active_store
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
 )
@@ -45,9 +47,7 @@ from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import 
     DEFAULT_MARC_RECORD_PREPROCESSORS,
     MARCReaderWrapper,
 )
-from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
-    RefDataMapping,
-)
+from folio_migration_tools.report_store import ReportStore, get_active_store, set_active_store
 from folio_migration_tools.utils import is_uuid
 
 logger = logging.getLogger(__name__)

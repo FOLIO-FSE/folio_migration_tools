@@ -11,10 +11,10 @@ import logging
 import re
 from typing import List
 
-import i18n
 from pymarc import Field, Record
 
 from folio_migration_tools.custom_exceptions import TransformationFieldMappingError
+from folio_migration_tools.i18n_cache import i18n_t
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ class HoldingsStatementsParser:
                     except KeyError as e:
                         raise TransformationFieldMappingError(
                             legacy_ids,
-                            i18n.t(
+                            i18n_t(
                                 "subfield present in %{linked_value_tag} but not "
                                 "in %{pattern_field}",
                                 pattern_field=pattern_field,
@@ -124,7 +124,7 @@ class HoldingsStatementsParser:
         if "8" not in pattern_field:
             raise TransformationFieldMappingError(
                 legacy_ids,
-                i18n.t(
+                i18n_t(
                     "%{tag} subfield %{subfield} not in field",
                     tag=pattern_tag,
                     subfield="8",
@@ -208,7 +208,7 @@ class HoldingsStatementsParser:
             ):
                 raise TransformationFieldMappingError(
                     legacy_ids,
-                    i18n.t("%{field} a, x and z are missing or empty", field=field_textual),
+                    i18n_t("%{field} a, x and z are missing or empty", field=field_textual),
                     f,
                 )
             return_dict["statements"].append(

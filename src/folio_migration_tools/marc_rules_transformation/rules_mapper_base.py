@@ -17,7 +17,6 @@ from abc import abstractmethod
 from textwrap import wrap
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-import i18n
 import pymarc
 from dateutil.parser import parse
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
@@ -536,17 +535,17 @@ class RulesMapperBase(MapperBase):
             except Exception as ee:
                 Helper.log_data_issue("", f"Could not parse catalogedDate: {ee}", value)
                 self.migration_report.add(
-                    "FieldMappingErrors", i18n.t("Could not parse catalogedDate")
+                    "FieldMappingErrors", i18n_t("Could not parse catalogedDate")
                 )
         if not target_string or target_string not in sch:
             raise TransformationFieldMappingError(
                 "",
-                i18n.t("Target string '%{string}' not in Schema!", string=target_string)
-                + i18n.t("Check mapping file against the schema.")
+                i18n_t("Target string '%{string}' not in Schema!", string=target_string)
+                + i18n_t("Check mapping file against the schema.")
                 + " "
-                + i18n.t("Target type")
+                + i18n_t("Target type")
                 + f": {sch.get(target_string, {}).get('type', '')} "
-                + i18n.t("Value")
+                + i18n_t("Value")
                 + f": {value}",
                 "",
             )
@@ -704,12 +703,12 @@ class RulesMapperBase(MapperBase):
         folio_record["discoverySuppress"] = file_def.discovery_suppressed
         self.migration_report.add(
             "Suppression",
-            i18n.t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
+            i18n_t("Suppressed from discovery") + f" = {folio_record['discoverySuppress']}",
         )
         if not only_discovery_suppress:
             folio_record["staffSuppress"] = file_def.staff_suppressed
             self.migration_report.add(
-                "Suppression", i18n.t("Staff suppressed") + f" = {folio_record['staffSuppress']} "
+                "Suppression", i18n_t("Staff suppressed") + f" = {folio_record['staffSuppress']} "
             )
 
     def create_preceding_succeeding_titles(
@@ -717,7 +716,7 @@ class RulesMapperBase(MapperBase):
     ):
         if title := entity.get("title"):
             self.migration_report.add(
-                "PrecedingSuccedingTitles", f"{e_parent} " + i18n.t("created")
+                "PrecedingSuccedingTitles", f"{e_parent} " + i18n_t("created")
             )
             # TODO: Make these uuids deterministic
             new_entity = {

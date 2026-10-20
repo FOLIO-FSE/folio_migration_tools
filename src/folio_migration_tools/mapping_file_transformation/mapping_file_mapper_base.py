@@ -16,7 +16,6 @@ from functools import reduce
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 
@@ -334,7 +333,7 @@ class MappingFileMapperBase(MapperBase):
             return ""
         elif len(map_entries) > 1:
             self.migration_report.add(
-                "Details", i18n.t("%{props} were concatenated", props=legacy_item_keys)
+                "Details", i18n_t("%{props} were concatenated", props=legacy_item_keys)
             )
             return " ".join(
                 MappingFileMapperBase.get_legacy_value(
@@ -359,7 +358,7 @@ class MappingFileMapperBase(MapperBase):
             else:
                 self.migration_report.add(
                     "FolioDefaultValuesAdded",
-                    i18n.t(
+                    i18n_t(
                         "%{schema_value} added to %{prop_name}",
                         schema_value=schema_default_value,
                         prop_name=folio_prop_name,
@@ -459,7 +458,7 @@ class MappingFileMapperBase(MapperBase):
             value_mapped_value = mapping_file_entry.get("value")
             migration_report.add(
                 "DefaultValuesAdded",
-                i18n.t(
+                i18n_t(
                     "%{value} added to %{entry}",
                     value=value_mapped_value,
                     entry=mapping_file_entry.get("folio_field", ""),
@@ -516,7 +515,7 @@ class MappingFileMapperBase(MapperBase):
         if fallback_field and fallback_value not in ["", None]:
             migration_report.add(
                 "FieldMappingDetails",
-                i18n.t(
+                i18n_t(
                     "Added fallback value from %{fallback_field} instead of %{legacy_field}",
                     fallback_field=fallback_field,
                     legacy_field=mapping_file_entry["legacy_field"],
@@ -528,7 +527,7 @@ class MappingFileMapperBase(MapperBase):
         if fallback_value_literal:
             migration_report.add(
                 "FieldMappingDetails",
-                i18n.t(
+                i18n_t(
                     "Added fallback value %{fallback_value} instead of empty %{legacy_field}",
                     fallback_value=fallback_value_literal,
                     legacy_field=mapping_file_entry["legacy_field"],
@@ -579,7 +578,7 @@ class MappingFileMapperBase(MapperBase):
             if replaced_val != value:
                 migration_report.add(
                     "FieldMappingDetails",
-                    i18n.t(
+                    i18n_t(
                         "Replaced %{value} in %{source_field} with %{replaced_val}",
                         value=value,
                         source_field=source_field,
@@ -1098,12 +1097,12 @@ class MappingFileMapperBase(MapperBase):
         logger.info("Source data file contains %d empty rows", empty_rows)
         self.migration_report.set(
             "GeneralStatistics",
-            i18n.t("Number of rows in %{file_name}", file_name=file_name.name),
+            i18n_t("Number of rows in %{file_name}", file_name=file_name.name),
             total_rows,
         )
         self.migration_report.set(
             "GeneralStatistics",
-            i18n.t("Number of empty rows in %{file_name}", file_name=file_name.name),
+            i18n_t("Number of empty rows in %{file_name}", file_name=file_name.name),
             empty_rows,
         )
         try:

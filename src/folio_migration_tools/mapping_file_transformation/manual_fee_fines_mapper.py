@@ -10,7 +10,6 @@ import uuid
 from typing import Any, Dict
 from zoneinfo import ZoneInfo
 
-import i18n
 from dateutil import parser as dateutil_parser
 from dateutil import tz
 from folio_uuid.folio_uuid import FOLIONamespaces
@@ -20,6 +19,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -114,9 +114,9 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
     def store_objects(self, composite_feefine):
         try:
             self.extradata_writer.write("account", composite_feefine["account"])
-            self.migration_report.add_general_statistics(i18n.t("TOTAL Accounts created"))
+            self.migration_report.add_general_statistics(i18n_t("TOTAL Accounts created"))
             self.extradata_writer.write("feefineaction", composite_feefine["feefineaction"])
-            self.migration_report.add_general_statistics(i18n.t("TOTAL Feefineactions created"))
+            self.migration_report.add_general_statistics(i18n_t("TOTAL Feefineactions created"))
 
         except Exception as ee:
             raise TransformationRecordFailedError(
@@ -211,7 +211,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         except Exception:
             self.migration_report.add(
                 "GeneralStatistics",
-                i18n.t("DATA ISSUE Invalid dates"),
+                i18n_t("DATA ISSUE Invalid dates"),
             )
             logging.log(
                 26,
@@ -227,7 +227,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         except Exception as ee:
             self.migration_report.add(
                 "GeneralStatistics",
-                i18n.t("DATA ISSUE Invalid sum"),
+                i18n_t("DATA ISSUE Invalid sum"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -262,7 +262,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
         else:
             self.migration_report.add(
                 "GeneralStatistics",
-                i18n.t("DATA ISSUE Users not in FOLIO"),
+                i18n_t("DATA ISSUE Users not in FOLIO"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -319,7 +319,7 @@ class ManualFeeFinesMapper(MappingFileMapperBase):
             feefine["account"].pop("itemId")
             self.migration_report.add(
                 "GeneralStatistics",
-                i18n.t("DATA ISSUE Items not in FOLIO"),
+                i18n_t("DATA ISSUE Items not in FOLIO"),
             )
             logging.log(
                 26,

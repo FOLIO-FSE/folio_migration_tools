@@ -16,7 +16,6 @@ from itertools import count
 from pathlib import Path
 from typing import List
 
-import i18n
 from folio_data_import.marc_preprocessors import MARCPreprocessor
 from pymarc import Leader, MARCReader, Record
 
@@ -26,6 +25,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.folder_structure import FolderStructure
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import FileDefinition
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
@@ -104,7 +104,7 @@ def set_leader(
         if migration_report is not None:
             migration_report.add(
                 "LeaderManipulation",
-                i18n.t(
+                i18n_t(
                     "Set leader 09 (Character coding scheme) from %{field} to a",
                     field=marc_record.leader[9],
                 ),
@@ -115,7 +115,7 @@ def set_leader(
         if migration_report is not None:
             migration_report.add(
                 "LeaderManipulation",
-                i18n.t(
+                i18n_t(
                     "Set leader 20-23 from %{field} to 4500",
                     field=marc_record.leader[-4:],
                 ),
@@ -126,7 +126,7 @@ def set_leader(
         if migration_report is not None:
             migration_report.add(
                 "LeaderManipulation",
-                i18n.t(
+                i18n_t(
                     "Set leader 10 (Indicator count) from %{field} to 2",
                     field=marc_record.leader[10],
                 ),
@@ -137,7 +137,7 @@ def set_leader(
         if migration_report is not None:
             migration_report.add(
                 "LeaderManipulation",
-                i18n.t(
+                i18n_t(
                     "Set leader 11 (Subfield code count) from %{record} to 2",
                     record=marc_record.leader[11],
                 ),
@@ -240,7 +240,7 @@ class MARCReaderWrapper:
                 except StopIteration:
                     break
             processor.mapper.migration_report.add_general_statistics(
-                i18n.t("Records in file before parsing")
+                i18n_t("Records in file before parsing")
             )
             try:
                 recovery_strategy = "none"
@@ -329,13 +329,13 @@ class MARCReaderWrapper:
                         marc_record_preprocessor,
                     )
                     processor.mapper.migration_report.add_general_statistics(
-                        i18n.t("Records successfully decoded from MARC21"),
+                        i18n_t("Records successfully decoded from MARC21"),
                     )
                     processor.process_record(idx, record, source_file)
             except TransformationRecordFailedError as error:
                 error.log_it()
                 processor.mapper.migration_report.add_general_statistics(
-                    i18n.t("Records that failed transformation. Check log for details"),
+                    i18n_t("Records that failed transformation. Check log for details"),
                 )
             except ValueError as error:
                 logger.exception(error)
@@ -456,7 +456,7 @@ class MARCReaderWrapper:
         record_label: str | None = None,
     ):
         migration_report.add_general_statistics(
-            i18n.t("Records with encoding errors - repaired"),
+            i18n_t("Records with encoding errors - repaired"),
         )
         original_values = list(MARCReaderWrapper.iter_text_values(original_record))
         redecoded_values = list(MARCReaderWrapper.iter_text_values(redecoded_record))
@@ -468,7 +468,7 @@ class MARCReaderWrapper:
         before, after = changed[0] if changed else ("", "")
         Helper.log_data_issue(
             record_label or f"{source_file.file_name}:{idx}",
-            i18n.t("MARC-8 escape sequences translated to Unicode"),
+            i18n_t("MARC-8 escape sequences translated to Unicode"),
             f"subfields_changed={len(changed)}; first_before={before[:80]!r}; "
             f"first_after={after[:80]!r}; source={source_file.file_name}:{idx}",
         )
@@ -490,14 +490,14 @@ class MARCReaderWrapper:
         The text is passed on unchanged, so the escape characters end up in the FOLIO record.
         """
         migration_report.add_general_statistics(
-            i18n.t("Records with untranslated MARC-8 escape sequences"),
+            i18n_t("Records with untranslated MARC-8 escape sequences"),
         )
         affected = [
             value for value in MARCReaderWrapper.iter_text_values(record) if "\x1b" in value
         ]
         Helper.log_data_issue(
             record_label or f"{source_file.file_name}:{idx}",
-            i18n.t("MARC-8 escape sequences could not be translated"),
+            i18n_t("MARC-8 escape sequences could not be translated"),
             f"subfields_affected={len(affected)}; first={affected[0][:80]!r}; "
             f"source={source_file.file_name}:{idx}",
         )
@@ -745,20 +745,20 @@ class MARCReaderWrapper:
             )
         if recovered:
             migration_report.add_general_statistics(
-                i18n.t("Records with encoding errors - repaired"),
+                i18n_t("Records with encoding errors - repaired"),
             )
             recovery_message = {
-                "marc8_leader_heuristic": i18n.t(
+                "marc8_leader_heuristic": i18n_t(
                     "MARC parsing issue repaired by re-decoding record as MARC-8"
                 ),
-                "dagger_subfield_heuristic": i18n.t(
+                "dagger_subfield_heuristic": i18n_t(
                     "MARC parsing issue repaired by converting MARCMaker dagger "
                     "to subfield delimiter"
                 ),
-                "latin1_leader_heuristic": i18n.t(
+                "latin1_leader_heuristic": i18n_t(
                     "MARC parsing issue repaired by re-decoding record as Latin-1"
                 ),
-            }.get(recovery_strategy, i18n.t("MARC parsing issue repaired after re-decode"))
+            }.get(recovery_strategy, i18n_t("MARC parsing issue repaired after re-decode"))
             Helper.log_data_issue(
                 legacy_id,
                 recovery_message,
@@ -766,11 +766,11 @@ class MARCReaderWrapper:
             )
         else:
             migration_report.add_general_statistics(
-                i18n.t("Records with encoding errors - parsing failed"),
+                i18n_t("Records with encoding errors - parsing failed"),
             )
             Helper.log_data_issue(
                 legacy_id,
-                i18n.t("MARC parsing issue could not be repaired with configured heuristics"),
+                i18n_t("MARC parsing issue could not be repaired with configured heuristics"),
                 context,
             )
 
@@ -786,7 +786,7 @@ class MARCReaderWrapper:
                 continue
             Helper.log_data_issue(
                 record_label or f"{source_file.file_name}:{idx}",
-                i18n.t("MARC-8 decoding warning"),
+                i18n_t("MARC-8 decoding warning"),
                 f"{line}; source={source_file.file_name}:{idx}",
             )
 
@@ -854,7 +854,7 @@ class MARCReaderWrapper:
             return
 
         migration_report.add_general_statistics(
-            i18n.t("Records with text fidelity warnings"),
+            i18n_t("Records with text fidelity warnings"),
         )
         context = (
             f"recovery_strategy={recovery_strategy}; signals={'; '.join(signals)}; "
@@ -862,7 +862,7 @@ class MARCReaderWrapper:
         )
         Helper.log_data_issue(
             record_label or f"{source_file.file_name}:{idx}",
-            i18n.t("MARC text fidelity warning"),
+            i18n_t("MARC text fidelity warning"),
             context,
         )
 

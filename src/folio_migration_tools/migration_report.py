@@ -9,8 +9,6 @@ import json
 import logging
 from datetime import datetime, timezone
 
-import i18n
-
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.report_store import get_active_store
 
@@ -89,7 +87,7 @@ class MigrationReport:
             "\n".join(
                 [
                     "# " + report_title,
-                    i18n.t("blurbs.Introduction.description"),
+                    i18n_t("blurbs.Introduction.description"),
                     "## " + i18n_t("Timings"),
                     "",
                     i18n_t("Measure") + " | " + i18n_t("Value"),
@@ -109,10 +107,10 @@ class MigrationReport:
                 "\n".join(
                     [
                         "",
-                        "## " + i18n.t(f"blurbs.{blurb_id}.title"),
-                        i18n.t(f"blurbs.{blurb_id}.description"),
+                        "## " + i18n_t(f"blurbs.{blurb_id}.title"),
+                        i18n_t(f"blurbs.{blurb_id}.description"),
                         "<details><summary>"
-                        + i18n.t("Click to expand all %{count} things", count=len(measures))
+                        + i18n_t("Click to expand all %{count} things", count=len(measures))
                         + "</summary>",
                         "",
                         i18n_t("Measure") + " | " + i18n_t("Count"),

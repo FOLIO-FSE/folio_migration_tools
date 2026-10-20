@@ -14,7 +14,6 @@ from datetime import datetime, timedelta
 from typing import Annotated, Optional
 from zoneinfo import ZoneInfo
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioValidationError
 from pydantic import Field
@@ -474,7 +473,7 @@ class RequestsMigrator(MigrationTaskBase):
             has_patron_barcode = request.patron_barcode in self.valid_patron_map
             if has_item_barcode and has_patron_barcode:
                 self.migration_report.add_general_statistics(
-                    i18n.t("Requests successfully verified against migrated users and items")
+                    i18n_t("Requests successfully verified against migrated users and items")
                 )
                 request.patron_barcode = self.valid_patron_map.get(
                     request.patron_barcode, request.patron_barcode
@@ -484,7 +483,7 @@ class RequestsMigrator(MigrationTaskBase):
                 self.failed_requests.add(request)
                 self.migration_report.add(
                     "DiscardedRequests",
-                    i18n.t(
+                    i18n_t(
                         "Requests discarded. Had migrated item barcode: %{item_barcode}.\n "
                         "Had migrated user barcode: %{patron_barcode}",
                         item_barcode=has_item_barcode,
@@ -492,7 +491,7 @@ class RequestsMigrator(MigrationTaskBase):
                     ),
                 )
                 self.migration_report.add_general_statistics(
-                    i18n.t("Requests that failed verification against migrated users and items")
+                    i18n_t("Requests that failed verification against migrated users and items")
                 )
             if not has_item_barcode:
                 Helper.log_data_issue(
@@ -511,7 +510,7 @@ class RequestsMigrator(MigrationTaskBase):
         num_bad = 0
         logger.info("Validating legacy requests in file...")
         for legacy_reques_count, legacy_request_dict in enumerate(requests_reader, start=1):
-            self.migration_report.add_general_statistics(i18n.t("Requests in file"))
+            self.migration_report.add_general_statistics(i18n_t("Requests in file"))
             try:
                 legacy_request = LegacyRequest(
                     legacy_request_dict,
@@ -523,7 +522,7 @@ class RequestsMigrator(MigrationTaskBase):
                 if any(legacy_request.errors):
                     num_bad += 1
                     self.migration_report.add_general_statistics(
-                        i18n.t("Requests with valueErrors")
+                        i18n_t("Requests with valueErrors")
                     )
                     for error in legacy_request.errors:
                         self.migration_report.add("DiscardedRequests", f"{error[0]} - {error[1]}")
@@ -534,7 +533,7 @@ class RequestsMigrator(MigrationTaskBase):
                         )
                 else:
                     self.migration_report.add_general_statistics(
-                        i18n.t("Requests with valid source data")
+                        i18n_t("Requests with valid source data")
                     )
                     yield legacy_request
             except ValueError as ve:

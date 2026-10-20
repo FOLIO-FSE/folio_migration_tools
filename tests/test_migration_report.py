@@ -148,9 +148,7 @@ class TestMigrationReport:
     def test_write_migration_report_writes_header(self):
         """Test that write_migration_report writes the report header and timings."""
         # Mock i18n functions to return predictable values
-        with patch(
-            "folio_migration_tools.migration_report.i18n.t", side_effect=lambda x, **kw: x
-        ), patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x: x):
+        with patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x, **kw: x):
             report = MigrationReport()
             report.add("GeneralStatistics", "Records processed", 100)
 
@@ -170,9 +168,7 @@ class TestMigrationReport:
 
     def test_write_migration_report_includes_sections(self):
         """Test that write_migration_report includes all report sections."""
-        with patch(
-            "folio_migration_tools.migration_report.i18n.t", side_effect=lambda x, **kw: x
-        ), patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x: x):
+        with patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x, **kw: x):
             report = MigrationReport()
             report.add("GeneralStatistics", "Records processed", 100)
             report.add("LocationMapping", "Main Library", 50)
@@ -194,9 +190,9 @@ class TestMigrationReport:
     def test_write_migration_report_titles_sections_created_by_set(self):
         """Test that sections created with set() still get their blurb title and count."""
         with patch(
-            "folio_migration_tools.migration_report.i18n.t",
+            "folio_migration_tools.migration_report.i18n_t",
             side_effect=lambda x, **kw: f"{x} {kw['count']}" if "count" in kw else x,
-        ), patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x: x):
+        ):
             report = MigrationReport()
             report.set("GeneralStatistics", "Records processed", 100)
             report.add("Details", "Something happened")

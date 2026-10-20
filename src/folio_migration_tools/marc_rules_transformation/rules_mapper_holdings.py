@@ -13,7 +13,6 @@ import logging
 import re
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
@@ -604,7 +603,7 @@ class RulesMapperHoldings(RulesMapperBase):
         if folio_holding.get("holdingsTypeId", ""):
             self.migration_report.add(
                 "HoldingsTypeMapping",
-                i18n.t(
+                i18n_t(
                     "Already set to %{value}. %{leader_key} was %{leader}",
                     value=folio_holding.get("holdingsTypeId"),
                     leader_key="LDR[06]",

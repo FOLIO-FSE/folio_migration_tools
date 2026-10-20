@@ -6,10 +6,10 @@ Handles note types, content, and object associations.
 
 import logging
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folioclient import FolioClient
 
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -80,12 +80,12 @@ class NotesMapper(MappingFileMapperBase):
                         del note["type"]
                     self.extradata_writer.write("notes", note)
                     self.migration_report.add_general_statistics(
-                        i18n.t("Number of linked notes created")
+                        i18n_t("Number of linked notes created")
                     )
                     self.migration_report.add("MappedNoteTypes", note["typeId"])
                 else:
                     self.migration_report.add_general_statistics(
-                        i18n.t("Number of discarded notes with no content")
+                        i18n_t("Number of discarded notes with no content")
                     )
 
     def get_notes_schema(self):

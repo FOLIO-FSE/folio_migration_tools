@@ -12,7 +12,6 @@ import sys
 import time
 from typing import Annotated, List
 
-import i18n
 from deepdiff import DeepDiff
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
@@ -305,7 +304,7 @@ class OrdersTransformer(MigrationTaskBase):
             logger.info("Storing last record to disk")
             Helper.write_to_file(self.results_file, self.current_folio_record)
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("TOTAL Purchase Orders created")
+                i18n_t("TOTAL Purchase Orders created")
             )
             self.current_folio_record = {}
 
@@ -359,7 +358,7 @@ class OrdersTransformer(MigrationTaskBase):
             # Writes record to file
             Helper.write_to_file(self.results_file, self.current_folio_record)
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("TOTAL Purchase Orders created")
+                i18n_t("TOTAL Purchase Orders created")
             )
             self.current_folio_record = folio_rec
 
@@ -371,7 +370,7 @@ class OrdersTransformer(MigrationTaskBase):
                     folio_rec.get(self.mapper.po_lines_key, [])
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Rows merged to create Purchase Orders")
+                    i18n_t("Rows merged to create Purchase Orders")
                 )
             for key in diff.affected_paths:
                 self.mapper.migration_report.add("DiffsBetweenOrders", key)

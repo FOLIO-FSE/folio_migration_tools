@@ -14,7 +14,6 @@ from datetime import timedelta
 from http import HTTPStatus
 from typing import Set
 
-import i18n
 from folioclient import (
     FolioClient,
     FolioClientError,
@@ -307,7 +306,7 @@ class CirculationHelper:
                 False,
                 None,
                 f"HTTP {fce.response.status_code}",
-                i18n.t("Failed checkout http status %{code}", code=fce.response.status_code),
+                i18n_t("Failed checkout http status %{code}", code=fce.response.status_code),
             )
         except FolioConnectionError as fce:
             logger.exception(
@@ -361,7 +360,7 @@ class CirculationHelper:
                 )
                 logger.exception(message)
                 migration_report.add_general_statistics(
-                    i18n.t("HTTP %{code} Error creating request", code=client_response.status_code)
+                    i18n_t("HTTP %{code} Error creating request", code=client_response.status_code)
                     + f": {client_response.text}"
                 )
             else:
@@ -378,7 +377,7 @@ class CirculationHelper:
             message = f"HTTP {fse.response.status_code} Server error creating request"
             logger.exception("%s: %s", message, fse.response.text)
             migration_report.add_general_statistics(
-                i18n.t("HTTP %{code} Error creating request", code=fse.response.status_code)
+                i18n_t("HTTP %{code} Error creating request", code=fse.response.status_code)
             )
             Helper.log_data_issue(
                 legacy_request.item_barcode,
