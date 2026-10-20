@@ -12,7 +12,7 @@ import time
 import traceback
 from typing import Annotated, Optional
 
-import i18n
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
@@ -184,10 +184,10 @@ class CoursesMigrator(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, excepion)
                 self.mapper.migration_report.add(
                     "GeneralStatistics",
-                    i18n.t("Number of Legacy items in %{container}", container=full_path),
+                    i18n_t("Number of Legacy items in %{container}", container=full_path),
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Number of Legacy items in total")
+                    i18n_t("Number of Legacy items in total")
                 )
                 self.print_progress(idx, start)
 
@@ -195,7 +195,7 @@ class CoursesMigrator(MigrationTaskBase):
         self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w+") as report_file:
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Courses migration report"), report_file, self.mapper.start_datetime
+                i18n_t("Courses migration report"), report_file, self.mapper.start_datetime
             )
         with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
             self.mapper.migration_report.write_json_report(raw_report_file)

@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Dict, List
 from uuid import uuid4
 
-import i18n
 
 from folio_migration_tools import custom_exceptions, helper
 from folio_migration_tools.i18n_cache import i18n_t
@@ -55,7 +54,7 @@ class HoldingsHelper:
                 if not v:
                     migration_report.add(
                         "HoldingsMerging",
-                        i18n.t(
+                        i18n_t(
                             "%{fields_criteria} empty or not set", fields_criteria=fields_criteria
                         ),
                     )

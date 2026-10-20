@@ -15,7 +15,7 @@ from hashlib import sha1
 from os.path import isfile
 from typing import Annotated, List, Optional
 
-import i18n
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
@@ -216,7 +216,7 @@ class OrganizationTransformer(MigrationTaskBase):
             open(self.folder_structure.created_objects_path, "w+") as results_file,
         ):
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of files processed")
+                i18n_t("Number of files processed")
             )
             start = time.time()
             records_processed = 0
@@ -259,10 +259,10 @@ class OrganizationTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, exception)
 
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Number of objects in source data file")
+                    i18n_t("Number of objects in source data file")
                 )
                 self.mapper.migration_report.add_general_statistics(
-                    i18n.t("Number of organizations created")
+                    i18n_t("Number of organizations created")
                 )
 
                 # TODO Rewrite to base % value on number of rows in file
@@ -304,7 +304,7 @@ class OrganizationTransformer(MigrationTaskBase):
                 self.folder_structure.migration_reports_file,
             )
             self.mapper.migration_report.write_migration_report(
-                i18n.t("Organization transformation report"),
+                i18n_t("Organization transformation report"),
                 migration_report_file,
                 self.start_datetime,
             )
@@ -367,7 +367,7 @@ class OrganizationTransformer(MigrationTaskBase):
             else:
                 self.mapper.migration_report.add(
                     "MalformedInterfaceUri",
-                    i18n.t("Interfaces"),
+                    i18n_t("Interfaces"),
                 )
                 Helper.log_data_issue(
                     f"{record['code']}",
@@ -442,7 +442,7 @@ class OrganizationTransformer(MigrationTaskBase):
 
         if len(identical_objects) > 0:
             self.mapper.migration_report.add_general_statistics(
-                i18n.t("Number of reoccurring identical %{type}", type=extradata_object_type)
+                i18n_t("Number of reoccurring identical %{type}", type=extradata_object_type)
             )
             Helper.log_data_issue(
                 f"{self.legacy_id}",
@@ -457,7 +457,7 @@ class OrganizationTransformer(MigrationTaskBase):
         self.embedded_extradata_object_cache.add(embedded_object_hash)
 
         self.mapper.migration_report.add_general_statistics(
-            i18n.t("Number of linked %{type} created", type=extradata_object_type)
+            i18n_t("Number of linked %{type} created", type=extradata_object_type)
         )
 
         return extradata_object_uuid

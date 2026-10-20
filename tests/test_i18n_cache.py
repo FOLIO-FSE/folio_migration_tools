@@ -1,8 +1,12 @@
 """Test the i18n caching functionality."""
 
-import pytest
 
-from folio_migration_tools.i18n_cache import i18n_t, clear_i18n_cache, get_i18n_cache_info
+from folio_migration_tools.i18n_cache import (
+    TranslatedStr,
+    clear_i18n_cache,
+    get_i18n_cache_info,
+    i18n_t,
+)
 
 
 def test_i18n_cache_basic():
@@ -42,7 +46,9 @@ def test_i18n_cache_with_parameters():
 
     # Parameterized call
     result = i18n_t("Changed %{a} to %{b}", a="old", b="new")
-    assert "old" in result or "new" in result or result  # Should contain parameters or be a translated string
+    assert (
+        "old" in result or "new" in result or result
+    )  # Should contain parameters or be a translated string
 
     # Same call should hit cache
     result2 = i18n_t("Changed %{a} to %{b}", a="old", b="new")
@@ -84,3 +90,31 @@ def test_cache_respects_locale_changes():
     finally:
         i18n.set("locale", original_locale)
         clear_i18n_cache()
+
+
+def test_unhashable_params_still_return_translated_str():
+    result = i18n_t("Some key", items=["a", "b"])
+    assert isinstance(result, TranslatedStr)
+    assert result.key == "Some key"
+
+
+def test_no_direct_i18n_t_calls_outside_cache_module():
+    """Direct i18n.t() returns a plain str and loses the key the report store needs."""
+    import pathlib
+    import re
+
+    src = pathlib.Path(__file__).parent.parent / "src" / "folio_migration_tools"
+    offenders = [
+        str(p.relative_to(src))
+        for p in src.rglob("*.py")
+        if p.name != "i18n_cache.py" and re.search(r"\bi18n\.t\(", p.read_text(encoding="utf-8"))
+    ]
+    assert not offenders, f"Use i18n_t from i18n_cache instead of i18n.t in: {offenders}"
+
+
+def test_parameterized_calls_are_not_cached():
+    clear_i18n_cache()
+    for n in range(50):
+        result = i18n_t("Some key %{n}", n=n)
+        assert result.params == {"n": n}
+    assert get_i18n_cache_info().currsize == 0

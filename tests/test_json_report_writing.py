@@ -91,17 +91,13 @@ class TestJsonReportWriting:
         (base_folder / ".gitignore").write_text("results/\n")
 
         fs = FolderStructure(
-            base_folder,
-            FOLIONamespaces.instances,
-            "test_task",
-            "iteration_1",
-            False
+            base_folder, FOLIONamespaces.instances, "test_task", "iteration_1", False
         )
         fs.setup_migration_file_structure()
 
-        assert hasattr(fs, 'migration_reports_raw_file')
-        assert 'raw_report' in str(fs.migration_reports_raw_file)
-        assert '.json' in str(fs.migration_reports_raw_file)
+        assert hasattr(fs, "migration_reports_raw_file")
+        assert "raw_report" in str(fs.migration_reports_raw_file)
+        assert ".json" in str(fs.migration_reports_raw_file)
 
 
 class TestMigrationReportIntegration:
@@ -121,16 +117,11 @@ class TestMigrationReportIntegration:
         json_path = raw_folder / "raw_report_test.json"
 
         # Write both reports
-        with patch(
-            "folio_migration_tools.migration_report.i18n.t", side_effect=lambda x, **kw: x
-        ), patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x: x):
+        with patch("folio_migration_tools.migration_report.i18n_t", side_effect=lambda x, **kw: x):
             from datetime import datetime, timezone
+
             with open(md_path, "w") as md_file:
-                report.write_migration_report(
-                    "Test Report",
-                    md_file,
-                    datetime.now(timezone.utc)
-                )
+                report.write_migration_report("Test Report", md_file, datetime.now(timezone.utc))
 
         with open(json_path, "w") as json_file:
             report.write_json_report(json_file)

@@ -160,6 +160,7 @@ def test_load_and_validate_legacy_loans_with_proxy():
         )
         assert a[0].proxy_patron_barcode == "prox_barcode"
 
+
 class DummyLegacyLoan:
     def __init__(
         self, item_barcode="item1", patron_barcode="patron1", proxy_patron_barcode="", row=1
@@ -194,23 +195,23 @@ def migrator():
     return m
 
 
-@patch("folio_migration_tools.migration_tasks.loans_migrator.i18n", autospec=True)
+@patch("folio_migration_tools.migration_tasks.loans_migrator.i18n_t")
 def test_checkout_single_loan_success(mock_i18n, migrator):
     legacy_loan = DummyLegacyLoan()
     res_checkout = Mock()
     res_checkout.was_successful = True
     migrator.circulation_helper.check_out_by_barcode.return_value = res_checkout
 
-    mock_i18n.t.return_value = 'Checked out on first try'
+    mock_i18n.return_value = "Checked out on first try"
 
     LoansMigrator.checkout_single_loan(migrator, legacy_loan)
 
-    migrator.migration_report.add.assert_called_with("Details", mock_i18n.t.return_value)
+    migrator.migration_report.add.assert_called_with("Details", mock_i18n.return_value)
     migrator.apply_post_checkout_updates.assert_called_once_with(legacy_loan, res_checkout)
     migrator.set_new_status.assert_called_once_with(legacy_loan, res_checkout)
 
 
-@patch("folio_migration_tools.migration_tasks.loans_migrator.i18n", autospec=True)
+@patch("folio_migration_tools.migration_tasks.loans_migrator.i18n_t")
 def test_checkout_single_loan_retry_success(mock_i18n, migrator):
     legacy_loan = DummyLegacyLoan()
     res_checkout = Mock()
@@ -222,11 +223,11 @@ def test_checkout_single_loan_retry_success(mock_i18n, migrator):
     migrator.circulation_helper.check_out_by_barcode.return_value = res_checkout
     migrator.handle_checkout_failure.return_value = res_checkout2
 
-    mock_i18n.t.return_value = 'Checked out on second try'
+    mock_i18n.return_value = "Checked out on second try"
 
     LoansMigrator.checkout_single_loan(migrator, legacy_loan)
 
-    migrator.migration_report.add.assert_any_call("Details", mock_i18n.t.return_value)
+    migrator.migration_report.add.assert_any_call("Details", mock_i18n.return_value)
     migrator.apply_post_checkout_updates.assert_called_once_with(legacy_loan, res_checkout2)
     migrator.set_new_status.assert_called_once_with(legacy_loan, res_checkout2)
 
@@ -248,7 +249,9 @@ class TestPreValidatePatronBarcodesAsync:
     async def test_valid_patron_found(self):
         loans = [DummyLegacyLoan(patron_barcode="P001")]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1", "patronGroup": "group-1"}]
+        m.folio_client.folio_get_async.return_value = [
+            {"barcode": "P001", "id": "uuid-1", "patronGroup": "group-1"}
+        ]
 
         await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
@@ -294,7 +297,9 @@ class TestPreValidatePatronBarcodesAsync:
             DummyLegacyLoan(patron_barcode="P001"),
         ]
         m = self._make_migrator(loans)
-        m.folio_client.folio_get_async.return_value = [{"barcode": "P001", "id": "uuid-1", "patronGroup": "group-1"}]
+        m.folio_client.folio_get_async.return_value = [
+            {"barcode": "P001", "id": "uuid-1", "patronGroup": "group-1"}
+        ]
 
         await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
@@ -326,7 +331,9 @@ class TestPreValidatePatronBarcodesAsync:
         await LoansMigrator.pre_validate_patron_barcodes_async(m)
 
         m.folio_client.folio_get_async.assert_called_once_with(
-            "/users", key="users", query='barcode=="P001" OR externalSystemId=="P001"',
+            "/users",
+            key="users",
+            query='barcode=="P001" OR externalSystemId=="P001"',
         )
 
     @pytest.mark.asyncio
@@ -432,14 +439,18 @@ class TestPreValidateItemBarcodes:
         m = self._make_migrator(loans)
         # Return different items per batch call
         m.folio_client.folio_post.side_effect = [
-            {"items": [
-                {"barcode": "I0000", "id": "uuid-0"},
-                {"barcode": "I0001", "id": "uuid-1"},
-            ]},
-            {"items": [
-                {"barcode": "I0002", "id": "uuid-2"},
-                {"barcode": "I0003", "id": "uuid-3"},
-            ]},
+            {
+                "items": [
+                    {"barcode": "I0000", "id": "uuid-0"},
+                    {"barcode": "I0001", "id": "uuid-1"},
+                ]
+            },
+            {
+                "items": [
+                    {"barcode": "I0002", "id": "uuid-2"},
+                    {"barcode": "I0003", "id": "uuid-3"},
+                ]
+            },
             {"items": [{"barcode": "I0004", "id": "uuid-4"}]},
         ]
 
@@ -563,7 +574,7 @@ def test_pre_validate_item_barcodes_handles_non_dict_response():
     assert migrator.valid_item_barcodes == set()
 
 
-@patch("folio_migration_tools.migration_tasks.loans_migrator.i18n", autospec=True)
+@patch("folio_migration_tools.migration_tasks.loans_migrator.i18n_t")
 def test_declare_lost_uses_fallback_service_point_id_without_cast(mock_i18n):
     migrator = Mock(spec=LoansMigrator)
     migrator.task_configuration = Mock()

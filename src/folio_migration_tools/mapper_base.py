@@ -14,7 +14,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from folio_uuid.folio_uuid import FolioUUID
 from folioclient import FolioClient
@@ -465,7 +464,7 @@ class MapperBase:
                 # identifiers in formerIds are carried over to every copy, and remain the
                 # way to retrieve all of the holdings records in a boundwith set.
                 bound_with_holding.pop("hrid", None)
-            self.migration_report.add_general_statistics(i18n.t("Bound-with holdings created"))
+            self.migration_report.add_general_statistics(i18n_t("Bound-with holdings created"))
             yield bound_with_holding
 
     def generate_boundwith_holding_uuid(self, holding_uuid, instance_uuid):
@@ -546,7 +545,7 @@ class MapperBase:
                 else:
                     Helper.log_data_issue(
                         legacy_ids,
-                        i18n.t(
+                        i18n_t(
                             "Statistical code '%{code}' not found in FOLIO",
                             code=stat_code,
                         ),

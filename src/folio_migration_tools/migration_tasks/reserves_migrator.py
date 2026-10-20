@@ -12,7 +12,6 @@ import time
 from typing import Annotated
 
 import httpx
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
@@ -146,7 +145,7 @@ class ReservesMigrator(MigrationTaskBase):
 
     def post_single_reserve(self, legacy_reserve: LegacyReserve):
         path = f"/coursereserves/courselistings/{legacy_reserve.course_listing_id}/reserves"
-        if self.folio_put_post(path, legacy_reserve.to_dict(), "POST", i18n.t("Posted reserves")):
+        if self.folio_put_post(path, legacy_reserve.to_dict(), "POST", i18n_t("Posted reserves")):
             self.migration_report.add_general_statistics(i18n_t("Successfully posted reserves"))
         else:
             self.migration_report.add_general_statistics(i18n_t("Failure to post reserve"))
@@ -223,7 +222,7 @@ class ReservesMigrator(MigrationTaskBase):
                 )
                 if any(legacy_reserve.errors):
                     num_bad += 1
-                    self.migration_report.add_general_statistics(i18n.t("Discarded reserves"))
+                    self.migration_report.add_general_statistics(i18n_t("Discarded reserves"))
                     for error in legacy_reserve.errors:
                         self.migration_report.add("DiscardedReserves", f"{error[0]} - {error[1]}")
                 else:
@@ -253,7 +252,7 @@ class ReservesMigrator(MigrationTaskBase):
                 logger.error(error_message)
                 self.migration_report.add(
                     "Details",
-                    i18n.t(
+                    i18n_t(
                         "%{action} error: %{message}",
                         action=action_description,
                         message=error_message,
@@ -263,13 +262,13 @@ class ReservesMigrator(MigrationTaskBase):
             elif resp.is_success:
                 self.migration_report.add(
                     "Details",
-                    i18n.t("Successfully %{action}", action=action_description)
+                    i18n_t("Successfully %{action}", action=action_description)
                     + f" ({resp.status_code})",
                 )
             else:
                 self.migration_report.add(
                     "Details",
-                    i18n.t(
+                    i18n_t(
                         "%{action} error. http status: %{status}",
                         action=action_description,
                         status=resp.status_code,

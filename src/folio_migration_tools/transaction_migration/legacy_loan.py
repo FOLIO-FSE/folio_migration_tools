@@ -10,12 +10,12 @@ import logging
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import i18n
 from dateutil import tz
 from dateutil.parser import ParserError, parse
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
 )
@@ -98,7 +98,7 @@ class LegacyLoan(object):
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(
-                    i18n.t(
+                    i18n_t(
                         "Provided due_date is not UTC, setting tz-info to tenant timezone"
                         " (%{timezone})",
                         timezone=self.tenant_timezone,
@@ -112,7 +112,7 @@ class LegacyLoan(object):
                     "Assuming end of local calendar day (23:59)...",
                     json.dumps(self.legacy_loan_dict),
                 )
-                self.report(i18n.t("Hour and minute not specified for due date"))
+                self.report(i18n_t("Hour and minute not specified for due date"))
         except (ParserError, OverflowError) as ee:
             logger.exception(ee)
             self.errors.append((f"Parse date failure in {row=}. Setting UTC NOW", "due_date"))
@@ -131,7 +131,7 @@ class LegacyLoan(object):
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(
-                    i18n.t(
+                    i18n_t(
                         "Provided out_date is not UTC, setting tz-info to tenant timezone"
                         " (%{timezone})",
                         timezone=self.tenant_timezone,
@@ -191,7 +191,7 @@ class LegacyLoan(object):
                 self.out_date = self.out_date.replace(hour=0, minute=1)
         if self.due_date < self.out_date:
             self.migration_report.add_general_statistics(
-                i18n.t("Loans with due date before out date")
+                i18n_t("Loans with due date before out date")
             )
             if self.allow_due_date_before_out_date:
                 Helper.log_data_issue(
@@ -199,7 +199,7 @@ class LegacyLoan(object):
                     "Due date is before out date. Legacy dates will be kept",
                     json.dumps(self.legacy_loan_dict),
                 )
-                self.report(i18n.t("Due date is before out date. Legacy dates will be kept"))
+                self.report(i18n_t("Due date is before out date. Legacy dates will be kept"))
                 return
         if self.due_date <= self.out_date:
             raise TransformationRecordFailedError(

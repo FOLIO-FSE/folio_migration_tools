@@ -10,7 +10,6 @@ import logging
 import re
 import traceback
 
-import i18n
 from folioclient import FolioClient
 from pymarc import field
 
@@ -20,6 +19,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import FolioRelease
 from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
@@ -213,7 +213,7 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    i18n.t(
+                    i18n_t(
                         'Mapping failed for %{tag} "%{subfield}" (%{normalized_subfield})',
                         tag=f"${contributor_code_subfield}",
                         subfield=subfield,
@@ -229,7 +229,7 @@ class Conditions:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
                     (
-                        i18n.t(
+                        i18n_t(
                             'Contributor type code "%{code}" found for $%{code_subfield}',
                             code=t[1],
                             code_subfield=contributor_code_subfield,
@@ -249,7 +249,7 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    i18n.t(
+                    i18n_t(
                         'Mapping failed for %{tag} "%{subfield}" (%{normalized_subfield})',
                         tag=f"{marc_field.tag} ${contributor_name_subfield}",
                         subfield=subfield,
@@ -264,7 +264,7 @@ class Conditions:
             else:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    i18n.t(
+                    i18n_t(
                         "Contributor type name %{name} found for %{tag}",
                         name=t[1],
                         tag=marc_field.tag,
@@ -275,7 +275,7 @@ class Conditions:
         return ""
 
     def condition_set_holdings_type_id(self, legacy_id, value, parameter, marc_field: field.Field):
-        self.mapper.migration_report.add("HoldingsTypeMapping", i18n.t("Condition in rules hit"))
+        self.mapper.migration_report.add("HoldingsTypeMapping", i18n_t("Condition in rules hit"))
         return ""
 
     def condition_concat_subfields_by_name(
@@ -300,7 +300,7 @@ class Conditions:
             return value.strip()
         self.mapper.migration_report.add(
             "AddedValueFromParameter",
-            i18n.t(
+            i18n_t(
                 "Tag: %{tag}. Added value: %{value}", tag=marc_field.tag, value=parameter["value"]
             ),
         )
@@ -324,13 +324,13 @@ class Conditions:
             )
             self.mapper.migration_report.add(
                 "InstanceFormat",
-                i18n.t("Successful match") + f'  - "{value}"->{t[1]}',
+                i18n_t("Successful match") + f'  - "{value}"->{t[1]}',
             )
             return t[0]
         except Exception:
             self.mapper.migration_report.add(
                 "InstanceFormat",
-                i18n.t('Code from 338$b NOT found in FOLIO: "%{value}"', value=value),
+                i18n_t('Code from 338$b NOT found in FOLIO: "%{value}"', value=value),
             )
 
             return ""
@@ -406,7 +406,7 @@ class Conditions:
         if identifier_type is None:
             raise TransformationFieldMappingError(
                 legacy_id,
-                i18n.t("no matching identifier_types in %{names}", names=parameter["names"]),
+                i18n_t("no matching identifier_types in %{names}", names=parameter["names"]),
                 marc_field,
             )
         self.mapper.migration_report.add("MappedIdentifierTypes", identifier_type["name"])
@@ -414,7 +414,7 @@ class Conditions:
         if not my_id:
             raise TransformationFieldMappingError(
                 legacy_id,
-                i18n.t("no matching identifier_types in %{names}", names=parameter["names"]),
+                i18n_t("no matching identifier_types in %{names}", names=parameter["names"]),
                 marc_field,
             )
         return my_id
@@ -424,7 +424,7 @@ class Conditions:
     ):
         self.mapper.migration_report.add(
             "Exceptions",
-            i18n.t(
+            i18n_t(
                 "Condition set_holding_note_type_id_by_name is deprecated. "
                 "Use set_holdings_note_type_id instead"
             ),
@@ -528,7 +528,7 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    i18n.t(
+                    i18n_t(
                         'Mapping failed for %{tag} "%{subfield}" (%{normalized_subfield})',
                         tag="$4",
                         subfield=subfield,
@@ -543,7 +543,7 @@ class Conditions:
             else:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    i18n.t(
+                    i18n_t(
                         'Contributor type code "%{code}" found for $%{code_subfield}',
                         code=t[1],
                         code_subfield="4",
@@ -561,7 +561,7 @@ class Conditions:
             if not t:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    i18n.t(
+                    i18n_t(
                         'Mapping failed for %{tag} "%{subfield}" '
                         "(Normalized: %{normalized_subfield})",
                         tag=f"{marc_field.tag} $e",
@@ -577,7 +577,7 @@ class Conditions:
             else:
                 self.mapper.migration_report.add(
                     "ContributorTypeMapping",
-                    i18n.t(
+                    i18n_t(
                         "Contributor type name %{name} found for %{tag}",
                         name=t[1],
                         tag=marc_field.tag,
@@ -595,7 +595,7 @@ class Conditions:
     ):
         self.mapper.migration_report.add(
             "Exceptions",
-            i18n.t(
+            i18n_t(
                 "Condition set_call_number_type_by_indicator is deprecated. "
                 "Change to set_call_number_type_id"
             ),
@@ -621,7 +621,7 @@ class Conditions:
         if marc_field.indicator1 == "7" and "2" in marc_field:
             self.mapper.migration_report.add(
                 "CallNumberTypeMapping",
-                i18n.t("Unhandled call number type in $2 (ind1 == 7)") + f": {marc_field['2']}",
+                i18n_t("Unhandled call number type in $2 (ind1 == 7)") + f": {marc_field['2']}",
             )
             return self.default_call_number_type["id"]
 
@@ -631,7 +631,7 @@ class Conditions:
             self.mapper.migration_report.add(
                 "CallNumberTypeMapping",
                 (
-                    i18n.t(
+                    i18n_t(
                         'Unhandled call number type in ind1: "%{ind1}".\n Returning default '
                         "Callnumber type: %{type}",
                         ind1=marc_field.indicator1,
@@ -646,13 +646,13 @@ class Conditions:
         if t:
             self.mapper.migration_report.add(
                 "CallNumberTypeMapping",
-                i18n.t("Mapped from Indicator 1") + f" {marc_field.indicator1} -> {t[1]}",
+                i18n_t("Mapped from Indicator 1") + f" {marc_field.indicator1} -> {t[1]}",
             )
             return t[0]
 
         self.mapper.migration_report.add(
             "CallNumberTypeMapping",
-            i18n.t("Mapping failed. Setting default CallNumber type")
+            i18n_t("Mapping failed. Setting default CallNumber type")
             + f": {self.default_call_number_type['name']}",
         )
 
@@ -690,7 +690,7 @@ class Conditions:
     ):
         self.mapper.migration_report.add(
             "Exceptions",
-            i18n.t(
+            i18n_t(
                 "set_location_id_by_code condition used in rules. "
                 "Deprecated condition. Switch to set_permanent_location_id"
             ),
@@ -737,13 +737,13 @@ class Conditions:
             mapped_code = self.ref_data_dicts["legacy_locations"].get("*", "").strip()
             if mapped_code:
                 self.mapper.migration_report.add(
-                    "LocationMapping", i18n.t("Fallback mapping") + f": {value}->{mapped_code}"
+                    "LocationMapping", i18n_t("Fallback mapping") + f": {value}->{mapped_code}"
                 )
         # Get the FOLIO UUID for the code and return it
         t = self.get_ref_data_tuple_by_code(self.folio.locations, "locations", mapped_code)
         if not t:
             self.mapper.migration_report.add(
-                "LocationMapping", i18n.t("Unmapped code") + f": '{value}'"
+                "LocationMapping", i18n_t("Unmapped code") + f": '{value}'"
             )
             raise TransformationRecordFailedError(
                 legacy_id, "Could not map location from legacy code", value
@@ -776,7 +776,7 @@ class Conditions:
         if marc_field.tag not in ["008", "336"]:
             self.mapper.migration_report.add(
                 "InstanceTypeMapping",
-                i18n.t(
+                i18n_t(
                     "Unhandled MARC tag %{tag}. Instance Type ID is only mapped from 336",
                     tag=marc_field.tag,
                 ),
@@ -840,7 +840,7 @@ class Conditions:
         self.mapper.migration_report.add(
             "StaffOnlyViaIndicator",
             f"{marc_field.tag} indicator1: {ind1} ("
-            + i18n.t("0 is staff-only, all other values are public")
+            + i18n_t("0 is staff-only, all other values are public")
             + ")",
         )
         if ind1 == "0":
@@ -902,7 +902,7 @@ class Conditions:
         """
         if len(value) < 7:
             self.mapper.migration_report.add(
-                "ReceiptStatusMapping", i18n.t("008 is too short") + f": {value}"
+                "ReceiptStatusMapping", i18n_t("008 is too short") + f": {value}"
             )
             return ""
 
@@ -920,7 +920,7 @@ class Conditions:
             mapped_value = status_map[value[6]]
             self.mapper.migration_report.add(
                 "ReceiptStatusMapping",
-                i18n.t(
+                i18n_t(
                     "%{value} mapped to %{mapped_value}",
                     value=value[6],
                     mapped_value=mapped_value,
@@ -929,7 +929,7 @@ class Conditions:
             return mapped_value
         except Exception:
             self.mapper.migration_report.add(
-                "ReceiptStatusMapping", i18n.t("%{value} not found in map.", value=value[6])
+                "ReceiptStatusMapping", i18n_t("%{value} not found in map.", value=value[6])
             )
             return ""
 
@@ -943,7 +943,7 @@ class Conditions:
         """
         if len(value) < 8:
             self.mapper.migration_report.add(
-                "ReceiptStatusMapping", i18n.t("008 is too short") + f": {value}"
+                "ReceiptStatusMapping", i18n_t("008 is too short") + f": {value}"
             )
             return ""
 
@@ -965,14 +965,14 @@ class Conditions:
             mapped_value = acq_methods[value[7]]
             self.mapper.migration_report.add(
                 "MethodOfAcquisitionMapping",
-                i18n.t(
+                i18n_t(
                     "%{value} mapped to %{mapped_value}", value=value[7], mapped_value=mapped_value
                 ),
             )
             return mapped_value
         except Exception:
             self.mapper.migration_report.add(
-                "MethodOfAcquisitionMapping", i18n.t("%{value} not found in map.", value=value[8])
+                "MethodOfAcquisitionMapping", i18n_t("%{value} not found in map.", value=value[8])
             )
             return ""
 
@@ -984,7 +984,7 @@ class Conditions:
         """
         if len(value) < 13:
             self.mapper.migration_report.add(
-                "RetentionPolicyMapping", i18n.t("008 is too short") + f": {value}"
+                "RetentionPolicyMapping", i18n_t("008 is too short") + f": {value}"
             )
             return ""
         value = value.replace("|", " ").replace(
@@ -1005,7 +1005,7 @@ class Conditions:
             mapped_value = retention_policies[value[12]]
             self.mapper.migration_report.add(
                 "RetentionPolicyMapping",
-                i18n.t(
+                i18n_t(
                     "%{value} mapped to %{mapped_value}",
                     value=value[12],
                     mapped_value=mapped_value,
@@ -1034,7 +1034,7 @@ class Conditions:
                     if specific_retention_policy:
                         self.mapper.migration_report.add(
                             "RetentionPolicyMapping",
-                            i18n.t(
+                            i18n_t(
                                 "Retention policy 6 indicates a limited period. Specific "
                                 "retention period will be mapped from 008/13-15",
                             ),
@@ -1047,7 +1047,7 @@ class Conditions:
                 except ValueError:
                     self.mapper.migration_report.add(
                         "RetentionPolicyMapping",
-                        i18n.t(
+                        i18n_t(
                             "Invalid specific retention policy in 008/13-15: %{value}",
                             value=value[13:16],
                         ),
@@ -1055,7 +1055,7 @@ class Conditions:
             return mapped_value
         except Exception:
             self.mapper.migration_report.add(
-                "RetentionPolicyMapping", i18n.t("%{value} not found in map.", value=value[12])
+                "RetentionPolicyMapping", i18n_t("%{value} not found in map.", value=value[12])
             )
             return ""
 
@@ -1067,7 +1067,7 @@ class Conditions:
         """
         if len(value) < 21:
             self.mapper.migration_report.add(
-                "ILLPolicyMapping", i18n.t("008 is too short") + f": {value}"
+                "ILLPolicyMapping", i18n_t("008 is too short") + f": {value}"
             )
             return ""
         try:
@@ -1081,7 +1081,7 @@ class Conditions:
             mapped_value = ill_policies[value[20]]
             self.mapper.migration_report.add(
                 "ILLPolicyMapping",
-                i18n.t(
+                i18n_t(
                     "%{value} mapped to %{mapped_value}",
                     value=value[20],
                     mapped_value=mapped_value,
@@ -1093,7 +1093,7 @@ class Conditions:
             return ill_policy_id[0] if ill_policy_id else ""
         except Exception:
             self.mapper.migration_report.add(
-                "ILLPolicyMapping", i18n.t("%{value} not found in map.", value=value[20])
+                "ILLPolicyMapping", i18n_t("%{value} not found in map.", value=value[20])
             )
             return ""
 
@@ -1107,7 +1107,7 @@ class Conditions:
         """
         if len(value) < 22:
             self.mapper.migration_report.add(
-                "DigitizationPolicyMapping", i18n.t("008 is too short") + f": {value}"
+                "DigitizationPolicyMapping", i18n_t("008 is too short") + f": {value}"
             )
             return ""
         try:
@@ -1119,7 +1119,7 @@ class Conditions:
             mapped_value = digitization_policies[value[21]]
             self.mapper.migration_report.add(
                 "DigitizationPolicyMapping",
-                i18n.t(
+                i18n_t(
                     "%{value} mapped to %{mapped_value}",
                     value=value[21],
                     mapped_value=mapped_value,
@@ -1128,6 +1128,6 @@ class Conditions:
             return mapped_value
         except Exception:
             self.mapper.migration_report.add(
-                "DigitizationPolicyMapping", i18n.t("%{value} not found in map.", value=value[21])
+                "DigitizationPolicyMapping", i18n_t("%{value} not found in map.", value=value[21])
             )
             return ""

@@ -11,7 +11,6 @@ import re
 import uuid
 from typing import Any
 
-import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
@@ -20,6 +19,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.acq_schema_resolver import (
     resolve_acq_schema,
@@ -523,7 +523,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if not self.is_valid_po_number(po_number):
             self.migration_report.add(
                 "PurchaseOrderVendorLinking",
-                i18n.t("RECORD FAILED: PO number has invalid character(s)"),
+                i18n_t("RECORD FAILED: PO number has invalid character(s)"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -563,7 +563,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if matching_org:
                 self.migration_report.add(
                     "PurchaseOrderVendorLinking",
-                    i18n.t("Organizations linked using organizations_id_map"),
+                    i18n_t("Organizations linked using organizations_id_map"),
                 )
                 return matching_org[1]
 
@@ -585,13 +585,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if matching_org:
             self.migration_report.add(
                 "PurchaseOrderVendorLinking",
-                i18n.t("Organizations not in ID map, linked using FOLIO lookup"),
+                i18n_t("Organizations not in ID map, linked using FOLIO lookup"),
             )
             return matching_org["id"]
         else:
             self.migration_report.add(
                 "PurchaseOrderVendorLinking",
-                i18n.t("RECORD FAILED Organization identifier not in ID map/FOLIO"),
+                i18n_t("RECORD FAILED Organization identifier not in ID map/FOLIO"),
             )
             raise TransformationRecordFailedError(
                 index_or_id,
@@ -603,13 +603,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if matching_instance := self.instance_id_map.get(bib_id):
             self.migration_report.add(
                 "PurchaseOrderInstanceLinking",
-                i18n.t("Instances linked using instances_id_map"),
+                i18n_t("Instances linked using instances_id_map"),
             )
             return matching_instance[1]
         else:
             self.migration_report.add(
                 "PurchaseOrderInstanceLinking",
-                i18n.t("Bib identifier not in instances_id_map, no instance linked"),
+                i18n_t("Bib identifier not in instances_id_map, no instance linked"),
             )
             Helper.log_data_issue(
                 index_or_id,

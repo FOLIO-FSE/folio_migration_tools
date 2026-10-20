@@ -14,7 +14,6 @@ import traceback
 import uuid
 from typing import Annotated, List, Optional
 
-import i18n
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
@@ -465,7 +464,7 @@ class ItemsTransformer(MigrationTaskBase):
                     self.mapper.handle_generic_exception(idx, exception)
                 self.mapper.migration_report.add(
                     "GeneralStatistics",
-                    i18n.t(
+                    i18n_t(
                         "Number of Legacy items in %{container}",
                         container=file_def.file_name,
                     ),

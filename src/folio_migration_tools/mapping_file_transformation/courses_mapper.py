@@ -7,11 +7,11 @@ term/department references.
 
 from typing import Any, Dict
 
-import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import LibraryConfiguration
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
@@ -90,13 +90,13 @@ class CoursesMapper(MappingFileMapperBase):
     def store_objects(self, composite_course):
         try:
             self.extradata_writer.write("courselisting", composite_course[0]["courselisting"])
-            self.migration_report.add_general_statistics(i18n.t("Stored courselistings"))
+            self.migration_report.add_general_statistics(i18n_t("Stored courselistings"))
             self.extradata_writer.write("course", composite_course[0]["course"])
-            self.migration_report.add_general_statistics(i18n.t("Stored courses"))
+            self.migration_report.add_general_statistics(i18n_t("Stored courses"))
             if "instructors" in composite_course[0] and any(composite_course[0]["instructors"]):
                 for instructor in composite_course[0]["instructors"]:
                     self.extradata_writer.write("instructor", instructor)
-                    self.migration_report.add_general_statistics(i18n.t("Stored instructors"))
+                    self.migration_report.add_general_statistics(i18n_t("Stored instructors"))
 
         except Exception as ee:
             raise TransformationRecordFailedError(
@@ -122,7 +122,7 @@ class CoursesMapper(MappingFileMapperBase):
                     if self.task_configuration.look_up_instructor:
                         self.populate_instructor_from_users(instructor)
             else:
-                self.migration_report.add_general_statistics(i18n.t("Missing Instructors"))
+                self.migration_report.add_general_statistics(i18n_t("Missing Instructors"))
 
             # Link course to courselisting
             composite_course[0]["course"]["courseListingId"] = composite_course[0][
