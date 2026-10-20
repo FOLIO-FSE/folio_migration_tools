@@ -118,3 +118,29 @@ def test_parameterized_calls_are_not_cached():
         result = i18n_t("Some key %{n}", n=n)
         assert result.params == {"n": n}
     assert get_i18n_cache_info().currsize == 0
+
+
+def test_adding_to_translated_str_keeps_parts():
+    from folio_migration_tools.i18n_cache import ComposedStr
+
+    left = i18n_t("Some key") + ": 42"
+    both = "prefix " + i18n_t("Some key") + " / " + i18n_t("Other key", n=1)
+    assert isinstance(left, ComposedStr)
+    assert str(left) == f"{i18n_t('Some key')}: 42"
+    assert [getattr(p, "key", p) for p in left.parts] == ["Some key", ": 42"]
+    assert [getattr(p, "key", p) for p in both.parts] == [
+        "prefix ",
+        "Some key",
+        " / ",
+        "Other key",
+    ]
+    assert isinstance(left + "x", ComposedStr)
+
+
+def test_composed_str_copies():
+    import copy
+    import pickle
+
+    value = i18n_t("Some key") + ": 1"
+    assert copy.deepcopy(value).parts == value.parts
+    assert pickle.loads(pickle.dumps(value)).parts == value.parts  # noqa: S301

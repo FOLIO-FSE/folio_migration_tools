@@ -43,9 +43,75 @@ class TranslatedStr(str):
         obj.params = params
         return obj
 
+    @property
+    def parts(self) -> tuple:
+        """A TranslatedStr is a single part."""
+        return (self,)
+
     def __getnewargs__(self):
         """Support copy and pickle, since __new__ needs the key and params."""
         return (str(self), self.key, self.params)
+
+    def __add__(self, other):
+        """Concatenate, returning a ComposedStr that keeps the translation key."""
+        if not isinstance(other, str):
+            return NotImplemented
+        return _compose(self, other)
+
+    def __radd__(self, other):
+        """Concatenate on the left, returning a ComposedStr that keeps the key."""
+        if not isinstance(other, str):
+            return NotImplemented
+        return _compose(other, self)
+
+
+def _parts_of(value) -> tuple:
+    """Return the translated/plain parts a string is made of."""
+    if isinstance(value, (TranslatedStr, ComposedStr)):
+        return value.parts
+    return (str(value),)
+
+
+def _compose(left, right) -> "ComposedStr":
+    parts = []
+    for part in _parts_of(left) + _parts_of(right):
+        if parts and type(part) is str and type(parts[-1]) is str:
+            parts[-1] += part
+        else:
+            parts.append(part)
+    return ComposedStr(str(left) + str(right), tuple(parts))
+
+
+class ComposedStr(str):
+    """Concatenation of translated and plain text that remembers its parts.
+
+    Created by adding to a TranslatedStr, e.g. ``i18n_t("Failed") + f": {reason}"``.
+    Each part is either a TranslatedStr (key and params) or a plain str, so the
+    report store can re-render the text in another locale.
+    """
+
+    parts: tuple
+
+    def __new__(cls, text: str, parts: tuple):
+        obj = super().__new__(cls, text)
+        obj.parts = parts
+        return obj
+
+    def __getnewargs__(self):
+        """Support copy and pickle, since __new__ needs the parts."""
+        return (str(self), self.parts)
+
+    def __add__(self, other):
+        """Concatenate, keeping the parts."""
+        if not isinstance(other, str):
+            return NotImplemented
+        return _compose(self, other)
+
+    def __radd__(self, other):
+        """Concatenate on the left, keeping the parts."""
+        if not isinstance(other, str):
+            return NotImplemented
+        return _compose(other, self)
 
 
 @lru_cache(maxsize=2048)

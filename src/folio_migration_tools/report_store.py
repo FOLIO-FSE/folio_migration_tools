@@ -35,7 +35,7 @@ CREATE TABLE report_stat (
     section_id TEXT NOT NULL,
     measure_key TEXT NOT NULL,
     params_json TEXT NOT NULL DEFAULT '{}',
-    translated INTEGER NOT NULL DEFAULT 1,
+    translated INTEGER NOT NULL DEFAULT 1,  -- 0 literal, 1 key, 2 composed parts
     count INTEGER NOT NULL,
     PRIMARY KEY (run_id, section_id, measure_key, params_json)
 );
@@ -127,6 +127,27 @@ def normalize_record_ref(value: Any) -> RecordRef:
     return RecordRef([text], "legacy_id", raw)
 
 
+def describe_text(value: Any) -> tuple:
+    """Return (key_or_text, params_json, translated) for a measure or issue message.
+
+    translated is 1 for a TranslatedStr (key + params), 2 for a ComposedStr (the
+    params_json holds its parts, each a translation key or literal text), and 0
+    for plain text, which is stored as is.
+    """
+    parts = getattr(value, "parts", None)
+    key = getattr(value, "key", None)
+    if key:
+        params = getattr(value, "params", None)
+        return key, json.dumps(params, sort_keys=True, default=str) if params else None, 1
+    if parts is not None:
+        encoded = [
+            {"key": p.key, "params": p.params} if getattr(p, "key", None) else {"text": str(p)}
+            for p in parts
+        ]
+        return str(value), json.dumps({"parts": encoded}, sort_keys=True, default=str), 2
+    return str(value), None, 0
+
+
 class ReportStore:
     """Owns the SQLite connection and buffers writes for one task run."""
 
@@ -202,17 +223,9 @@ class ReportStore:
             for measure, count in measures.items():
                 if measure == "blurb_id":
                     continue
-                key = getattr(measure, "key", None)
-                params = getattr(measure, "params", None)
+                text, params_json, translated = describe_text(measure)
                 rows.append(
-                    (
-                        self.run_id,
-                        section_id,
-                        key or str(measure),
-                        json.dumps(params or {}, sort_keys=True, default=str),
-                        1 if key else 0,
-                        count,
-                    )
+                    (self.run_id, section_id, text, params_json or "{}", translated, count)
                 )
         self.conn.executemany(
             "INSERT INTO report_stat (run_id, section_id, measure_key, params_json,"
@@ -234,8 +247,7 @@ class ReportStore:
         ts: str = "",
     ):
         ref = normalize_record_ref(record)
-        key = getattr(message, "key", None)
-        params = getattr(message, "params", None)
+        text, params_json, translated = describe_text(message)
         self._issue_buffer.append(
             (
                 self.run_id,
@@ -244,9 +256,9 @@ class ReportStore:
                 ref.kind,
                 ref.raw if ref.raw != ref.primary else None,
                 issue_type,
-                key or str(message),
-                json.dumps(params, sort_keys=True, default=str) if params else None,
-                1 if key else 0,
+                text,
+                params_json,
+                translated,
                 None if legacy_value is None else str(legacy_value),
                 location_kind,
                 location_path,
