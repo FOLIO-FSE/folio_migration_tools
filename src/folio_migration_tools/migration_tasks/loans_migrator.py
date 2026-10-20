@@ -605,7 +605,7 @@ class LoansMigrator(MigrationTaskBase):
                 self.migration_report.add_general_statistics(i18n_t("Loans failed pre-validation"))
                 self.migration_report.add(
                     "DiscardedLoans",
-                    f"{i18n_t(trfe.message)} - " + i18n_t("see data issues log"),
+                    i18n_t(trfe.message) + " - " + i18n_t("see data issues log"),
                 )
                 trfe.log_it()
                 self.failed[

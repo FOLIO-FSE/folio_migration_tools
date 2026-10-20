@@ -1,5 +1,6 @@
 """Tests for the SQLite report store and TranslatedStr."""
 
+import json
 import sqlite3
 
 import pytest
@@ -107,3 +108,22 @@ def test_helper_without_active_store_does_not_fail():
 def test_store_requires_existing_folder(tmp_path):
     with pytest.raises(FileNotFoundError):
         ReportStore(tmp_path / "missing" / "m.sqlite")
+
+
+def test_composed_text_round_trip(tmp_path):
+    store = ReportStore(tmp_path / "m.sqlite")
+    store.start_run("t")
+    composed = i18n_t("Unmapped code") + ": 'x'"
+    store.write_report_stats({"S": {composed: 3, "plain": 1}})
+    store.add_issue("WARNING", "id1", composed, "v")
+    store.finish_run("now")
+    stat = store.conn.execute(
+        "SELECT translated, params_json, count FROM report_stat WHERE measure_key = ?",
+        (str(composed),),
+    ).fetchone()
+    assert stat[0] == 2 and stat[2] == 3
+    parts = json.loads(stat[1])["parts"]
+    assert parts[0]["key"] == "Unmapped code" and parts[1] == {"text": ": 'x'"}
+    issue = store.conn.execute("SELECT translated, params_json FROM data_issue").fetchone()
+    assert issue[0] == 2 and json.loads(issue[1])["parts"] == parts
+    store.close()
