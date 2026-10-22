@@ -27,6 +27,7 @@ class DummyLegacyRequest:
         self.pickup_servicepoint_id = pickup_servicepoint_id
         self.request_date = 1
         self.row = 1
+        self.source_file = ""
 
     def to_source_dict(self):
         return {

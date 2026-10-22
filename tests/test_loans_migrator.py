@@ -169,6 +169,7 @@ class DummyLegacyLoan:
         self.patron_barcode = patron_barcode
         self.proxy_patron_barcode = proxy_patron_barcode
         self.row = row
+        self.source_file = ""
         self.legacy_loan_dict = {"item_barcode": item_barcode}
         self.to_dict = lambda: {
             "item_barcode": self.item_barcode,

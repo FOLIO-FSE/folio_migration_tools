@@ -446,3 +446,23 @@ def test_capture_row_file_index_links_barcode_issues(tmp_path):
     finally:
         set_active_store(None)
         store.close()
+
+
+def test_same_row_index_in_different_files_is_not_merged(tmp_path):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        for name in ("a.tsv", "b.tsv"):
+            capture_row(3, name, {"item_barcode": name}, kind="file_index")
+            store.add_issue("DATA ISSUE", "", "m", "v")
+        store.flush()
+        rows = store.conn.execute(
+            "SELECT source_file, payload FROM legacy_record ORDER BY source_file"
+        ).fetchall()
+        assert rows == [("a.tsv", b'{"item_barcode": "a.tsv"}'), ("b.tsv", b'{"item_barcode": "b.tsv"}')]
+    finally:
+        set_active_store(None)
+        store.close()
