@@ -5,13 +5,14 @@ replaces the database, mirroring how the report and log files are overwritten.
 """
 
 import ast
+import hashlib
 import json
 import logging
 import sqlite3
 import weakref
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -164,8 +165,9 @@ class ReportStore:
         self.conn.executescript(SCHEMA)
         self.conn.execute("INSERT INTO schema_info (version) VALUES (?)", (SCHEMA_VERSION,))
         self.conn.commit()
-        self.run_id: Optional[int] = None
+        self.run_id: int | None = None
         self._issue_buffer: list = []
+        self._current: dict | None = None
         self._reports: "weakref.WeakSet" = weakref.WeakSet()
         self.closed = False
 
@@ -193,7 +195,7 @@ class ReportStore:
         started: str = "",
         tool_version: str = "",
         locale: str = "",
-        config: Optional[dict] = None,
+        config: dict | None = None,
     ) -> int:
         cur = self.conn.execute(
             "INSERT INTO run (task_name, task_type, started, tool_version, locale_at_run,"
@@ -236,22 +238,89 @@ class ReportStore:
         )
         self.conn.commit()
 
+    def set_current_record(
+        self,
+        record_id: Any,
+        source_file: str = "",
+        source_index: int = 0,
+        format: str = "",
+        payload_getter: Callable[[], Any] | None = None,
+    ):
+        """Mark the record being processed. Nothing is written until an issue is logged.
+
+        payload_getter is called lazily, once, when the first issue for this record
+        is added, so clean records cost only this pointer assignment.
+        """
+        self._current = {
+            "ref": normalize_record_ref(record_id),
+            "source_file": str(source_file),
+            "source_index": source_index,
+            "format": format,
+            "getter": payload_getter,
+            "pk": None,
+        }
+
+    def clear_current_record(self):
+        self._current = None
+
+    def _current_record_pk(self) -> int | None:
+        cur = self._current
+        if cur is None:
+            return None
+        if cur["pk"] is None:
+            payload = cur["getter"]() if cur["getter"] else None
+            if isinstance(payload, str):
+                payload = payload.encode("utf-8")
+            ids = sorted(cur["ref"].ids)
+            row = self.conn.execute(
+                "INSERT INTO legacy_record (run_id, record_id, record_id_kind, source_file,"
+                " source_index, format, payload, payload_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                " ON CONFLICT (run_id, source_file, source_index) DO UPDATE SET"
+                " record_id = excluded.record_id RETURNING record_pk",
+                (
+                    self.run_id,
+                    ids[0] if ids else "",
+                    cur["ref"].kind,
+                    cur["source_file"],
+                    cur["source_index"],
+                    cur["format"],
+                    payload,
+                    hashlib.sha256(payload).hexdigest() if payload else None,
+                ),
+            ).fetchone()
+            cur["pk"] = row[0]
+            if len(ids) > 1:
+                self.conn.executemany(
+                    "INSERT INTO record_alias (record_pk, legacy_id) VALUES (?, ?)",
+                    [(cur["pk"], i) for i in ids],
+                )
+        return cur["pk"]
+
     def add_issue(
         self,
         issue_type: str,
         record: Any,
         message: Any,
         legacy_value: Any,
-        location_kind: Optional[str] = None,
-        location_path: Optional[str] = None,
+        location_kind: str | None = None,
+        location_path: str | None = None,
         ts: str = "",
     ):
         ref = normalize_record_ref(record)
+        record_pk = None
+        if self._current is not None:
+            current_ids = set(self._current["ref"].ids)
+            if not ref.ids:
+                ref = self._current["ref"]
+            if set(ref.ids) & current_ids:
+                record_pk = self._current_record_pk()
+        if len(ref.ids) > 1:
+            ref = RecordRef(sorted(ref.ids), ref.kind, ref.raw)
         text, params_json, translated = describe_text(message)
         self._issue_buffer.append(
             (
                 self.run_id,
-                None,
+                record_pk,
                 ref.primary,
                 ref.kind,
                 ref.raw if ref.raw != ref.primary else None,
@@ -288,16 +357,16 @@ class ReportStore:
         self.closed = True
 
 
-_active_store: Optional[ReportStore] = None
+_active_store: ReportStore | None = None
 
 
-def set_active_store(store: Optional[ReportStore]):
+def set_active_store(store: ReportStore | None):
     """Set the store used by MigrationReport and Helper.log_data_issue."""
     global _active_store
     _active_store = store
 
 
-def get_active_store() -> Optional[ReportStore]:
+def get_active_store() -> ReportStore | None:
     """Return the active store, or None if the current run does not persist reports."""
     if _active_store is not None and not _active_store.closed:
         return _active_store
