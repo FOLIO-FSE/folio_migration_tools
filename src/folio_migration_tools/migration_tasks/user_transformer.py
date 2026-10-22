@@ -303,7 +303,7 @@ class UserTransformer(MigrationTaskBase):
             elif len(primary_true) > 1:
                 Helper.log_data_issue(
                     index_or_id,
-                    "Too many addresses mapped as primary. Setting first one to primary.",
+                    i18n_t("Too many addresses mapped as primary. Setting first one to primary."),
                     primary_true,
                 )
                 for pt in primary_true[1:]:
@@ -343,7 +343,7 @@ def remove_addresses_missing_type_id(addresses, index_or_id):
         if normalized_type_id is None:
             Helper.log_data_issue(
                 index_or_id,
-                "personal.addresses.addressTypeId is required. Discarding address.",
+                i18n_t("personal.addresses.addressTypeId is required. Discarding address."),
                 address,
             )
             continue
@@ -360,9 +360,9 @@ def remove_duplicate_address_types(addresses, index_or_id):
         if address_type_id in seen_type_ids:
             Helper.log_data_issue(
                 index_or_id,
-                (
-                    "Duplicate personal.addresses.addressTypeId detected. "
-                    "Discarding duplicate address."
+                i18n_t(
+                    "Duplicate personal.addresses.addressTypeId detected. Discarding duplicate "
+                    "address."
                 ),
                 {
                     "addressTypeId": address_type_id,

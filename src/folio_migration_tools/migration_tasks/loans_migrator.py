@@ -758,9 +758,11 @@ class LoansMigrator(MigrationTaskBase):
             if self.deactivate_user(user, original_expiration_date):
                 logger.debug("Successfully Deactivated user again")
             else:
-                detail = (
-                    f"User {user.get('id')} was activated for checkout and could not be "
-                    f"deactivated. Original expirationDate: {original_expiration_date or 'none'}"
+                detail = i18n_t(
+                    "User %{user_id} was activated for checkout and could not be deactivated. "
+                    "Original expirationDate: %{expiration}",
+                    user_id=user.get("id"),
+                    expiration=original_expiration_date or "none",
                 )
                 Helper.log_data_issue(legacy_loan.patron_barcode, detail, user.get("id"))
                 self.add_followup(

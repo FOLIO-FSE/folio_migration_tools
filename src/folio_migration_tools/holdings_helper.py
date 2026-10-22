@@ -120,12 +120,16 @@ class HoldingsHelper:
                         holdings_type_id_to_exclude_from_merging,
                     )
                     if stored_key in prev_holdings:
-                        message = (
-                            f"Previously stored holdings key from {holdings_file_path.name}"
-                            f" already exists in the previously stored Holdings. Either the"
-                            f" files share holdings for the same key, or you have not used the"
-                            f" same matching criterias ({fields_criteria}) as you did in the"
-                            f" previous process. Records merged"
+                        message = i18n_t(
+                            "Previously stored holdings key from %{file} already exists in the "
+                            "previously "
+                            "stored Holdings. Either the files share holdings for the same key, "
+                            "or you have "
+                            "not used the same matching criterias (%{criteria}) as you did in "
+                            "the previous "
+                            "process. Records merged",
+                            file=holdings_file_path.name,
+                            criteria=fields_criteria,
                         )
                         helper.Helper.log_data_issue(
                             stored_holding["formerIds"], message, stored_key

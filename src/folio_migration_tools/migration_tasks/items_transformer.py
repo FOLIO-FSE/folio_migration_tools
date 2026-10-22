@@ -624,7 +624,7 @@ class ItemsTransformer(MigrationTaskBase):
                 if mfhd_id not in self.mapper.holdings_id_map:
                     Helper.log_data_issue_failed(
                         item_legacy_id,
-                        "Holdings for boundwith relationship not found in holdings id map",
+                        i18n_t("Holdings for boundwith relationship not found in holdings id map"),
                         mfhd_id,
                     )
                     removed_count += 1

@@ -266,6 +266,10 @@ class ReportStore:
                 rows.append(
                     (self.run_id, section_id, text, params_json or "{}", translated, count)
                 )
+        if logger.isEnabledFor(logging.DEBUG):
+            for row in rows:
+                if not row[4]:
+                    logger.debug("Untranslated report measure in %s: %r", row[1], row[2])
         self.conn.executemany(
             "INSERT INTO report_stat (run_id, section_id, measure_key, params_json,"
             " translated, count) VALUES (?, ?, ?, ?, ?, ?)"
@@ -508,6 +512,9 @@ class ReportStore:
 
     def flush(self):
         if self._issue_buffer:
+            if logger.isEnabledFor(logging.DEBUG):
+                for text in {r[6] for r in self._issue_buffer if not r[8]}:
+                    logger.debug("Untranslated data issue message: %r", text)
             self.conn.executemany(
                 "INSERT INTO data_issue (run_id, record_pk, record_id, record_id_kind,"
                 " record_id_raw, issue_type, message_key, params_json, translated,"

@@ -240,7 +240,7 @@ class HRIDHandler:
             )
             Helper.log_data_issue(
                 legacy_ids,
-                "Duplicate 001 for record. HRID created for record",
+                i18n_t("Duplicate 001 for record. HRID created for record"),
                 value,
                 marc_location("001"),
             )

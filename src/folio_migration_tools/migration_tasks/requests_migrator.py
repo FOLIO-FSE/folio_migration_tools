@@ -205,7 +205,7 @@ class RequestsMigrator(MigrationTaskBase):
             logger.error(f"No user with barcode {legacy_request.patron_barcode} found in FOLIO")
             Helper.log_data_issue(
                 f"{legacy_request.patron_barcode}",
-                "No user with barcode.",
+                i18n_t("No user with barcode."),
                 f"{legacy_request.patron_barcode}",
             )
             self.migration_report.add_general_statistics(
@@ -224,7 +224,7 @@ class RequestsMigrator(MigrationTaskBase):
             )
             Helper.log_data_issue(
                 f"{legacy_request.item_barcode}",
-                "No item with barcode",
+                i18n_t("No item with barcode"),
                 f"{legacy_request.item_barcode}",
             )
             self.failed_requests.add(legacy_request)
@@ -511,13 +511,13 @@ class RequestsMigrator(MigrationTaskBase):
             if not has_item_barcode:
                 Helper.log_data_issue(
                     "",
-                    "Request without matched item barcode",
+                    i18n_t("Request without matched item barcode"),
                     json.dumps(request.to_source_dict()),
                 )
             if not has_patron_barcode:
                 Helper.log_data_issue(
                     "",
-                    "Request without matched patron barcode",
+                    i18n_t("Request without matched patron barcode"),
                     json.dumps(request.to_source_dict()),
                 )
         clear_current_record()

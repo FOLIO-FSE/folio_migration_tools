@@ -223,7 +223,7 @@ class Conditions:
                 )
                 Helper.log_data_issue(
                     legacy_id,
-                    f"Mapping failed for ${contributor_code_subfield}",
+                    i18n_t("Mapping failed for $%{subfield}", subfield=contributor_code_subfield),
                     f'{subfield}" ({normalized_subfield}) ',
                     marc_location(marc_field.tag, contributor_code_subfield),
                 )
@@ -260,7 +260,11 @@ class Conditions:
                 )
                 Helper.log_data_issue(
                     legacy_id,
-                    f"Mapping failed for {marc_field.tag} ${contributor_name_subfield}",
+                    i18n_t(
+                        "Mapping failed for %{tag} $%{subfield}",
+                        tag=marc_field.tag,
+                        subfield=contributor_name_subfield,
+                    ),
                     f'{subfield}" ({normalized_subfield}) ',
                     marc_location(marc_field.tag, contributor_name_subfield),
                 )
@@ -540,7 +544,7 @@ class Conditions:
                 )
                 Helper.log_data_issue(
                     legacy_id,
-                    "Mapping failed for $4",
+                    i18n_t("Mapping failed for $4"),
                     f'{subfield}" ({normalized_subfield}) ',
                     marc_location(marc_field.tag, "4"),
                 )
@@ -575,7 +579,7 @@ class Conditions:
                 )
                 Helper.log_data_issue(
                     legacy_id,
-                    f"Mapping failed for {marc_field.tag} $e",
+                    i18n_t("Mapping failed for %{tag} $e", tag=marc_field.tag),
                     f'{subfield}" ({normalized_subfield}) ',
                     marc_location(marc_field.tag, "e"),
                 )

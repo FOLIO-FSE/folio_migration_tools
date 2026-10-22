@@ -94,8 +94,12 @@ class LegacyLoan(object):
                 temp_date_due = temp_date_due.replace(tzinfo=self.tenant_timezone)
                 Helper.log_data_issue(
                     self.row,
-                    f"Provided due_date is not UTC in {row=}, "
-                    f"setting tz-info to tenant timezone ({self.tenant_timezone})",
+                    i18n_t(
+                        "Provided due_date is not UTC in row=%{row}, setting tz-info to tenant "
+                        "timezone (%{timezone})",
+                        row=row,
+                        timezone=self.tenant_timezone,
+                    ),
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(
@@ -109,8 +113,11 @@ class LegacyLoan(object):
                 temp_date_due = temp_date_due.replace(hour=23, minute=59)
                 Helper.log_data_issue(
                     self.row,
-                    f"Hour and minute not specified for due date in {row=}. "
-                    "Assuming end of local calendar day (23:59)...",
+                    i18n_t(
+                        "Hour and minute not specified for due date in row=%{row}. "
+                        "Assuming end of local calendar day (23:59)...",
+                        row=row,
+                    ),
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(i18n_t("Hour and minute not specified for due date"))
@@ -127,8 +134,12 @@ class LegacyLoan(object):
                 temp_date_out = temp_date_out.replace(tzinfo=self.tenant_timezone)
                 Helper.log_data_issue(
                     self.row,
-                    f"Provided out_date is not UTC in {row=}, "
-                    f"setting tz-info to tenant timezone ({self.tenant_timezone})",
+                    i18n_t(
+                        "Provided out_date is not UTC in row=%{row}, setting tz-info to tenant "
+                        "timezone (%{timezone})",
+                        row=row,
+                        timezone=self.tenant_timezone,
+                    ),
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(
@@ -173,13 +184,13 @@ class LegacyLoan(object):
             except ValueError:
                 Helper.log_data_issue(
                     self.row,
-                    "Unresolvable renewal_count was replaced with 0.",
+                    i18n_t("Unresolvable renewal_count was replaced with 0."),
                     json.dumps(loan),
                 )
         else:
             Helper.log_data_issue(
                 self.row,
-                "Missing renewal count was replaced with 0.",
+                i18n_t("Missing renewal count was replaced with 0."),
                 json.dumps(loan),
             )
         return 0
@@ -197,7 +208,7 @@ class LegacyLoan(object):
             if self.allow_due_date_before_out_date:
                 Helper.log_data_issue(
                     self.row,
-                    "Due date is before out date. Legacy dates will be kept",
+                    i18n_t("Due date is before out date. Legacy dates will be kept"),
                     json.dumps(self.legacy_loan_dict),
                 )
                 self.report(i18n_t("Due date is before out date. Legacy dates will be kept"))

@@ -373,7 +373,9 @@ class OrganizationTransformer(MigrationTaskBase):
                 )
                 Helper.log_data_issue(
                     f"{record['code']}",
-                    f"INTERFACE FAILED Malformed interface URI: {interface['uri']}",
+                    i18n_t(
+                        "INTERFACE FAILED Malformed interface URI: %{uri}", uri=interface["uri"]
+                    ),
                     interface,
                 )
 
@@ -448,7 +450,10 @@ class OrganizationTransformer(MigrationTaskBase):
             )
             Helper.log_data_issue(
                 f"{self.legacy_id}",
-                f"Identical {extradata_object_type} objects found in multiple organizations",
+                i18n_t(
+                    "Identical %{object_type} objects found in multiple organizations",
+                    object_type=extradata_object_type,
+                ),
                 embedded_object,
             )
 
