@@ -15,6 +15,7 @@ from hashlib import sha1
 from os.path import isfile
 from typing import Annotated, List, Optional
 
+from folio_migration_tools.report_store import capture_row
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
@@ -221,6 +222,7 @@ class OrganizationTransformer(MigrationTaskBase):
             start = time.time()
             records_processed = 0
             for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
+                capture_row(idx, filename, record)
                 records_processed += 1
                 try:
                     if idx == 0:

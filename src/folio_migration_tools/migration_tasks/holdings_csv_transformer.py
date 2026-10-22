@@ -18,6 +18,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from httpx import HTTPError
 from pydantic import Field
 
+from folio_migration_tools.report_store import capture_row
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -481,6 +482,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             start = time.time()
             records_processed = 0
             for idx, legacy_record in enumerate(self.mapper.get_objects(records_file, full_path)):
+                capture_row(idx, full_path, legacy_record)
                 records_processed = idx + 1
                 try:
                     self.mapper.verify_legacy_record(legacy_record, idx)

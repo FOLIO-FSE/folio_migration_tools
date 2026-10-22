@@ -148,3 +148,41 @@ def test_current_record_captured_lazily_once(tmp_path):
     pks = [r[0] for r in store.conn.execute("SELECT record_pk FROM data_issue ORDER BY id")]
     assert pks[0] == pks[1] and pks[2] is None
     store.close()
+
+
+def test_marc_processor_sets_current_record(tmp_path):
+    from unittest.mock import Mock
+
+    from pymarc import Field, Record, Subfield
+
+    from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
+        MarcFileProcessor,
+    )
+    from folio_migration_tools.report_store import set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        record = Record()
+        record.add_field(Field(tag="001", data="x1"))
+        record.add_field(Field(tag="245", indicators=[" ", " "], subfields=[Subfield("a", "t")]))
+        proc = MarcFileProcessor.__new__(MarcFileProcessor)
+        proc.records_count = 0
+        proc.mapper = Mock()
+        proc.mapper.get_legacy_ids.return_value = ["x1"]
+        proc.mapper.parse_record.return_value = []
+        proc.legacy_ids = set()
+        proc.failed_records_count = 0
+        proc.exit_on_too_many_exceptions = Mock()
+        file_def = Mock(file_name="f.mrc")
+        proc.process_record(4, record, file_def)
+        store.add_issue("warning", ["x1"], "msg", "v")
+        store.flush()
+        row = store.conn.execute(
+            "SELECT record_id, source_file, source_index, format FROM legacy_record"
+        ).fetchone()
+        assert row == ("x1", "f.mrc", 4, "marc")
+    finally:
+        set_active_store(None)
+        store.close()

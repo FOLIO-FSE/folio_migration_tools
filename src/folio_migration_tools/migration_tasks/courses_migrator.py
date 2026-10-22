@@ -12,6 +12,7 @@ import time
 import traceback
 from typing import Annotated, Optional
 
+from folio_migration_tools.report_store import capture_row
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
@@ -154,6 +155,7 @@ class CoursesMigrator(MigrationTaskBase):
         start = time.time()
         with open(full_path, encoding="utf-8-sig") as records_file:
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
+                capture_row(idx, full_path, record)
                 try:
                     if idx == 0:
                         logger.info("First legacy record:")

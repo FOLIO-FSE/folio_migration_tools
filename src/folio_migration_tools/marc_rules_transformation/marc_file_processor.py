@@ -27,6 +27,7 @@ from folio_migration_tools.marc_rules_transformation.rules_mapper_base import (
     RulesMapperBase,
 )
 from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_store import get_active_store
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,12 @@ class MarcFileProcessor:
         folio_recs = []
         ids_added_to_map: List[str] = []
         self.records_count += 1
+        store = get_active_store()
+        file_index = idx
+        if store:
+            store.set_current_record(
+                idx, file_def.file_name, file_index, "marc", marc_record.as_marc
+            )
         try:
             # Transform the MARC21 to a FOLIO record
             try:
@@ -96,6 +103,10 @@ class MarcFileProcessor:
             if not legacy_ids:
                 raise TransformationRecordFailedError(
                     f"Index in file: {idx}", "No legacy id found", idx
+                )
+            if store:
+                store.set_current_record(
+                    legacy_ids, file_def.file_name, file_index, "marc", marc_record.as_marc
                 )
             folio_recs = self.mapper.parse_record(marc_record, file_def, legacy_ids)
             for idx, folio_rec in enumerate(folio_recs):

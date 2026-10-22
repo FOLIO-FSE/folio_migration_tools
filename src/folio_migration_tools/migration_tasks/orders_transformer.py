@@ -16,6 +16,7 @@ from deepdiff import DeepDiff
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
+from folio_migration_tools.report_store import capture_row
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -254,6 +255,7 @@ class OrdersTransformer(MigrationTaskBase):
             start = time.time()
             records_processed = 0
             for idx, record in enumerate(self.mapper.get_objects(records_file, filename)):
+                capture_row(idx, filename, record)
                 records_processed += 1
 
                 try:

@@ -19,6 +19,7 @@ from typing import Any, Dict, List, Set
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 
+from folio_migration_tools.report_store import get_active_store
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -376,6 +377,9 @@ class MappingFileMapperBase(MapperBase):
         folio_object, legacy_id = self.instantiate_record(
             legacy_object, index_or_id, object_type, accept_duplicate_ids
         )
+        store = get_active_store()
+        if store:
+            store.add_current_ids(legacy_id)
         for property_name, property in self.schema["properties"].items():
             try:
                 self.map_property(property_name, property, folio_object, legacy_id, legacy_object)
