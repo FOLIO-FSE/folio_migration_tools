@@ -10,7 +10,9 @@ import json
 import logging
 import sqlite3
 import weakref
+import zlib
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
 
@@ -48,6 +50,28 @@ CREATE TABLE mapping_stat (
     present INTEGER,  -- legacy side only: records where the field was present
     mapped INTEGER NOT NULL,  -- records where the field was mapped
     PRIMARY KEY (run_id, side, field_name)
+);
+CREATE TABLE reference_content (
+    sha256 TEXT PRIMARY KEY,
+    content BLOB NOT NULL  -- zlib-compressed bytes of the file, as it was read
+);
+CREATE TABLE reference_file (
+    ref_pk INTEGER PRIMARY KEY,
+    run_id INTEGER NOT NULL REFERENCES run(run_id),
+    role TEXT NOT NULL,  -- what the file was used for, e.g. a FOLIO property or 'mapping'
+    path TEXT NOT NULL,
+    sha256 TEXT NOT NULL REFERENCES reference_content(sha256),
+    size INTEGER NOT NULL,
+    format TEXT,  -- 'tsv' or 'json'
+    header_json TEXT,
+    captured_at TEXT,
+    UNIQUE (run_id, role, path)
+);
+CREATE TABLE reference_row (
+    ref_pk INTEGER NOT NULL REFERENCES reference_file(ref_pk),
+    row_index INTEGER NOT NULL,
+    row_json TEXT NOT NULL,
+    PRIMARY KEY (ref_pk, row_index)
 );
 CREATE TABLE legacy_record (
     record_pk INTEGER PRIMARY KEY,
@@ -271,6 +295,52 @@ class ReportStore:
         )
         self.conn.commit()
 
+    def capture_reference_file(
+        self, role: str, path: Path, rows: list[dict] | None = None, captured_at: str = ""
+    ):
+        """Snapshot a reference data file as it was when the task used it.
+
+        The raw bytes are stored once per distinct content (compressed). For delimited
+        files, pass the parsed rows to make the content queryable.
+        """
+        path = Path(path)
+        data = path.read_bytes()
+        digest = hashlib.sha256(data).hexdigest()
+        header = list(rows[0].keys()) if rows else None
+        self.conn.execute(
+            "INSERT OR IGNORE INTO reference_content (sha256, content) VALUES (?, ?)",
+            (digest, zlib.compress(data)),
+        )
+        self.conn.execute(
+            "DELETE FROM reference_row WHERE ref_pk IN"
+            " (SELECT ref_pk FROM reference_file WHERE run_id = ? AND role = ? AND path = ?)",
+            (self.run_id, role, str(path)),
+        )
+        self.conn.execute(
+            "INSERT OR REPLACE INTO reference_file (run_id, role, path, sha256, size, format,"
+            " header_json, captured_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                self.run_id,
+                role,
+                str(path),
+                digest,
+                len(data),
+                "tsv" if rows is not None else path.suffix.lstrip(".").lower(),
+                json.dumps(header) if header is not None else None,
+                captured_at,
+            ),
+        )
+        if rows:
+            ref_pk = self.conn.execute(
+                "SELECT ref_pk FROM reference_file WHERE run_id = ? AND role = ? AND path = ?",
+                (self.run_id, role, str(path)),
+            ).fetchone()[0]
+            self.conn.executemany(
+                "INSERT INTO reference_row (ref_pk, row_index, row_json) VALUES (?, ?, ?)",
+                [(ref_pk, i, json.dumps(row)) for i, row in enumerate(rows)],
+            )
+        self.conn.commit()
+
     def set_current_record(
         self,
         record_id: Any,
@@ -432,6 +502,17 @@ def marc_location(
     elif span is not None:
         path += f"/{span}"
     return "marc", path
+
+
+def capture_reference_file(role: str, path: Path, rows: list[dict] | None = None):
+    """Snapshot a reference file into the active store. Never raises."""
+    if store := get_active_store():
+        try:
+            store.capture_reference_file(
+                role, path, rows, captured_at=datetime.now(timezone.utc).isoformat()
+            )
+        except Exception as ex:  # a reporting failure must not stop a migration
+            logger.warning("Could not store reference file %s: %s", path, ex)
 
 
 def iter_fields(marc_record):

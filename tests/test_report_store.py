@@ -269,3 +269,46 @@ def test_print_mapping_report_stores_mapping_stats(tmp_path):
     finally:
         set_active_store(None)
         store.close()
+
+
+def test_reference_files_are_snapshotted_and_deduplicated(tmp_path):
+    import csv
+    import zlib
+
+    from folio_migration_tools.migration_tasks.migration_task_base import MigrationTaskBase
+    from folio_migration_tools.report_store import set_active_store
+
+    csv.register_dialect("tsv", delimiter="\t")
+    tsv = tmp_path / "locations.tsv"
+    tsv.write_text("legacy_code\tfolio_code\nmain\tMAIN\nbranch\tBR\n")
+    mapping = tmp_path / "item_mapping.json"
+    mapping.write_text('{"data": []}')
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        rows = MigrationTaskBase.load_ref_data_mapping_file("permanentLocationId", tsv, [])
+        MigrationTaskBase.load_ref_data_mapping_file("temporaryLocationId", tsv, [], True)
+        store.capture_reference_file("mapping", mapping)
+        files = store.conn.execute(
+            "SELECT role, format, header_json, size FROM reference_file ORDER BY role"
+        ).fetchall()
+        assert files == [
+            ("mapping", "json", None, len(b'{"data": []}')),
+            ("permanentLocationId", "tsv", '["legacy_code", "folio_code"]', tsv.stat().st_size),
+            ("temporaryLocationId", "tsv", '["legacy_code", "folio_code"]', tsv.stat().st_size),
+        ]
+        assert store.conn.execute("SELECT COUNT(*) FROM reference_content").fetchone()[0] == 2
+        content = store.conn.execute(
+            "SELECT content FROM reference_content WHERE sha256 = (SELECT sha256 FROM"
+            " reference_file WHERE role = 'permanentLocationId')"
+        ).fetchone()[0]
+        assert zlib.decompress(content) == tsv.read_bytes()
+        stored = store.conn.execute(
+            "SELECT row_json FROM reference_row r JOIN reference_file f USING (ref_pk)"
+            " WHERE f.role = 'permanentLocationId' ORDER BY row_index"
+        ).fetchall()
+        assert [json.loads(r[0]) for r in stored] == rows
+    finally:
+        set_active_store(None)
+        store.close()

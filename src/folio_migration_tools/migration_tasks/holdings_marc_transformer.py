@@ -16,6 +16,7 @@ from pydantic import Field
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
+from folio_migration_tools.report_store import capture_reference_file
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     HridHandling,
@@ -300,6 +301,7 @@ class HoldingsMarcTransformer(MigrationTaskBase):
         )
         with open(location_map_path) as location_map_file:
             self.location_map = list(csv.DictReader(location_map_file, dialect="tsv"))
+            capture_reference_file("locationMap", location_map_path, self.location_map)
             logger.info("Locations in map: %s", len(self.location_map))
 
         self.check_source_files(
