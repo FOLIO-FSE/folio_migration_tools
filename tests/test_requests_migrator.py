@@ -26,6 +26,7 @@ class DummyLegacyRequest:
         self.patron_barcode = patron_barcode
         self.pickup_servicepoint_id = pickup_servicepoint_id
         self.request_date = 1
+        self.row = 1
 
     def to_source_dict(self):
         return {

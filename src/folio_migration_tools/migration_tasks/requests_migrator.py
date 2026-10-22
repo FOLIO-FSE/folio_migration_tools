@@ -27,6 +27,7 @@ from folio_migration_tools.circulation_prevalidation import (
 from folio_migration_tools.custom_dict import InsensitiveDictReader
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.report_store import capture_row, clear_current_record
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -254,6 +255,12 @@ class RequestsMigrator(MigrationTaskBase):
             start=1,
         ):
             t0_migration = time.time()
+            capture_row(
+                legacy_request.row,
+                "requests file",
+                legacy_request.to_source_dict(),
+                kind="file_index",
+            )
             try:
                 res, legacy_request = self.prepare_legacy_request(legacy_request)
                 if res:
@@ -288,6 +295,7 @@ class RequestsMigrator(MigrationTaskBase):
                 sys.exit(1)
             if num_requests % 10 == 0:
                 logger.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
+        clear_current_record()
         if num_requests > 0:
             logger.info(f"{timings(self.t0, t0_migration, num_requests)} {num_requests}")
         else:
@@ -469,6 +477,7 @@ class RequestsMigrator(MigrationTaskBase):
         await self.pre_validate_patron_barcodes_async()
         request: LegacyRequest
         for request in self.semi_valid_legacy_requests:
+            capture_row(request.row, "requests file", request.to_source_dict(), kind="file_index")
             has_item_barcode = request.item_barcode in self.valid_item_barcodes
             has_patron_barcode = request.patron_barcode in self.valid_patron_map
             if has_item_barcode and has_patron_barcode:
@@ -505,12 +514,16 @@ class RequestsMigrator(MigrationTaskBase):
                     "Request without matched patron barcode",
                     json.dumps(request.to_source_dict()),
                 )
+        clear_current_record()
 
     def load_and_validate_legacy_requests(self, requests_reader):
         num_bad = 0
         logger.info("Validating legacy requests in file...")
         for legacy_reques_count, legacy_request_dict in enumerate(requests_reader, start=1):
             self.migration_report.add_general_statistics(i18n_t("Requests in file"))
+            capture_row(
+                legacy_reques_count, "requests file", legacy_request_dict, kind="file_index"
+            )
             try:
                 legacy_request = LegacyRequest(
                     legacy_request_dict,
@@ -538,6 +551,7 @@ class RequestsMigrator(MigrationTaskBase):
                     yield legacy_request
             except ValueError as ve:
                 logger.exception(ve)
+        clear_current_record()
         logger.info(
             f"Done validating {legacy_reques_count} legacy requests with {num_bad} rotten apples"
         )

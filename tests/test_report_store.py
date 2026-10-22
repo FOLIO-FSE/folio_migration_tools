@@ -409,3 +409,40 @@ def test_file_index_record_collects_parse_issues(tmp_path):
     ).fetchone()
     assert row == ("file_index", b"rawbytes")
     store.close()
+
+
+def test_clear_current_record_stops_adoption_by_blank_ids(tmp_path):
+    from folio_migration_tools.report_store import clear_current_record, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        store.set_current_record("12", "f", 12, "json", lambda: "{}")
+        clear_current_record()
+        store.add_issue("DATA ISSUE", "", "m", "v")
+        store.flush()
+        assert store.conn.execute("SELECT record_pk FROM data_issue").fetchone() == (None,)
+    finally:
+        set_active_store(None)
+        store.close()
+
+
+def test_capture_row_file_index_links_barcode_issues(tmp_path):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        capture_row(4, "loans file", {"item_barcode": "i1"}, kind="file_index")
+        store.add_issue("DATA ISSUE", "i1-barcode", "m", "v")
+        capture_row(4, "loans file", {"item_barcode": "i1"}, kind="file_index")
+        store.add_issue("DATA ISSUE", "p1-barcode", "m", "v")
+        store.flush()
+        pks = {r[0] for r in store.conn.execute("SELECT record_pk FROM data_issue")}
+        assert len(pks) == 1 and None not in pks
+        assert store.conn.execute("SELECT count(*) FROM legacy_record").fetchone() == (1,)
+    finally:
+        set_active_store(None)
+        store.close()
