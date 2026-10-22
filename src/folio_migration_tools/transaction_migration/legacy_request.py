@@ -52,6 +52,7 @@ class LegacyRequest(object):
         ]
         self.errors = []
         self.row = row
+        self.source_file = ""
 
         for prop in correct_headers:
             if prop not in legacy_request_dict:

@@ -78,6 +78,7 @@ class LegacyLoan(object):
         self.tenant_timezone = tenant_timezone
         self.errors = []
         self.row = row
+        self.source_file = ""
         for prop in correct_headers:
             if prop not in self.legacy_loan_dict and prop not in optional_headers:
                 self.errors.append((f"Missing properties in legacy data {row=}", prop))

@@ -219,6 +219,7 @@ class LoansMigrator(MigrationTaskBase):
                     self.load_and_validate_legacy_loans(
                         reader,
                         file_def.service_point_id or task_configuration.fallback_service_point_id,
+                        file_def.file_name,
                     )
                 )
 
@@ -291,7 +292,10 @@ class LoansMigrator(MigrationTaskBase):
             ):
                 t0_migration = time.time()
                 capture_row(
-                    legacy_loan.row, "loans file", legacy_loan.legacy_loan_dict, kind="file_index"
+                    legacy_loan.row,
+                    legacy_loan.source_file or "loans file",
+                    legacy_loan.legacy_loan_dict,
+                    kind="file_index",
                 )
                 self.migration_report.add_general_statistics(
                     i18n_t("Processed pre-validated loans")
@@ -545,7 +549,12 @@ class LoansMigrator(MigrationTaskBase):
         self.pre_validate_item_barcodes()
         await self.pre_validate_patron_barcodes_async()
         for loan in self.semi_valid_legacy_loans:
-            capture_row(loan.row, "loans file", loan.legacy_loan_dict, kind="file_index")
+            capture_row(
+                loan.row,
+                loan.source_file or "loans file",
+                loan.legacy_loan_dict,
+                kind="file_index",
+            )
             has_item_barcode = loan.item_barcode in self.valid_item_barcodes
             has_patron_barcode = loan.patron_barcode in self.valid_patron_map
             has_proxy_barcode = True
@@ -578,12 +587,16 @@ class LoansMigrator(MigrationTaskBase):
                 )
         clear_current_record()
 
-    def load_and_validate_legacy_loans(self, loans_reader, service_point_id: str) -> list:
+    def load_and_validate_legacy_loans(
+        self, loans_reader, service_point_id: str, source_file: str = ""
+    ) -> list:
         results = []
         num_bad = 0
         logger.info("Validating legacy loans in file...")
         for legacy_loan_count, legacy_loan_dict in enumerate(loans_reader):
-            capture_row(legacy_loan_count, "loans file", legacy_loan_dict, kind="file_index")
+            capture_row(
+                legacy_loan_count, source_file or "loans file", legacy_loan_dict, kind="file_index"
+            )
             try:
                 legacy_loan = LegacyLoan(
                     legacy_loan_dict,
@@ -594,6 +607,7 @@ class LoansMigrator(MigrationTaskBase):
                     self.service_point_mapping,
                     self.task_configuration.allow_due_date_before_out_date,
                 )
+                legacy_loan.source_file = source_file
                 if any(legacy_loan.errors):
                     num_bad += 1
                     self.migration_report.add_general_statistics(

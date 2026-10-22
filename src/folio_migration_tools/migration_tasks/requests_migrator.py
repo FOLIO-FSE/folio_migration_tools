@@ -163,7 +163,8 @@ class RequestsMigrator(MigrationTaskBase):
         ) as requests_file:
             self.semi_valid_legacy_requests = list(
                 self.load_and_validate_legacy_requests(
-                    InsensitiveDictReader(requests_file, dialect="tsv")
+                    InsensitiveDictReader(requests_file, dialect="tsv"),
+                    task_configuration.open_requests_file.file_name,
                 )
             )
             logger.info(
@@ -257,7 +258,7 @@ class RequestsMigrator(MigrationTaskBase):
             t0_migration = time.time()
             capture_row(
                 legacy_request.row,
-                "requests file",
+                legacy_request.source_file or "requests file",
                 legacy_request.to_source_dict(),
                 kind="file_index",
             )
@@ -477,7 +478,12 @@ class RequestsMigrator(MigrationTaskBase):
         await self.pre_validate_patron_barcodes_async()
         request: LegacyRequest
         for request in self.semi_valid_legacy_requests:
-            capture_row(request.row, "requests file", request.to_source_dict(), kind="file_index")
+            capture_row(
+                request.row,
+                request.source_file or "requests file",
+                request.to_source_dict(),
+                kind="file_index",
+            )
             has_item_barcode = request.item_barcode in self.valid_item_barcodes
             has_patron_barcode = request.patron_barcode in self.valid_patron_map
             if has_item_barcode and has_patron_barcode:
@@ -516,13 +522,16 @@ class RequestsMigrator(MigrationTaskBase):
                 )
         clear_current_record()
 
-    def load_and_validate_legacy_requests(self, requests_reader):
+    def load_and_validate_legacy_requests(self, requests_reader, source_file: str = ""):
         num_bad = 0
         logger.info("Validating legacy requests in file...")
         for legacy_reques_count, legacy_request_dict in enumerate(requests_reader, start=1):
             self.migration_report.add_general_statistics(i18n_t("Requests in file"))
             capture_row(
-                legacy_reques_count, "requests file", legacy_request_dict, kind="file_index"
+                legacy_reques_count,
+                source_file or "requests file",
+                legacy_request_dict,
+                kind="file_index",
             )
             try:
                 legacy_request = LegacyRequest(
@@ -532,6 +541,7 @@ class RequestsMigrator(MigrationTaskBase):
                     self.service_point_mapping,
                     self.task_configuration.fallback_service_point_id,
                 )
+                legacy_request.source_file = source_file
                 if any(legacy_request.errors):
                     num_bad += 1
                     self.migration_report.add_general_statistics(
