@@ -17,6 +17,7 @@ from typing import Annotated, List, Optional
 from folio_uuid.folio_namespaces import FOLIONamespaces
 from pydantic import Field
 
+from folio_migration_tools.report_store import capture_row
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -428,6 +429,7 @@ class ItemsTransformer(MigrationTaskBase):
             )
             start = time.time()
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
+                capture_row(idx, full_path, record)
                 try:
                     if idx == 0:
                         logger.info("First legacy record:")

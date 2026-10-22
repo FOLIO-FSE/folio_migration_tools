@@ -260,6 +260,16 @@ class ReportStore:
             "pk": None,
         }
 
+    def add_current_ids(self, ids: Any):
+        """Add ids (such as the legacy id found while mapping) to the current record."""
+        if self._current is None:
+            return
+        ref = self._current["ref"]
+        extra = [i for i in normalize_record_ref(ids).ids if i not in ref.ids]
+        if extra and self._current["pk"] is None:
+            ref.ids.extend(extra)
+            ref.kind = "legacy_id"
+
     def clear_current_record(self):
         self._current = None
 
@@ -358,6 +368,24 @@ class ReportStore:
 
 
 _active_store: ReportStore | None = None
+
+
+def capture_row(index: int, source: Any, record: Any):
+    """Set the current record for a delimited or JSON row, if a store is active.
+
+    The row is addressable by its zero-based index in the file until a legacy id
+    is added with add_current_ids. The payload is serialized only if an issue is logged.
+    """
+    store = get_active_store()
+    if store is None:
+        return
+    store.set_current_record(
+        [str(index), f"row {index}"],
+        getattr(source, "name", None) or str(source),
+        index,
+        "json",
+        lambda: json.dumps(record, default=str),
+    )
 
 
 def set_active_store(store: ReportStore | None):
