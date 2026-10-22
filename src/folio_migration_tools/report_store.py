@@ -101,9 +101,9 @@ def normalize_record_ref(value: Any) -> RecordRef:
     Lists and tuples become their non-empty members, list-repr strings are
     unpacked, ints are row numbers, and empty values are "none".
     """
-    raw = value if isinstance(value, str) else repr(value) if value is not None else ""
     if value is None or value == "" or value == [] or value == ():
         return RecordRef([], "none", "")
+    raw = value if isinstance(value, str) else repr(value)
     if isinstance(value, bool):
         return RecordRef([str(value)], "legacy_id", raw)
     if isinstance(value, int):
@@ -168,6 +168,7 @@ class ReportStore:
         self.run_id: int | None = None
         self._issue_buffer: list = []
         self._current: dict | None = None
+        self.current_field: tuple | None = None
         self._reports: "weakref.WeakSet" = weakref.WeakSet()
         self.closed = False
 
@@ -179,7 +180,7 @@ class ReportStore:
         """Write the stats of all registered reports, finish the run and close."""
         if self.closed:
             return
-        for report in list(self._reports):
+        for report in self._reports:
             self.write_report_stats(report.report)
         self.finish_run(finished)
         self.close()
@@ -253,7 +254,7 @@ class ReportStore:
         """
         self._current = {
             "ref": normalize_record_ref(record_id),
-            "source_file": str(source_file),
+            "source_file": source_file,
             "source_index": source_index,
             "format": format,
             "getter": payload_getter,
@@ -368,6 +369,51 @@ class ReportStore:
 
 
 _active_store: ReportStore | None = None
+
+
+def marc_location(tag: str, subfield: str | None = None, occurrence: int | None = None) -> tuple:
+    """Build a (kind, path) location for a MARC field or subfield.
+
+    The path grammar is TAG[OCCURRENCE]$CODE. The occurrence (zero-based index among
+    fields with the same tag) and the subfield code are optional: 245, 245$a, 245[0]$a.
+    If no occurrence is given and the field being processed (see iter_fields) has the
+    same tag, its occurrence is used.
+    """
+    if occurrence is None and (store := get_active_store()) and store.current_field:
+        current_tag, current_occurrence = store.current_field
+        if current_tag == tag:
+            occurrence = current_occurrence
+    path = tag
+    if occurrence is not None:
+        path += f"[{occurrence}]"
+    if subfield:
+        path += f"${subfield}"
+    return "marc", path
+
+
+def iter_fields(marc_record):
+    """Iterate a MARC record's fields, tracking which field (and occurrence) is current.
+
+    Issues located with marc_location during an iteration step get the occurrence of
+    that field among the fields with the same tag, so repeated fields are told apart.
+    """
+    store = get_active_store()
+    seen: dict = {}
+    try:
+        for marc_field in marc_record:
+            occurrence = seen.get(marc_field.tag, 0)
+            seen[marc_field.tag] = occurrence + 1
+            if store:
+                store.current_field = (marc_field.tag, occurrence)
+            yield marc_field
+    finally:
+        if store:
+            store.current_field = None
+
+
+def column_location(column: str) -> tuple:
+    """Build a (kind, path) location for a column in a delimited file."""
+    return "column", column
 
 
 def capture_row(index: int, source: Any, record: Any):

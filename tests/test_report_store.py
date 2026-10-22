@@ -186,3 +186,55 @@ def test_marc_processor_sets_current_record(tmp_path):
     finally:
         set_active_store(None)
         store.close()
+
+
+def test_issue_location_and_helpers(tmp_path):
+    from folio_migration_tools.helper import Helper
+    from folio_migration_tools.report_store import (
+        column_location,
+        marc_location,
+        set_active_store,
+    )
+
+    assert marc_location("245") == ("marc", "245")
+    assert marc_location("245", "a", 0) == ("marc", "245[0]$a")
+    assert column_location("barcode") == ("column", "barcode")
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        Helper.log_data_issue("id1", "bad", "v", marc_location("700", "e"))
+        Helper.log_data_issue("id2", "no location", "v")
+        store.flush()
+        rows = store.conn.execute(
+            "SELECT location_kind, location_path FROM data_issue ORDER BY id"
+        ).fetchall()
+        assert rows == [("marc", "700$e"), (None, None)]
+    finally:
+        set_active_store(None)
+        store.close()
+
+
+def test_marc_location_uses_occurrence_of_current_field(tmp_path):
+    from pymarc import Field, Record, Subfield
+
+    from folio_migration_tools.report_store import iter_fields, marc_location, set_active_store
+
+    record = Record()
+    for name in ("a", "b", "c"):
+        record.add_field(Field("700", [" ", " "], [Subfield("a", name), Subfield("e", name)]))
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        paths = []
+        for field in iter_fields(record):
+            if field["a"] == "b":
+                paths.append(marc_location(field.tag, "e")[1])
+        assert paths == ["700[1]$e"]
+        assert store.current_field is None
+        assert marc_location("700", "e")[1] == "700$e"
+        assert marc_location("700", "e", 2)[1] == "700[2]$e"
+    finally:
+        set_active_store(None)
+        store.close()

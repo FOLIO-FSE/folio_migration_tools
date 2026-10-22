@@ -13,6 +13,7 @@ import traceback
 from folioclient import FolioClient
 from pymarc import field
 
+from folio_migration_tools.report_store import marc_location
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -224,6 +225,7 @@ class Conditions:
                     legacy_id,
                     f"Mapping failed for ${contributor_code_subfield}",
                     f'{subfield}" ({normalized_subfield}) ',
+                    marc_location(marc_field.tag, contributor_code_subfield),
                 )
             else:
                 self.mapper.migration_report.add(
@@ -260,6 +262,7 @@ class Conditions:
                     legacy_id,
                     f"Mapping failed for {marc_field.tag} ${contributor_name_subfield}",
                     f'{subfield}" ({normalized_subfield}) ',
+                    marc_location(marc_field.tag, contributor_name_subfield),
                 )
             else:
                 self.mapper.migration_report.add(
@@ -539,6 +542,7 @@ class Conditions:
                     legacy_id,
                     "Mapping failed for $4",
                     f'{subfield}" ({normalized_subfield}) ',
+                    marc_location(marc_field.tag, "4"),
                 )
             else:
                 self.mapper.migration_report.add(
@@ -573,6 +577,7 @@ class Conditions:
                     legacy_id,
                     f"Mapping failed for {marc_field.tag} $e",
                     f'{subfield}" ({normalized_subfield}) ',
+                    marc_location(marc_field.tag, "e"),
                 )
             else:
                 self.mapper.migration_report.add(
