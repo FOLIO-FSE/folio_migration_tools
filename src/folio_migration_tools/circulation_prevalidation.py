@@ -14,6 +14,7 @@ from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.utils import cql_quote, get_from_path
 
 logger = logging.getLogger(__name__)
@@ -173,7 +174,9 @@ def validate_item_barcodes(
     valid_barcodes = {barcode for barcode in barcodes if barcode.lower() in found_barcodes}
     for barcode in barcodes - valid_barcodes:
         logger.warning("No item found for barcode: %s", barcode)
-        Helper.log_data_issue_failed("", "No item found for barcode", f"Barcode: {barcode}")
+        Helper.log_data_issue_failed(
+            "", i18n_t("No item found for barcode"), f"Barcode: {barcode}"
+        )
     return valid_barcodes
 
 
@@ -214,13 +217,15 @@ def _resolve_patron_value(
     """Return the value to post transactions with, or None (after logging why) if invalid."""
     if not patrons:
         logger.warning("No patron found for barcode: %s", barcode)
-        Helper.log_data_issue_failed("", "No patron found for barcode", f"Barcode: {barcode}")
+        Helper.log_data_issue_failed(
+            "", i18n_t("No patron found for barcode"), f"Barcode: {barcode}"
+        )
         return None
     if len(patrons) > 1:
         logger.warning("Multiple patrons found for barcode: %s", barcode)
         Helper.log_data_issue_failed(
             "",
-            "Multiple patrons found for barcode",
+            i18n_t("Multiple patrons found for barcode"),
             f"Barcode: {barcode} - {json.dumps(patrons)}",
         )
         return None
@@ -229,16 +234,16 @@ def _resolve_patron_value(
         logger.warning("Patron exists but has no group: %s", barcode)
         Helper.log_data_issue_failed(
             "",
-            "Fetched patron has no group assigned",
+            i18n_t("Fetched patron has no group assigned"),
             f"Barcode: {barcode} - {json.dumps(patrons)}",
         )
         return None
     if require_barcode:
         lookup_value = patron.get("barcode")
-        issue = "Fetched patron has no barcode assigned"
+        issue = i18n_t("Fetched patron has no barcode assigned")
     else:
         lookup_value = get_patron_lookup_value(patron, barcode, patron_identifiers)
-        issue = "Fetched patron has no lookupable identifier value"
+        issue = i18n_t("Fetched patron has no lookupable identifier value")
     if not lookup_value:
         logger.warning("Patron exists but has no usable identifier value: %s", barcode)
         Helper.log_data_issue("", issue, f"Barcode: {barcode} - {json.dumps(patron)}")

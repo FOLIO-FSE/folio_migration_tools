@@ -122,7 +122,7 @@ class BibsRulesMapper(RulesMapperBase):
         if leader_05 == "d":
             Helper.log_data_issue(
                 legacy_ids,
-                "d in leader. Is this correct?",
+                i18n_t("d in leader. Is this correct?"),
                 marc_record.leader,
                 marc_location("LDR", span=5),
             )
@@ -192,8 +192,10 @@ class BibsRulesMapper(RulesMapperBase):
         if len(main_entry_fields) > 1:
             Helper.log_data_issue(
                 legacy_ids,
-                "Multiple main entry fields in record. Record will fail Data Import. "
-                "Creating Instance anyway.",
+                i18n_t(
+                    "Multiple main entry fields in record. Record will fail Data Import. "
+                    "Creating Instance anyway."
+                ),
                 [str(field) for field in main_entry_fields],
                 marc_location(main_entry_fields[1].tag),
             )
@@ -398,7 +400,7 @@ class BibsRulesMapper(RulesMapperBase):
                 )
                 Helper.log_data_issue(
                     legacy_ids,
-                    "instance type name (336$a) -Unsuccessful matching",
+                    i18n_t("instance type name (336$a) -Unsuccessful matching"),
                     f336a,
                     marc_location("336", "a"),
                 )
@@ -465,7 +467,7 @@ class BibsRulesMapper(RulesMapperBase):
             # TODO: Distinguish between generated codes and proper 338bs
             Helper.log_data_issue(
                 legacy_ids,
-                "Instance format Code not found in FOLIO",
+                i18n_t("Instance format Code not found in FOLIO"),
                 code,
                 marc_location("338", "b"),
             )
@@ -498,7 +500,7 @@ class BibsRulesMapper(RulesMapperBase):
         except Exception:
             Helper.log_data_issue(
                 legacy_ids,
-                "Unsuccessful matching on 337$a and 338$a",
+                i18n_t("Unsuccessful matching on 337$a and 338$a"),
                 match_template,
                 marc_location("338", "a"),
             )
@@ -651,7 +653,7 @@ class BibsRulesMapper(RulesMapperBase):
                 self.migration_report.add("LanguageCodeSources", lang_tag["2"])
                 Helper.log_data_issue(
                     legacy_id,
-                    "Field with other Language code",
+                    i18n_t("Field with other Language code"),
                     lang_tag.value(),
                     marc_location("041", "2", lang_idx),
                 )
@@ -726,7 +728,7 @@ class BibsRulesMapper(RulesMapperBase):
             elif not language_value.strip():
                 continue
             elif language_value not in forbidden_values:
-                m = "Unrecognized language codes in record"
+                m = i18n_t("Unrecognized language codes in record")
                 Helper.log_data_issue(index_or_legacy_id, m, language_value)
                 self.migration_report.add(
                     "UnrecognizedLanguageCodes",

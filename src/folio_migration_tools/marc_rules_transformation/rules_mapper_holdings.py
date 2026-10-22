@@ -181,7 +181,9 @@ class RulesMapperHoldings(RulesMapperBase):
             except TransformationFieldMappingError as tfme:
                 tfme.log_it()
         if num_852s > 1:
-            Helper.log_data_issue(legacy_ids, "More than 1 852 found", "", marc_location("852"))
+            Helper.log_data_issue(
+                legacy_ids, i18n_t("More than 1 852 found"), "", marc_location("852")
+            )
 
         self.perform_additional_mapping(marc_record, folio_holding, legacy_ids, file_def)
         cleaned_folio_holding = self.validate_required_properties(
@@ -232,7 +234,7 @@ class RulesMapperHoldings(RulesMapperBase):
         if len(marc_record.get_fields("004")) > 1:
             Helper.log_data_issue(
                 legacy_ids,
-                "More than one linked bib (004) found in record. Using the first one",
+                i18n_t("More than one linked bib (004) found in record. Using the first one"),
                 [str(x) for x in marc_record.get_fields("004")],
                 marc_location("004"),
             )
@@ -357,7 +359,9 @@ class RulesMapperHoldings(RulesMapperBase):
         if " " in folio_holding.get("permanentLocationId", ""):
             Helper.log_data_issue(
                 legacy_ids,
-                "Space in permanentLocationId. Was this MFHD attached to multiple holdings?",
+                i18n_t(
+                    "Space in permanentLocationId. Was this MFHD attached to multiple holdings?"
+                ),
                 folio_holding["permanentLocationId"],
                 marc_location("852"),
             )

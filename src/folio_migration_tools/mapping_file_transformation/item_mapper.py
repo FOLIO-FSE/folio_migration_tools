@@ -313,7 +313,7 @@ class ItemMapper(MappingFileMapperBase):
             barcode = mapped_value
             normalized_barcode = barcode.strip().lower()
             if normalized_barcode and normalized_barcode in self.unique_barcodes:
-                Helper.log_data_issue(index_or_id, "Duplicate barcode", mapped_value)
+                Helper.log_data_issue(index_or_id, i18n_t("Duplicate barcode"), mapped_value)
                 self.migration_report.add_general_statistics(i18n_t("Duplicate barcodes"))
                 return f"{barcode}-{uuid4()}"
             else:

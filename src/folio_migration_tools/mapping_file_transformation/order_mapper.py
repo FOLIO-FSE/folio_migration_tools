@@ -802,6 +802,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
             )
             Helper.log_data_issue(
                 index_or_id,
-                "No matching instance for bib identifier",
+                i18n_t("No matching instance for bib identifier"),
                 bib_id,
             )

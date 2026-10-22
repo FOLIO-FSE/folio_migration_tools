@@ -466,3 +466,20 @@ def test_same_row_index_in_different_files_is_not_merged(tmp_path):
     finally:
         set_active_store(None)
         store.close()
+
+
+def test_debug_logging_flags_untranslated_measures(tmp_path, caplog):
+    import logging
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    with caplog.at_level(logging.DEBUG, logger="folio_migration_tools.report_store"):
+        store.write_report_stats(
+            {"GeneralStatistics": {i18n_t("Records processed"): 1, "plain text": 2}}
+        )
+        store.add_issue("DATA ISSUE", "r1", "plain issue", "v")
+        store.flush()
+    assert "Untranslated report measure in GeneralStatistics: 'plain text'" in caplog.text
+    assert "Records processed" not in caplog.text
+    assert "Untranslated data issue message: 'plain issue'" in caplog.text
+    store.close()

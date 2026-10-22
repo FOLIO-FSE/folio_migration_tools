@@ -189,7 +189,9 @@ class RulesMapperBase(MapperBase):
             if "005" in marc_record:
                 Helper.log_data_issue(
                     legacy_ids,
-                    f"Could not parse Last transaction date from 005 {exception}",
+                    i18n_t(
+                        "Could not parse Last transaction date from 005 %{error}", error=exception
+                    ),
                     marc_record["005"].data,
                     marc_location("005"),
                 )
@@ -215,7 +217,7 @@ class RulesMapperBase(MapperBase):
             if "008" in marc_record:
                 Helper.log_data_issue(
                     legacy_ids,
-                    f"Could not parse cat date from 008 {exception}",
+                    i18n_t("Could not parse cat date from 008 %{error}", error=exception),
                     marc_record["008"].data,
                     marc_location("008", span=(0, 5)),
                 )
@@ -451,7 +453,7 @@ class RulesMapperBase(MapperBase):
             and marc_field.tag not in bad_tags
         ):
             self.migration_report.add("NonNumericTagsInRecord", marc_field.tag)
-            message = "Non-numeric tags in records"
+            message = i18n_t("Non-numeric tags in records")
             Helper.log_data_issue(
                 legacy_ids, message, marc_field.tag, marc_location(marc_field.tag)
             )
@@ -538,7 +540,9 @@ class RulesMapperBase(MapperBase):
             try:
                 value = [str(parse(value[0], fuzzy=True).date())]
             except Exception as ee:
-                Helper.log_data_issue("", f"Could not parse catalogedDate: {ee}", value)
+                Helper.log_data_issue(
+                    "", i18n_t("Could not parse catalogedDate: %{error}", error=ee), value
+                )
                 self.migration_report.add(
                     "FieldMappingErrors", i18n_t("Could not parse catalogedDate")
                 )
@@ -608,9 +612,13 @@ class RulesMapperBase(MapperBase):
                     if subfield != "9":
                         Helper.log_data_issue(
                             index_or_legacy_id,
-                            f"authorityId mapping from ${subfield} is not supported. Data Import "
-                            "will fail. Use only $9 for authority id mapping in MARC-to-Instance "
-                            "mapping rules.",
+                            i18n_t(
+                                "authorityId mapping from $%{subfield} is not supported. Data "
+                                "Import will fail. "
+                                "Use only $9 for authority id mapping in MARC-to-Instance "
+                                "mapping rules.",
+                                subfield=subfield,
+                            ),
                             marc_field,
                             marc_location(marc_field.tag, subfield),
                         )
@@ -645,8 +653,11 @@ class RulesMapperBase(MapperBase):
             entity = {}
             Helper.log_data_issue(
                 index_or_legacy_id,
-                f"Missing one or more required property in entity {entity_parent_key} "
-                f"({missing_required_props})",
+                i18n_t(
+                    "Missing one or more required property in entity %{entity} (%{props})",
+                    entity=entity_parent_key,
+                    props=missing_required_props,
+                ),
                 marc_field,
                 marc_location(marc_field.tag),
             )
@@ -753,7 +764,7 @@ class RulesMapperBase(MapperBase):
         else:
             Helper.log_data_issue(
                 identifier,
-                f"Unable to create {e_parent} entity. Missing title.",
+                i18n_t("Unable to create %{entity} entity. Missing title.", entity=e_parent),
                 marc_field,
                 marc_location(marc_field.tag),
             )
