@@ -157,6 +157,10 @@ class MigrationTaskBase:
                 locale=i18n.get("locale") or "",
                 config=self.task_configuration.model_dump(mode="json"),
             )
+            privacy = self.task_configuration.report_privacy
+            self.report_store.configure_privacy(
+                privacy.capture_legacy_records, privacy.mask_fields
+            )
             set_active_store(self.report_store)
         except Exception as ex:
             logger.warning("Could not create report database: %s", ex)
