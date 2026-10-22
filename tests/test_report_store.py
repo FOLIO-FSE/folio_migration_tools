@@ -127,3 +127,24 @@ def test_composed_text_round_trip(tmp_path):
     issue = store.conn.execute("SELECT translated, params_json FROM data_issue").fetchone()
     assert issue[0] == 2 and json.loads(issue[1])["parts"] == parts
     store.close()
+
+
+def test_current_record_captured_lazily_once(tmp_path):
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    calls = []
+    store.set_current_record(
+        ["b2", "a1"], "f.mrc", 3, "marc", lambda: calls.append(1) or b"raw"
+    )
+    assert store.conn.execute("SELECT count(*) FROM legacy_record").fetchone()[0] == 0
+    store.add_issue("warning", ["b2", "a1"], "one", "v")
+    store.add_issue("warning", "a1", "two", "v")
+    store.add_issue("warning", "other", "three", "v")
+    store.flush()
+    assert calls == [1]
+    rec = store.conn.execute("SELECT record_id, payload FROM legacy_record").fetchone()
+    assert rec == ("a1", b"raw")
+    assert store.conn.execute("SELECT count(*) FROM record_alias").fetchone()[0] == 2
+    pks = [r[0] for r in store.conn.execute("SELECT record_pk FROM data_issue ORDER BY id")]
+    assert pks[0] == pks[1] and pks[2] is None
+    store.close()
