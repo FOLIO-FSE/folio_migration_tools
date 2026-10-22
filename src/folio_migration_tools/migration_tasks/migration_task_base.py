@@ -47,7 +47,12 @@ from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import 
     DEFAULT_MARC_RECORD_PREPROCESSORS,
     MARCReaderWrapper,
 )
-from folio_migration_tools.report_store import ReportStore, get_active_store, set_active_store
+from folio_migration_tools.report_store import (
+    ReportStore,
+    capture_reference_file,
+    get_active_store,
+    set_active_store,
+)
 from folio_migration_tools.utils import is_uuid
 
 logger = logging.getLogger(__name__)
@@ -325,6 +330,7 @@ class MigrationTaskBase:
         logger.info("Logging set up")
 
     def setup_records_map(self, mapping_file_path) -> Dict:
+        capture_reference_file("mapping", Path(mapping_file_path))
         with open(mapping_file_path) as mapping_file:
             field_map = json.load(mapping_file)
             logger.info("%s fields present in record mapping file", len(field_map["data"]))
@@ -486,6 +492,7 @@ class MigrationTaskBase:
                         ", ".join(ref_data_map[0].keys()),
                         folio_property_name,
                     )
+                    capture_reference_file(folio_property_name, map_file_path, ref_data_map)
                     return ref_data_map
             except Exception as exception:
                 raise exception

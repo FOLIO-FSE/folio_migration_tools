@@ -24,6 +24,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.report_store import capture_reference_file
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import FileDefinition
@@ -170,7 +171,9 @@ class MARCReaderWrapper:
     def load_preprocessors_args(task_config, folder_structure: FolderStructure) -> dict:
         preprocessors_args = getattr(task_config, "preprocessors_args", {}) or {}
         if isinstance(preprocessors_args, str):
-            with open(folder_structure.mapping_files_folder / preprocessors_args, "r") as f:
+            preprocessors_path = folder_structure.mapping_files_folder / preprocessors_args
+            capture_reference_file("preprocessors_args", preprocessors_path)
+            with open(preprocessors_path, "r") as f:
                 return json.load(f)
         return dict(preprocessors_args)
 
