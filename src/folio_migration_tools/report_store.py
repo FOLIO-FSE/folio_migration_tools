@@ -650,7 +650,7 @@ def column_location(column: str) -> tuple:
     return "column", column
 
 
-def capture_row(index: int, source: Any, record: Any):
+def capture_row(index: int, source: Any, record: Any, kind: str | None = None):
     """Set the current record for a delimited or JSON row, if a store is active.
 
     The row is addressable by its zero-based index in the file until a legacy id
@@ -665,7 +665,15 @@ def capture_row(index: int, source: Any, record: Any):
         index,
         "json",
         lambda: json.dumps(record, default=str),
+        kind=kind,
     )
+
+
+def clear_current_record():
+    """Forget the current record, if a store is active."""
+    store = get_active_store()
+    if store is not None:
+        store.clear_current_record()
 
 
 def set_active_store(store: ReportStore | None):

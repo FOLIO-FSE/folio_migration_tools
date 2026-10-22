@@ -29,6 +29,7 @@ from folio_migration_tools.circulation_prevalidation import (
 )
 from folio_migration_tools.custom_exceptions import TransformationRecordFailedError
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.report_store import capture_row, clear_current_record
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -289,6 +290,9 @@ class LoansMigrator(MigrationTaskBase):
                 self.valid_legacy_loans[starting_index:], start=1
             ):
                 t0_migration = time.time()
+                capture_row(
+                    legacy_loan.row, "loans file", legacy_loan.legacy_loan_dict, kind="file_index"
+                )
                 self.migration_report.add_general_statistics(
                     i18n_t("Processed pre-validated loans")
                 )
@@ -308,6 +312,7 @@ class LoansMigrator(MigrationTaskBase):
                     )
                 if num_loans % 25 == 0:
                     logger.info(f"{timings(self.t0, t0_migration, num_loans)} {num_loans}")
+            clear_current_record()
 
     def checkout_single_loan(self, legacy_loan: LegacyLoan):
         """Checks a legacy loan out. Retries once if it fails.
@@ -540,6 +545,7 @@ class LoansMigrator(MigrationTaskBase):
         self.pre_validate_item_barcodes()
         await self.pre_validate_patron_barcodes_async()
         for loan in self.semi_valid_legacy_loans:
+            capture_row(loan.row, "loans file", loan.legacy_loan_dict, kind="file_index")
             has_item_barcode = loan.item_barcode in self.valid_item_barcodes
             has_patron_barcode = loan.patron_barcode in self.valid_patron_map
             has_proxy_barcode = True
@@ -570,12 +576,14 @@ class LoansMigrator(MigrationTaskBase):
                     + i18n_t("Had migrated proxy barcode")
                     + f": {has_proxy_barcode}",
                 )
+        clear_current_record()
 
     def load_and_validate_legacy_loans(self, loans_reader, service_point_id: str) -> list:
         results = []
         num_bad = 0
         logger.info("Validating legacy loans in file...")
         for legacy_loan_count, legacy_loan_dict in enumerate(loans_reader):
+            capture_row(legacy_loan_count, "loans file", legacy_loan_dict, kind="file_index")
             try:
                 legacy_loan = LegacyLoan(
                     legacy_loan_dict,
@@ -613,6 +621,7 @@ class LoansMigrator(MigrationTaskBase):
                 ] = legacy_loan_dict
             except ValueError as ve:
                 logger.exception(ve)
+        clear_current_record()
         logger.info(
             f"Done validating {legacy_loan_count + 1} legacy loans out of which "
             f"{num_bad} where discarded."

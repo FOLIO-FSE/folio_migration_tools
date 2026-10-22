@@ -18,6 +18,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.helper import Helper
+from folio_migration_tools.report_store import capture_row
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -217,6 +218,7 @@ class UserTransformer(MigrationTaskBase):
                     for num_users, legacy_user in enumerate(
                         self.mapper.get_users(object_file, file_format), start=1
                     ):
+                        capture_row(num_users, source_path, legacy_user)
                         try:
                             if num_users == 1:
                                 logger.info("First Legacy  user")
