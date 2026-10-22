@@ -19,7 +19,7 @@ from folioclient import FolioClient
 from pymarc.field import Field, Indicators
 from pymarc.record import Record
 
-from folio_migration_tools.report_store import iter_fields
+from folio_migration_tools.report_store import iter_fields, marc_location
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -181,7 +181,7 @@ class RulesMapperHoldings(RulesMapperBase):
             except TransformationFieldMappingError as tfme:
                 tfme.log_it()
         if num_852s > 1:
-            Helper.log_data_issue(legacy_ids, "More than 1 852 found", "")
+            Helper.log_data_issue(legacy_ids, "More than 1 852 found", "", marc_location("852"))
 
         self.perform_additional_mapping(marc_record, folio_holding, legacy_ids, file_def)
         cleaned_folio_holding = self.validate_required_properties(
@@ -234,6 +234,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 legacy_ids,
                 "More than one linked bib (004) found in record. Using the first one",
                 [str(x) for x in marc_record.get_fields("004")],
+                marc_location("004"),
             )
         f004_field = marc_record["004"]
         if f004_field and (f004_data := f004_field.data):
@@ -358,6 +359,7 @@ class RulesMapperHoldings(RulesMapperBase):
                 legacy_ids,
                 "Space in permanentLocationId. Was this MFHD attached to multiple holdings?",
                 folio_holding["permanentLocationId"],
+                marc_location("852"),
             )
             folio_holding["permanentLocationId"] = folio_holding["permanentLocationId"].split(" ")[
                 0
@@ -629,6 +631,7 @@ class RulesMapperHoldings(RulesMapperBase):
                             "(leader 06 is set to 'u') Check if this is correct"
                         ),
                         ldr06,
+                        marc_location("LDR", span=6),
                     )
             else:
                 if not self.fallback_holdings_type_id:
@@ -650,6 +653,7 @@ class RulesMapperHoldings(RulesMapperBase):
                         + ". leader 06 was unmapped."
                     ),
                     ldr06,
+                    marc_location("LDR", span=6),
                 )
 
     def set_default_call_number_type_if_empty(self, folio_holding: Dict):

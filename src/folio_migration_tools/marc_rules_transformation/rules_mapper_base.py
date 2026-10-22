@@ -191,6 +191,7 @@ class RulesMapperBase(MapperBase):
                     legacy_ids,
                     f"Could not parse Last transaction date from 005 {exception}",
                     marc_record["005"].data,
+                    marc_location("005"),
                 )
 
     @abstractmethod
@@ -216,6 +217,7 @@ class RulesMapperBase(MapperBase):
                     legacy_ids,
                     f"Could not parse cat date from 008 {exception}",
                     marc_record["008"].data,
+                    marc_location("008", span=(0, 5)),
                 )
 
     def handle_sub_field_delimiters(
@@ -610,6 +612,7 @@ class RulesMapperBase(MapperBase):
                             "will fail. Use only $9 for authority id mapping in MARC-to-Instance "
                             "mapping rules.",
                             marc_field,
+                            marc_location(marc_field.tag, subfield),
                         )
                         entity_mapping["subfield"] = ["9"]
             if my_values := [
@@ -645,6 +648,7 @@ class RulesMapperBase(MapperBase):
                 f"Missing one or more required property in entity {entity_parent_key} "
                 f"({missing_required_props})",
                 marc_field,
+                marc_location(marc_field.tag),
             )
         return entity
 
@@ -748,7 +752,10 @@ class RulesMapperBase(MapperBase):
             self.extradata_writer.write(e_parent, new_entity)
         else:
             Helper.log_data_issue(
-                identifier, f"Unable to create {e_parent} entity. Missing title.", marc_field
+                identifier,
+                f"Unable to create {e_parent} entity. Missing title.",
+                marc_field,
+                marc_location(marc_field.tag),
             )
 
     def apply_rule(self, legacy_id, value, condition_types, marc_field, parameter):

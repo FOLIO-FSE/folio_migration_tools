@@ -18,7 +18,7 @@ from folioclient import FolioClient
 from pymarc.field import Field
 from pymarc.record import Leader, Record
 
-from folio_migration_tools.report_store import iter_fields
+from folio_migration_tools.report_store import iter_fields, marc_location
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -120,7 +120,12 @@ class BibsRulesMapper(RulesMapperBase):
                 "RecordStatus", i18n_t("Changed %{a} to %{b}", a=leader_05, b="c")
             )
         if leader_05 == "d":
-            Helper.log_data_issue(legacy_ids, "d in leader. Is this correct?", marc_record.leader)
+            Helper.log_data_issue(
+                legacy_ids,
+                "d in leader. Is this correct?",
+                marc_record.leader,
+                marc_location("LDR", span=5),
+            )
 
     def parse_record(
         self, marc_record: Record, file_def: FileDefinition, legacy_ids: List[str]
@@ -190,6 +195,7 @@ class BibsRulesMapper(RulesMapperBase):
                 "Multiple main entry fields in record. Record will fail Data Import. "
                 "Creating Instance anyway.",
                 [str(field) for field in main_entry_fields],
+                marc_location(main_entry_fields[1].tag),
             )
         if not main_entry_fields:
             main_entry_fields += marc_record.get_fields("700", "710", "711", "730")
@@ -394,6 +400,7 @@ class BibsRulesMapper(RulesMapperBase):
                     legacy_ids,
                     "instance type name (336$a) -Unsuccessful matching",
                     f336a,
+                    marc_location("336", "a"),
                 )
             return match
 
@@ -427,6 +434,7 @@ class BibsRulesMapper(RulesMapperBase):
                     legacy_ids,
                     i18n_t("instance type code (%{code}) not found in FOLIO", code="336$b"),
                     f336_b,
+                    marc_location("336", "b"),
                 )
             else:
                 self.migration_report.add(
@@ -455,7 +463,12 @@ class BibsRulesMapper(RulesMapperBase):
             return match["id"]
         except Exception:
             # TODO: Distinguish between generated codes and proper 338bs
-            Helper.log_data_issue(legacy_ids, "Instance format Code not found in FOLIO", code)
+            Helper.log_data_issue(
+                legacy_ids,
+                "Instance format Code not found in FOLIO",
+                code,
+                marc_location("338", "b"),
+            )
             self.migration_report.add(
                 "InstanceFormat",
                 i18n_t("Code '%{code}' not found in FOLIO", code=code),
@@ -487,6 +500,7 @@ class BibsRulesMapper(RulesMapperBase):
                 legacy_ids,
                 "Unsuccessful matching on 337$a and 338$a",
                 match_template,
+                marc_location("338", "a"),
             )
             self.migration_report.add(
                 "InstanceFormat",
@@ -554,7 +568,7 @@ class BibsRulesMapper(RulesMapperBase):
                             s = i18n_t(
                                 "No corresponding 337 to 338 even though 338$b was one character"
                             )
-                            Helper.log_data_issue(legacy_id, s, b)
+                            Helper.log_data_issue(legacy_id, s, b, marc_location("338", "b", fidx))
                             self.migration_report.add(
                                 "InstanceFormat",
                                 s,
@@ -568,7 +582,9 @@ class BibsRulesMapper(RulesMapperBase):
                             )
                             if not corresponding_b:
                                 s = i18n_t("No corresponding $b in corresponding 338")
-                                Helper.log_data_issue(legacy_id, s, "")
+                                Helper.log_data_issue(
+                                    legacy_id, s, "", marc_location("338", "b", fidx)
+                                )
                                 self.migration_report.add("InstanceFormat", s)
                             else:
                                 combined_code = (corresponding_b + b).strip()
@@ -630,11 +646,14 @@ class BibsRulesMapper(RulesMapperBase):
         if not any(lang_fields):
             return {}
         subfields = "abdefghjkmn"
-        for lang_tag in lang_fields:
+        for lang_idx, lang_tag in enumerate(lang_fields):
             if "2" in lang_tag:
                 self.migration_report.add("LanguageCodeSources", lang_tag["2"])
                 Helper.log_data_issue(
-                    legacy_id, "Field with other Language code", lang_tag.value()
+                    legacy_id,
+                    "Field with other Language code",
+                    lang_tag.value(),
+                    marc_location("041", "2", lang_idx),
                 )
             lang_codes = lang_tag.get_subfields(*list(subfields))
             for lang_code in lang_codes:

@@ -18,6 +18,7 @@ from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import HridHandling
 from folio_migration_tools.migration_report import MigrationReport
+from folio_migration_tools.report_store import marc_location
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +156,7 @@ class HRIDHandler:
             if "001" in marc_record:
                 s = i18n_t("Failed to create %{to} from %{fro}", to="035", fro="001")
                 migration_report.add("HridHandling", s)
-                Helper.log_data_issue(legacy_ids, s, marc_record["001"])
+                Helper.log_data_issue(legacy_ids, s, marc_record["001"], marc_location("001"))
             else:
                 migration_report.add("HridHandling", i18n_t("Legacy bib records without 001"))
 
@@ -241,6 +242,7 @@ class HRIDHandler:
                 legacy_ids,
                 "Duplicate 001 for record. HRID created for record",
                 value,
+                marc_location("001"),
             )
             folio_record["hrid"] = self.get_next_hrid(namespace)
             new_001 = Field(tag="001", data=folio_record["hrid"])

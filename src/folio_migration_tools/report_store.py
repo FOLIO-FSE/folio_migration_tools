@@ -29,7 +29,8 @@ CREATE TABLE run (
     finished TEXT,
     tool_version TEXT,
     locale_at_run TEXT,
-    config_json TEXT
+    config_json TEXT,
+    mapping_total_records INTEGER
 );
 CREATE TABLE report_stat (
     run_id INTEGER NOT NULL REFERENCES run(run_id),
@@ -39,6 +40,14 @@ CREATE TABLE report_stat (
     translated INTEGER NOT NULL DEFAULT 1,  -- 0 literal, 1 key, 2 composed parts
     count INTEGER NOT NULL,
     PRIMARY KEY (run_id, section_id, measure_key, params_json)
+);
+CREATE TABLE mapping_stat (
+    run_id INTEGER NOT NULL REFERENCES run(run_id),
+    side TEXT NOT NULL,  -- 'folio' or 'legacy'
+    field_name TEXT NOT NULL,
+    present INTEGER,  -- legacy side only: records where the field was present
+    mapped INTEGER NOT NULL,  -- records where the field was mapped
+    PRIMARY KEY (run_id, side, field_name)
 );
 CREATE TABLE legacy_record (
     record_pk INTEGER PRIMARY KEY,
@@ -239,6 +248,29 @@ class ReportStore:
         )
         self.conn.commit()
 
+    def write_mapping_stats(self, total_records: int, folio_fields: dict, legacy_fields: dict):
+        """Persist the mapped FOLIO and legacy field counts of the mapping report.
+
+        folio_fields maps a FOLIO property to [mapped]; legacy_fields maps a legacy field
+        to [present, mapped]. Replaces any rows written earlier in the run.
+        """
+        rows = [(self.run_id, "folio", name, None, int(v[0])) for name, v in folio_fields.items()]
+        rows += [
+            (self.run_id, "legacy", name, int(v[0]), int(v[1]))
+            for name, v in legacy_fields.items()
+        ]
+        self.conn.execute("DELETE FROM mapping_stat WHERE run_id = ?", (self.run_id,))
+        self.conn.executemany(
+            "INSERT INTO mapping_stat (run_id, side, field_name, present, mapped)"
+            " VALUES (?, ?, ?, ?, ?)",
+            rows,
+        )
+        self.conn.execute(
+            "UPDATE run SET mapping_total_records = ? WHERE run_id = ?",
+            (total_records, self.run_id),
+        )
+        self.conn.commit()
+
     def set_current_record(
         self,
         record_id: Any,
@@ -371,11 +403,18 @@ class ReportStore:
 _active_store: ReportStore | None = None
 
 
-def marc_location(tag: str, subfield: str | None = None, occurrence: int | None = None) -> tuple:
-    """Build a (kind, path) location for a MARC field or subfield.
+def marc_location(
+    tag: str,
+    subfield: str | None = None,
+    occurrence: int | None = None,
+    span: int | tuple[int, int] | None = None,
+) -> tuple:
+    """Build a (kind, path) location for a MARC field, subfield or character span.
 
-    The path grammar is TAG[OCCURRENCE]$CODE. The occurrence (zero-based index among
-    fields with the same tag) and the subfield code are optional: 245, 245$a, 245[0]$a.
+    The path grammar is TAG[OCCURRENCE]$CODE/SPAN. The occurrence (zero-based index among
+    fields with the same tag), the subfield code and the span are optional: 245, 245$a,
+    245[0]$a, LDR/05, 008/35-37. The span follows the MARC convention: zero-based, inclusive
+    character positions within the value of the field (or subfield), given as N or (N, M).
     If no occurrence is given and the field being processed (see iter_fields) has the
     same tag, its occurrence is used.
     """
@@ -388,6 +427,10 @@ def marc_location(tag: str, subfield: str | None = None, occurrence: int | None 
         path += f"[{occurrence}]"
     if subfield:
         path += f"${subfield}"
+    if isinstance(span, tuple):
+        path += f"/{span[0]}-{span[1]}"
+    elif span is not None:
+        path += f"/{span}"
     return "marc", path
 
 
