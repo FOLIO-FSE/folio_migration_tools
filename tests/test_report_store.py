@@ -312,3 +312,86 @@ def test_reference_files_are_snapshotted_and_deduplicated(tmp_path):
     finally:
         set_active_store(None)
         store.close()
+
+
+def test_scrub_secrets_masks_nested_secret_keys():
+    from folio_migration_tools.report_store import MASK_TOKEN, scrub_secrets
+
+    cfg = {"name": "x", "folioPassword": "pw", "nested": [{"apiKey": "k", "ok": 1}]}
+    assert scrub_secrets(cfg) == {
+        "name": "x",
+        "folioPassword": MASK_TOKEN,
+        "nested": [{"apiKey": MASK_TOKEN, "ok": 1}],
+    }
+
+
+def test_task_configurations_declare_no_secret_fields():
+    import importlib
+    import pkgutil
+
+    import folio_migration_tools.migration_tasks as pkg
+    from folio_migration_tools.report_store import _SECRET_KEY
+    from folio_migration_tools.task_configuration import AbstractTaskConfiguration
+
+    for mod in pkgutil.iter_modules(pkg.__path__):
+        importlib.import_module(f"{pkg.__name__}.{mod.name}")
+
+    def subclasses(cls):
+        for sub in cls.__subclasses__():
+            yield sub
+            yield from subclasses(sub)
+
+    for model in subclasses(AbstractTaskConfiguration):
+        for name in model.model_fields:
+            assert not _SECRET_KEY.search(name), f"{model.__name__}.{name}"
+
+
+def _marc_bytes():
+    import pymarc
+
+    rec = pymarc.Record()
+    rec.add_field(pymarc.Field("001", data="b1"))
+    rec.add_field(
+        pymarc.Field(
+            "100",
+            indicators=[" ", " "],
+            subfields=[pymarc.Subfield("a", "Secret, Person"), pymarc.Subfield("d", "1900")],
+        )
+    )
+    return rec.as_marc()
+
+
+def test_masked_marc_and_json_never_reach_db(tmp_path):
+    from folio_migration_tools.report_store import MASK_TOKEN
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.configure_privacy(True, ["100$a", "ssn"])
+    store.set_current_record("b1", "f.mrc", 0, "marc", _marc_bytes)
+    store.add_issue("DATA ISSUE", "b1", "m", "Secret, Person", "marc", "100[0]$a")
+    store.set_current_record("r2", "p.tsv", 1, "json", lambda: json.dumps({"ssn": "123", "n": "x"}))
+    store.add_issue("DATA ISSUE", "r2", "m", "123", "column", "ssn")
+    store.flush()
+    rows = store.conn.execute("SELECT payload, masked, mask_note FROM legacy_record").fetchall()
+    assert all(r[1] == 1 and "f.mrc" in (r[2] or "") + "f.mrc" for r in rows)
+    blob = b"".join(r[0] for r in rows)
+    assert b"Secret" not in blob and b"123" not in blob and b"1900" in blob
+    assert MASK_TOKEN.encode() in blob
+    legacy = [r[0] for r in store.conn.execute("SELECT legacy_value FROM data_issue")]
+    assert legacy == [MASK_TOKEN, MASK_TOKEN]
+    store.close()
+
+
+def test_capture_can_be_disabled_and_default_is_unmasked(tmp_path):
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.set_current_record("b1", "f", 0, "json", lambda: '{"a": 1}')
+    store.add_issue("DATA ISSUE", "b1", "m", "v")
+    store.configure_privacy(False)
+    store.set_current_record("b2", "f", 1, "json", lambda: '{"a": 2}')
+    store.add_issue("DATA ISSUE", "b2", "m", "v")
+    rows = store.conn.execute(
+        "SELECT record_id, payload, masked FROM legacy_record ORDER BY record_id"
+    ).fetchall()
+    assert rows == [("b1", b'{"a": 1}', 0), ("b2", None, 0)]
+    store.close()

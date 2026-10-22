@@ -8,6 +8,7 @@ import ast
 import hashlib
 import json
 import logging
+import re
 import sqlite3
 import weakref
 import zlib
@@ -200,6 +201,8 @@ class ReportStore:
         self.conn.commit()
         self.run_id: int | None = None
         self._issue_buffer: list = []
+        self._capture_records = True
+        self._mask_fields: list[str] = []
         self._current: dict | None = None
         self.current_field: tuple | None = None
         self._reports: "weakref.WeakSet" = weakref.WeakSet()
@@ -240,7 +243,7 @@ class ReportStore:
                 started,
                 tool_version,
                 locale,
-                json.dumps(config, default=str) if config is not None else None,
+                json.dumps(scrub_secrets(config), default=str) if config is not None else None,
             ),
         )
         self.conn.commit()
@@ -341,6 +344,38 @@ class ReportStore:
             )
         self.conn.commit()
 
+    def configure_privacy(self, capture_legacy_records: bool = True, mask_fields=()):
+        """Set whether legacy records are stored and which fields are masked."""
+        self._capture_records = capture_legacy_records
+        self._mask_fields = [f.strip() for f in mask_fields if f and f.strip()]
+
+    def _mask_payload(self, payload: Any, fmt: str) -> tuple[Any, bool]:
+        """Return the payload with masked fields replaced, and whether anything was masked.
+
+        If masking is configured but cannot be applied, the payload is dropped rather
+        than stored unmasked.
+        """
+        if payload is None or not self._mask_fields:
+            return payload, False
+        try:
+            if fmt == "marc":
+                return _mask_marc(payload, self._mask_fields), True
+            if fmt == "json":
+                return _mask_json(payload, self._mask_fields), True
+        except Exception:
+            logger.warning("Could not mask legacy record; it will not be stored")
+        return None, True
+
+    def _is_masked_location(self, kind: str | None, path: str | None) -> bool:
+        if not self._mask_fields or not kind or not path:
+            return False
+        if kind == "column":
+            return path in self._mask_fields
+        tag, sub = _split_marc_path(path)
+        return tag in self._mask_fields or (
+            sub is not None and f"{tag}${sub}" in self._mask_fields
+        )
+
     def set_current_record(
         self,
         record_id: Any,
@@ -381,13 +416,21 @@ class ReportStore:
         if cur is None:
             return None
         if cur["pk"] is None:
-            payload = cur["getter"]() if cur["getter"] else None
+            payload = cur["getter"]() if cur["getter"] and self._capture_records else None
+            payload, masked = self._mask_payload(payload, cur["format"])
             if isinstance(payload, str):
                 payload = payload.encode("utf-8")
+            note = None
+            if masked:
+                note = (
+                    "Fields masked; refer to the original data file at "
+                    f"{cur['source_file']}, index {cur['source_index']}"
+                )
             ids = sorted(cur["ref"].ids)
             row = self.conn.execute(
                 "INSERT INTO legacy_record (run_id, record_id, record_id_kind, source_file,"
-                " source_index, format, payload, payload_hash) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+                " source_index, format, payload, payload_hash, masked, mask_note)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
                 " ON CONFLICT (run_id, source_file, source_index) DO UPDATE SET"
                 " record_id = excluded.record_id RETURNING record_pk",
                 (
@@ -399,6 +442,8 @@ class ReportStore:
                     cur["format"],
                     payload,
                     hashlib.sha256(payload).hexdigest() if payload else None,
+                    int(masked),
+                    note,
                 ),
             ).fetchone()
             cur["pk"] = row[0]
@@ -430,6 +475,13 @@ class ReportStore:
         if len(ref.ids) > 1:
             ref = RecordRef(sorted(ref.ids), ref.kind, ref.raw)
         text, params_json, translated = describe_text(message)
+        if self._is_masked_location(location_kind, location_path):
+            original = None if legacy_value is None else str(legacy_value)
+            if original:
+                text = text.replace(original, MASK_TOKEN) if text else text
+                if params_json:
+                    params_json = params_json.replace(json.dumps(original)[1:-1], MASK_TOKEN)
+            legacy_value = MASK_TOKEN
         self._issue_buffer.append(
             (
                 self.run_id,
@@ -471,6 +523,58 @@ class ReportStore:
 
 
 _active_store: ReportStore | None = None
+
+
+MASK_TOKEN = "***MASKED***"
+_SECRET_KEY = re.compile(r"pass(word|wd)|secret|token|api[_-]?key|credential", re.IGNORECASE)
+
+
+def scrub_secrets(value: Any) -> Any:
+    """Return a copy of value with the values of secret-like keys replaced by the mask token."""
+    if isinstance(value, dict):
+        return {
+            k: MASK_TOKEN if isinstance(k, str) and _SECRET_KEY.search(k) else scrub_secrets(v)
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [scrub_secrets(v) for v in value]
+    return value
+
+
+def _split_marc_path(path: str) -> tuple[str, str | None]:
+    base = path.split("/", 1)[0]
+    tag = re.split(r"[\[$]", base, maxsplit=1)[0]
+    sub = base.split("$", 1)[1] if "$" in base else None
+    return tag, sub
+
+
+def _mask_marc(payload: bytes, mask_fields: list[str]) -> bytes:
+    import pymarc
+
+    record = pymarc.Record(data=payload, to_unicode=True, force_utf8=True)
+    for spec in mask_fields:
+        tag, _, code = spec.partition("$")
+        for field in record.get_fields(tag):
+            if field.is_control_field():
+                field.data = MASK_TOKEN
+            elif not code:
+                field.subfields = [pymarc.Subfield(sf.code, MASK_TOKEN) for sf in field.subfields]
+            else:
+                field.subfields = [
+                    pymarc.Subfield(sf.code, MASK_TOKEN if sf.code == code else sf.value)
+                    for sf in field.subfields
+                ]
+    return record.as_marc()
+
+
+def _mask_json(payload: Any, mask_fields: list[str]) -> str:
+    data = json.loads(payload) if isinstance(payload, (str, bytes)) else payload
+    if isinstance(data, dict):
+        data = {
+            k: MASK_TOKEN if k in mask_fields and v not in (None, "") else v
+            for k, v in data.items()
+        }
+    return json.dumps(data, default=str)
 
 
 def marc_location(

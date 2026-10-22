@@ -15,6 +15,37 @@ def to_camel(string):
     return camelize(string)
 
 
+class ReportPrivacy(BaseModel):
+    """Controls what legacy data is stored in the report database."""
+
+    capture_legacy_records: Annotated[
+        bool,
+        Field(
+            title="Capture legacy records",
+            description=(
+                "Store the legacy record (MARC record, delimited row or JSON object) for "
+                "each record that has a data issue, so that issues can be reviewed in context. "
+                "Set to false to store no legacy record data."
+            ),
+        ),
+    ] = True
+    mask_fields: Annotated[
+        list[str],
+        Field(
+            title="Mask fields",
+            description=(
+                "Fields to mask in stored data. For delimited and JSON data, list the column "
+                "or key names. For MARC data, list tags or tag and subfield codes, such as "
+                "'100', '245$a' or '008'. Masked values are replaced with a fixed token "
+                "before anything is written to the database, including the legacy value of "
+                "data issues raised for those fields."
+            ),
+        ),
+    ] = []
+
+    model_config = ConfigDict(alias_generator=to_camel, populate_by_name=True)
+
+
 class AbstractTaskConfiguration(BaseModel):
     """Abstract class for task configuration."""
 
@@ -44,6 +75,13 @@ class AbstractTaskConfiguration(BaseModel):
             ),
         ),
     ] = ""
+    report_privacy: Annotated[
+        ReportPrivacy,
+        Field(
+            title="Report privacy",
+            description="Controls capture and masking of legacy data in the report database.",
+        ),
+    ] = ReportPrivacy()
 
     model_config = ConfigDict(
         alias_generator=to_camel,
