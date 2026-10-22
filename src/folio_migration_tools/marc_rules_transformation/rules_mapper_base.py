@@ -23,6 +23,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 from pymarc import Field, Indicators, Record, Subfield
 
+from folio_migration_tools.report_store import marc_location
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -449,7 +450,9 @@ class RulesMapperBase(MapperBase):
         ):
             self.migration_report.add("NonNumericTagsInRecord", marc_field.tag)
             message = "Non-numeric tags in records"
-            Helper.log_data_issue(legacy_ids, message, marc_field.tag)
+            Helper.log_data_issue(
+                legacy_ids, message, marc_field.tag, marc_location(marc_field.tag)
+            )
             bad_tags.add(marc_field.tag)
 
     def add_value_to_target(self, rec, target_string, value):

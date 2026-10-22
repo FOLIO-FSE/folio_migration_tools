@@ -64,18 +64,22 @@ class Helper:
         report_file.write(details_end)
 
     @staticmethod
-    def log_data_issue(index_or_id, message, legacy_value):
+    def log_data_issue(index_or_id, message, legacy_value, location=None):
         logging.log(26, "DATA ISSUE\t%s\t%s\t%s", index_or_id, message, legacy_value)
-        Helper._store_data_issue("DATA ISSUE", index_or_id, message, legacy_value)
+        Helper._store_data_issue("DATA ISSUE", index_or_id, message, legacy_value, location)
 
     @staticmethod
-    def log_data_issue_failed(index_or_id, message, legacy_value):
+    def log_data_issue_failed(index_or_id, message, legacy_value, location=None):
         logging.log(26, "RECORD FAILED\t%s\t%s\t%s", index_or_id, message, legacy_value)
-        Helper._store_data_issue("RECORD FAILED", index_or_id, message, legacy_value)
+        Helper._store_data_issue("RECORD FAILED", index_or_id, message, legacy_value, location)
 
     @staticmethod
-    def _store_data_issue(issue_type, index_or_id, message, legacy_value):
-        """Mirror a data issue into the report database. Never raises."""
+    def _store_data_issue(issue_type, index_or_id, message, legacy_value, location=None):
+        """Mirror a data issue into the report database. Never raises.
+
+        location is an optional (kind, path) tuple, see report_store.marc_location.
+        """
+        kind, path = location or (None, None)
         if store := get_active_store():
             try:
                 store.add_issue(
@@ -83,6 +87,8 @@ class Helper:
                     index_or_id,
                     message,
                     legacy_value,
+                    kind,
+                    path,
                     ts=datetime.now(timezone.utc).isoformat(),
                 )
             except Exception as ex:  # a reporting failure must not stop a migration

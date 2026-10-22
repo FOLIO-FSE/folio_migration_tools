@@ -18,6 +18,7 @@ from folioclient import FolioClient
 from pymarc.field import Field
 from pymarc.record import Leader, Record
 
+from folio_migration_tools.report_store import iter_fields
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -143,7 +144,7 @@ class BibsRulesMapper(RulesMapperBase):
         if getattr(self.task_configuration, "data_import_marc", False):
             self.simple_bib_map(folio_instance, marc_record, ignored_subsequent_fields, legacy_ids)
         else:
-            for marc_field in marc_record:
+            for marc_field in iter_fields(marc_record):
                 self.report_marc_stats(marc_field, bad_tags, legacy_ids, ignored_subsequent_fields)
                 if marc_field.tag not in ignored_subsequent_fields:
                     self.process_marc_field(

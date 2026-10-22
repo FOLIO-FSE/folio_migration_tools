@@ -19,6 +19,7 @@ from folioclient import FolioClient
 from pymarc.field import Field, Indicators
 from pymarc.record import Record
 
+from folio_migration_tools.report_store import iter_fields
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -165,7 +166,7 @@ class RulesMapperHoldings(RulesMapperBase):
         self.migration_report.add("RecordStatus", marc_record.leader[5])
         ignored_subsequent_fields: set = set()
         num_852s = 0
-        for marc_field in marc_record:
+        for marc_field in iter_fields(marc_record):
             try:
                 if marc_field.tag == "852":
                     num_852s += 1
