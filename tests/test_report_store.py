@@ -395,3 +395,17 @@ def test_capture_can_be_disabled_and_default_is_unmasked(tmp_path):
     ).fetchall()
     assert rows == [("b1", b'{"a": 1}', 0), ("b2", None, 0)]
     store.close()
+
+
+def test_file_index_record_collects_parse_issues(tmp_path):
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.set_current_record("f.mrc:3", "f.mrc", 3, "marc", lambda: b"rawbytes", kind="file_index")
+    store.add_issue("DATA ISSUE", "some legacy label", "bad record", "ctx")
+    store.flush()
+    row = store.conn.execute(
+        "SELECT l.record_id_kind, l.payload FROM data_issue d JOIN legacy_record l"
+        " ON d.record_pk = l.record_pk"
+    ).fetchone()
+    assert row == ("file_index", b"rawbytes")
+    store.close()

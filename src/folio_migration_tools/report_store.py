@@ -383,14 +383,18 @@ class ReportStore:
         source_index: int = 0,
         format: str = "",
         payload_getter: Callable[[], Any] | None = None,
+        kind: str | None = None,
     ):
         """Mark the record being processed. Nothing is written until an issue is logged.
 
         payload_getter is called lazily, once, when the first issue for this record
         is added, so clean records cost only this pointer assignment.
         """
+        ref = normalize_record_ref(record_id)
+        if kind and ref.ids:
+            ref.kind = kind
         self._current = {
-            "ref": normalize_record_ref(record_id),
+            "ref": ref,
             "source_file": source_file,
             "source_index": source_index,
             "format": format,
@@ -470,7 +474,7 @@ class ReportStore:
             current_ids = set(self._current["ref"].ids)
             if not ref.ids:
                 ref = self._current["ref"]
-            if set(ref.ids) & current_ids:
+            if set(ref.ids) & current_ids or self._current["ref"].kind == "file_index":
                 record_pk = self._current_record_pk()
         if len(ref.ids) > 1:
             ref = RecordRef(sorted(ref.ids), ref.kind, ref.raw)
@@ -525,7 +529,7 @@ class ReportStore:
 _active_store: ReportStore | None = None
 
 
-MASK_TOKEN = "***MASKED***"
+MASK_TOKEN = "***MASKED***"  # noqa: S105
 _SECRET_KEY = re.compile(r"pass(word|wd)|secret|token|api[_-]?key|credential", re.IGNORECASE)
 
 
@@ -554,15 +558,17 @@ def _mask_marc(payload: bytes, mask_fields: list[str]) -> bytes:
     record = pymarc.Record(data=payload, to_unicode=True, force_utf8=True)
     for spec in mask_fields:
         tag, _, code = spec.partition("$")
-        for field in record.get_fields(tag):
-            if field.is_control_field():
-                field.data = MASK_TOKEN
+        for marc_field in record.get_fields(tag):
+            if marc_field.is_control_field():
+                marc_field.data = MASK_TOKEN
             elif not code:
-                field.subfields = [pymarc.Subfield(sf.code, MASK_TOKEN) for sf in field.subfields]
+                marc_field.subfields = [
+                    pymarc.Subfield(sf.code, MASK_TOKEN) for sf in marc_field.subfields
+                ]
             else:
-                field.subfields = [
+                marc_field.subfields = [
                     pymarc.Subfield(sf.code, MASK_TOKEN if sf.code == code else sf.value)
-                    for sf in field.subfields
+                    for sf in marc_field.subfields
                 ]
     return record.as_marc()
 

@@ -24,7 +24,7 @@ from folio_migration_tools.custom_exceptions import (
     TransformationRecordFailedError,
 )
 from folio_migration_tools.folder_structure import FolderStructure
-from folio_migration_tools.report_store import capture_reference_file
+from folio_migration_tools.report_store import capture_reference_file, get_active_store
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import FileDefinition
@@ -245,6 +245,18 @@ class MARCReaderWrapper:
             processor.mapper.migration_report.add_general_statistics(
                 i18n_t("Records in file before parsing")
             )
+            store = get_active_store()
+            if store:
+                # Until a legacy id is known, issues are attached to the raw source bytes
+                raw_chunk = getattr(reader, "current_chunk", None)
+                store.set_current_record(
+                    f"{source_file.file_name}:{idx}",
+                    source_file.file_name,
+                    idx,
+                    "marc",
+                    lambda chunk=raw_chunk: chunk,
+                    kind="file_index",
+                )
             try:
                 recovery_strategy = "none"
                 # A permissive MARCReader yields None when parsing fails.
