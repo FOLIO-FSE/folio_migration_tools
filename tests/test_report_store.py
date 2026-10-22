@@ -198,6 +198,9 @@ def test_issue_location_and_helpers(tmp_path):
 
     assert marc_location("245") == ("marc", "245")
     assert marc_location("245", "a", 0) == ("marc", "245[0]$a")
+    assert marc_location("LDR", span=5) == ("marc", "LDR/5")
+    assert marc_location("008", span=(35, 37)) == ("marc", "008/35-37")
+    assert marc_location("245", "a", 0, (3, 5)) == ("marc", "245[0]$a/3-5")
     assert column_location("barcode") == ("column", "barcode")
     store = ReportStore(tmp_path / "r.sqlite")
     store.start_run("t")
@@ -235,6 +238,34 @@ def test_marc_location_uses_occurrence_of_current_field(tmp_path):
         assert store.current_field is None
         assert marc_location("700", "e")[1] == "700$e"
         assert marc_location("700", "e", 2)[1] == "700[2]$e"
+    finally:
+        set_active_store(None)
+        store.close()
+
+
+def test_print_mapping_report_stores_mapping_stats(tmp_path):
+    import io
+
+    from folio_migration_tools.helper import Helper
+    from folio_migration_tools.report_store import set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        Helper.print_mapping_report(
+            io.StringIO(), 10, {"barcode": [8], "title": [10]}, {"BARCODE": [9, 8]}
+        )
+        rows = store.conn.execute(
+            "SELECT side, field_name, present, mapped FROM mapping_stat ORDER BY side, field_name"
+        ).fetchall()
+        assert rows == [
+            ("folio", "barcode", None, 8),
+            ("folio", "title", None, 10),
+            ("legacy", "BARCODE", 9, 8),
+        ]
+        total = store.conn.execute("SELECT mapping_total_records FROM run").fetchone()[0]
+        assert total == 10
     finally:
         set_active_store(None)
         store.close()

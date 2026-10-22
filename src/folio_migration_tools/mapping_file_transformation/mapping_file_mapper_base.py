@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Set
 from folio_uuid.folio_uuid import FOLIONamespaces, FolioUUID
 from folioclient import FolioClient
 
-from folio_migration_tools.report_store import get_active_store
+from folio_migration_tools.report_store import column_location, get_active_store
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -665,6 +665,7 @@ class MappingFileMapperBase(MapperBase):
             f"Accepted values: {sorted(self.boolean_true_tokens | self.boolean_false_tokens)}. "
             "Value found: ",
             value,
+            self.legacy_column_location(property_name),
         )
 
     def _coerce_boolean_value(self, value, folio_prop_name, index_or_id, delimited):
@@ -734,6 +735,7 @@ class MappingFileMapperBase(MapperBase):
                 index_or_id,
                 f"Conflicting boolean values for {folio_prop_name}. Values found: ",
                 [v for v, _ in results],
+                self.legacy_column_location(folio_prop_name),
             )
         return results[0][0]
 
@@ -1146,6 +1148,12 @@ class MappingFileMapperBase(MapperBase):
             )
         )
 
+    def legacy_column_location(self, folio_prop) -> tuple[str, str] | None:
+        """Return the column location of the legacy field mapped to a FOLIO property, if any."""
+        if legacy_field := self.legacy_basic_property(folio_prop):
+            return column_location(legacy_field)
+        return None
+
     def legacy_basic_property(self, folio_prop):
         if folio_prop not in self.folio_keys:
             return ""
@@ -1216,6 +1224,7 @@ class MappingFileMapperBase(MapperBase):
                 f"are {mapped_schema_property['enum']} "
                 f"Forbidden enum value found: ",
                 mapped_value,
+                self.legacy_column_location(mapped_schema_property_name),
             )
 
     def is_uuid(self, value):

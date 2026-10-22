@@ -18,6 +18,11 @@ class Helper:
     def print_mapping_report(
         report_file, total_records: int, mapped_folio_fields, mapped_legacy_fields
     ):
+        if store := get_active_store():
+            try:
+                store.write_mapping_stats(total_records, mapped_folio_fields, mapped_legacy_fields)
+            except Exception as ex:  # a reporting failure must not stop a migration
+                logging.getLogger(__name__).warning("Could not store mapping stats: %s", ex)
         details_start = (
             "<details><summary>" + i18n_t("Click to expand field report") + "</summary>\n\n"
         )

@@ -9,6 +9,7 @@ Defines specialized exception types for different transformation error scenarios
 import logging
 
 from folio_migration_tools import StrCoercible
+from folio_migration_tools.helper import Helper
 
 
 class TransformationError(Exception):
@@ -21,14 +22,22 @@ class TransformationFieldMappingError(TransformationError):
     The issue should be logged for the library to act upon it
     """
 
-    def __init__(self, index_or_id="", message="", data_value: str | StrCoercible = ""):
+    def __init__(
+        self,
+        index_or_id="",
+        message="",
+        data_value: str | StrCoercible = "",
+        location: tuple[str, str] | None = None,
+    ):
         """Initialize field mapping error with index, message, and data value.
 
         Args:
             index_or_id: Record identifier or row index from source data.
             message: Descriptive error message.
             data_value: The problematic data value.
+            location: Optional (kind, path) of the problem, see report_store.marc_location.
         """
+        self.location = location
         self.index_or_id = index_or_id or ""
         self.message = message
         self.data_value: str | StrCoercible = data_value
@@ -49,19 +58,30 @@ class TransformationFieldMappingError(TransformationError):
             self.message,
             self.data_value,
         )
+        Helper._store_data_issue(
+            "FIELD MAPPING FAILED", self.index_or_id, self.message, self.data_value, self.location
+        )
 
 
 class TransformationRecordFailedError(TransformationError):
     """Raised when the field mapping fails, Error is critical and means transformation fails."""
 
-    def __init__(self, index_or_id, message="", data_value=""):
+    def __init__(
+        self,
+        index_or_id,
+        message="",
+        data_value="",
+        location: tuple[str, str] | None = None,
+    ):
         """Initialize record failure error with context information.
 
         Args:
             index_or_id: Record identifier or row index from source data.
             message: Descriptive error message about the failure.
             data_value: The problematic data value.
+            location: Optional (kind, path) of the problem, see report_store.marc_location.
         """
+        self.location = location
         self.index_or_id = index_or_id
         self.message = message
         self.data_value: str | StrCoercible = data_value
@@ -82,6 +102,9 @@ class TransformationRecordFailedError(TransformationError):
             self.index_or_id,
             self.message,
             self.data_value,
+        )
+        Helper._store_data_issue(
+            "RECORD FAILED", self.index_or_id, self.message, self.data_value, self.location
         )
 
 
