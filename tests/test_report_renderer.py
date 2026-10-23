@@ -15,6 +15,7 @@ from folio_migration_tools.report_renderer import (
     list_sections,
     render_issues_tsv,
     render_markdown,
+    render_report_json,
 )
 from folio_migration_tools.report_store import ReportStore, set_active_store
 
@@ -161,3 +162,41 @@ def test_report_cli_bad_config(run, tmp_path, content):
     config = tmp_path / "bad.json"
     config.write_text(content)
     assert report_main(["--db", str(db), "--config", str(config)]) == 1
+
+
+def test_report_json_is_locale_neutral(run):
+    db, _ = run
+    data = json.loads(render_report_json(db))
+    assert data["run"]["task_name"]
+    assert data["sections"]
+    measures = [m for ms in data["sections"].values() for m in ms]
+    assert all({"kind", "key", "params", "count"} <= set(m) for m in measures)
+    assert any(m["kind"] == "key" for m in measures)
+    # neutral output does not depend on the locale
+    assert render_report_json(db, locale="en") == render_report_json(db, locale="fr")
+
+
+def test_report_json_localized_and_filtered(run):
+    db, _ = run
+    english = json.loads(render_report_json(db, "en", localized=True))
+    french = json.loads(render_report_json(db, "fr", localized=True))
+    assert english.keys() == french.keys()
+    assert english != french
+    only = json.loads(
+        render_report_json(db, "en", ReportFilters(sections=["Trivia"], mapping=False))
+    )
+    assert list(only["sections"]) == ["Trivia"]
+    assert "mapping" not in only
+    with pytest.raises(ValueError):
+        render_report_json(db, filters=ReportFilters(sections=["Nope"]))
+
+
+def test_report_cli_json_output(run, tmp_path):
+    db, _ = run
+    out = tmp_path / "stats.json"
+    assert report_main(["--db", str(db), "--json-output", str(out)]) == 0
+    assert "sections" in json.loads(out.read_text())
+    localized = tmp_path / "labels.json"
+    args = ["--db", str(db), "--locale", "en", "--json-output", str(localized), "--json-localized"]
+    assert report_main(args) == 0
+    assert "sections" not in json.loads(localized.read_text())

@@ -120,6 +120,40 @@ class ReportFilters(BaseModel):
         return split_csv(value) if isinstance(value, str) else value
 
 
+def _filter_sections(sections: list, filters: ReportFilters) -> list:
+    """Apply the section and measure filters to [(section_id, [(label, count)])].
+
+    Raises:
+        ValueError: If a section id is not in the run.
+    """
+    known = [section_id for section_id, _ in sections]
+    requested = (filters.sections or []) + (filters.exclude_sections or [])
+    unknown = [s for s in requested if s not in known]
+    if unknown:
+        raise ValueError(
+            f"Unknown section(s): {', '.join(unknown)}. Available: {', '.join(known)}"
+        )
+    wanted = sections
+    if filters.sections is not None:
+        wanted = [s for s in wanted if s[0] in filters.sections]
+    if filters.exclude_sections:
+        wanted = [s for s in wanted if s[0] not in filters.exclude_sections]
+    if filters.min_count or filters.measure_contains:
+        needle = (filters.measure_contains or "").lower()
+        wanted = [
+            (section_id, kept)
+            for section_id, measures in wanted
+            if (
+                kept := [
+                    (label, count)
+                    for label, count in measures
+                    if count >= filters.min_count and needle in str(label).lower()
+                ]
+            )
+        ]
+    return wanted
+
+
 def render_markdown(
     db_path: Path,
     locale: str | None = None,
@@ -139,8 +173,6 @@ def render_markdown(
         ValueError: If there is no run, or a section id is not in the run.
     """
     filters = filters or ReportFilters()
-    sections, exclude_sections = filters.sections, filters.exclude_sections
-    min_count, measure_contains = filters.min_count, filters.measure_contains
     conn = connect_readonly(db_path)
     try:
         run = conn.execute("SELECT * FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
@@ -150,36 +182,81 @@ def render_markdown(
         finished = datetime.fromisoformat(run["finished"] or run["started"])
         folio, legacy = _mapping_fields(conn, run["run_id"])
         with _locale(locale):
-            wanted = _sections(conn, run["run_id"])
-            known = [section_id for section_id, _ in wanted]
-            unknown = [s for s in (sections or []) + (exclude_sections or []) if s not in known]
-            if unknown:
-                raise ValueError(
-                    f"Unknown section(s): {', '.join(unknown)}. Available: {', '.join(known)}"
-                )
-            if sections is not None:
-                wanted = [s for s in wanted if s[0] in sections]
-            if exclude_sections:
-                wanted = [s for s in wanted if s[0] not in exclude_sections]
-            if min_count or measure_contains:
-                needle = (measure_contains or "").lower()
-                wanted = [
-                    (section_id, kept)
-                    for section_id, measures in wanted
-                    if (
-                        kept := [
-                            (label, count)
-                            for label, count in measures
-                            if count >= min_count and needle in str(label).lower()
-                        ]
-                    )
-                ]
+            wanted = _filter_sections(_sections(conn, run["run_id"]), filters)
             text = render_report_markdown(_title(run, title), started, finished, wanted)
             if filters.mapping and (folio or legacy):
                 text += Helper.render_mapping_report(
                     run["mapping_total_records"] or 0, folio, legacy
                 )
         return text
+    finally:
+        conn.close()
+
+
+def _measure_json(row: sqlite3.Row) -> dict:
+    params = json.loads(row["params_json"]) if row["params_json"] else {}
+    kind = {0: "literal", 1: "key", 2: "composed"}[row["translated"]]
+    return {"kind": kind, "key": row["measure_key"], "params": params, "count": row["count"]}
+
+
+def render_report_json(
+    db_path: Path,
+    locale: str | None = None,
+    filters: ReportFilters | None = None,
+    localized: bool = False,
+) -> str:
+    """Render the statistics of the latest run as JSON.
+
+    By default the output is locale-neutral: every measure is a ``{kind, key, params,
+    count}`` object, where ``kind`` is ``key`` (a translation key with its params),
+    ``literal`` (text that was never translated) or ``composed`` (``params.parts`` hold
+    keys and text to join). With ``localized`` the output has the shape of the JSON a
+    task writes, ``{section: {label: count}}``, with labels in ``locale``. The filters
+    apply to both. The mapping field tables are included unless ``filters.mapping`` is
+    false.
+
+    Raises:
+        ValueError: If there is no run, or a section id is not in the run.
+    """
+    filters = filters or ReportFilters()
+    conn = connect_readonly(db_path)
+    try:
+        run = conn.execute("SELECT * FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
+        if run is None:
+            raise ValueError(f"No run recorded in {db_path}")
+        with _locale(locale):
+            wanted = _filter_sections(_sections(conn, run["run_id"]), filters)
+            if localized:
+                data = {section_id: dict(measures) for section_id, measures in wanted}
+                return json.dumps(data, indent=2, ensure_ascii=False)
+            kept = {
+                section_id: {label for label, _ in measures} for section_id, measures in wanted
+            }
+            sections: dict = {section_id: [] for section_id in kept}
+            for r in conn.execute(
+                "SELECT section_id, measure_key, params_json, translated, count FROM report_stat"
+                " WHERE run_id = ? ORDER BY rowid",
+                (run["run_id"],),
+            ):
+                label = render_text(r["translated"], r["measure_key"], r["params_json"])
+                if r["section_id"] in kept and label in kept[r["section_id"]]:
+                    sections[r["section_id"]].append(_measure_json(r))
+        data = {
+            "run": {
+                "task_name": run["task_name"],
+                "task_type": run["task_type"],
+                "started": run["started"],
+                "finished": run["finished"],
+                "tool_version": run["tool_version"],
+                "total_records": run["mapping_total_records"],
+            },
+            "sections": sections,
+        }
+        if filters.mapping:
+            folio, legacy = _mapping_fields(conn, run["run_id"])
+            if folio or legacy:
+                data["mapping"] = {"folio": folio, "legacy": legacy}
+        return json.dumps(data, indent=2, ensure_ascii=False)
     finally:
         conn.close()
 
