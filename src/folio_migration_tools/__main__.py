@@ -245,6 +245,10 @@ def inheritors(base_class):
 
 
 def cli():
+    if len(sys.argv) > 1 and sys.argv[1] == "report":
+        from folio_migration_tools.report_cli import main as report_main
+
+        sys.exit(report_main(sys.argv[2:]))
     asyncio.run(main())
 
 
