@@ -1,6 +1,7 @@
 """Tests for rendering reports from the report database."""
 
 import io
+import json
 from datetime import datetime, timezone
 
 import pytest
@@ -8,7 +9,13 @@ import pytest
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import MigrationReport
-from folio_migration_tools.report_renderer import render_markdown
+from folio_migration_tools.report_cli import main as report_main
+from folio_migration_tools.report_renderer import (
+    ReportFilters,
+    list_sections,
+    render_issues_tsv,
+    render_markdown,
+)
 from folio_migration_tools.report_store import ReportStore, set_active_store
 
 STARTED = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
@@ -58,11 +65,99 @@ def test_rendered_report_can_change_locale(run):
 
 def test_section_filters(run):
     db, _ = run
-    only = render_markdown(db, locale="en", sections=["Trivia"], include_mapping=False)
+    only = render_markdown(
+        db, locale="en", filters=ReportFilters(sections=["Trivia"], mapping=False)
+    )
     assert "plain | 3" in only
     assert "Records processed" not in only
     assert "Mapped FOLIO fields" not in only
-    without = render_markdown(db, locale="en", exclude_sections=["Trivia"])
+    without = render_markdown(db, locale="en", filters=ReportFilters(exclude_sections=["Trivia"]))
     assert "plain | 3" not in without
     assert "Records processed" in without
 
+
+def test_measure_filters(run):
+    db, _ = run
+    big = render_markdown(db, locale="en", filters=ReportFilters(min_count=3, mapping=False))
+    assert "plain | 3" in big
+    assert "Records processed" in big  # count 5
+    assert "Could not parse catalogedDate" not in big  # count 2
+    only = render_markdown(
+        db, locale="en", filters=ReportFilters(measure_contains="PLAIN", mapping=False)
+    )
+    assert "plain | 3" in only
+    assert "Records processed" not in only
+
+
+def test_unknown_section_is_an_error(run):
+    db, _ = run
+    with pytest.raises(ValueError, match="Nope"):
+        render_markdown(db, filters=ReportFilters(sections=["Nope"]))
+
+
+def test_list_sections(run):
+    db, _ = run
+    sections = {s[0]: s for s in list_sections(db, "en")}
+    assert sections["Trivia"] == ("Trivia", 1, 3)
+
+
+def test_issues_tsv_is_localized(tmp_path, report_language):
+    store = ReportStore(tmp_path / "i.sqlite")
+    store.start_run("t", started=STARTED.isoformat())
+    set_active_store(store)
+    Helper.log_data_issue(["a1"], i18n_t("Could not parse catalogedDate"), "bad")
+    Helper.log_data_issue_failed("b2", "plain message", "val")
+    store.finalize(datetime.now(timezone.utc).isoformat())
+    set_active_store(None)
+    fr = render_issues_tsv(tmp_path / "i.sqlite").splitlines()
+    en = render_issues_tsv(tmp_path / "i.sqlite", locale="en").splitlines()
+    assert fr[0].split("\t")[:2] == ["DATA ISSUE", "a1"]
+    assert en[0].split("\t")[2:] == ["Could not parse catalogedDate", "bad"]
+    assert fr[0].split("\t")[2] != en[0].split("\t")[2]
+    assert fr[1].split("\t") == ["RECORD FAILED", "b2", "plain message", "val"]
+
+
+def test_report_cli(run, tmp_path, capsys):
+    db, _ = run
+    out = tmp_path / "r.md"
+    assert report_main(["--db", str(db), "--locale", "en,fr", "--output", str(out)]) == 0
+    assert "# Item transformation report" in (tmp_path / "r_en.md").read_text()
+    assert (tmp_path / "r_fr.md").exists()
+    assert report_main(["--db", str(db), "--list-sections"]) == 0
+    assert "Trivia" in capsys.readouterr().out
+    assert report_main(["--db", str(db), "--sections", "Nope"]) == 1
+    assert report_main(["--db", str(tmp_path / "missing.sqlite")]) == 1
+
+
+def test_report_cli_config_file(run, tmp_path):
+    db, _ = run
+    config = tmp_path / "filters.json"
+    config.write_text(
+        json.dumps(
+            {
+                "locale": "en",
+                "excludeSections": ["Trivia"],
+                "mapping": False,
+                "output": str(tmp_path / "from_config.md"),
+            }
+        )
+    )
+    assert report_main(["--db", str(db), "--config", str(config)]) == 0
+    text = (tmp_path / "from_config.md").read_text()
+    assert "Records processed" in text
+    assert "plain | 3" not in text
+    assert "Mapped FOLIO fields" not in text
+    # command line wins over the config file
+    other = tmp_path / "cli.md"
+    assert report_main(["--db", str(db), "--config", str(config), "--output", str(other)]) == 0
+    assert other.exists()
+
+
+@pytest.mark.parametrize(
+    "content", ['{"bogus": 1}', "[1]", "not json", '{"minCount": "x"}', '{"sections": [1]}']
+)
+def test_report_cli_bad_config(run, tmp_path, content):
+    db, _ = run
+    config = tmp_path / "bad.json"
+    config.write_text(content)
+    assert report_main(["--db", str(db), "--config", str(config)]) == 1

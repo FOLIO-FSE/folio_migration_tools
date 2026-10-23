@@ -11,8 +11,11 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
+from typing import Annotated
 
+import humps
 import i18n
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
@@ -91,12 +94,36 @@ def _mapping_fields(conn: sqlite3.Connection, run_id: int) -> tuple:
     return folio, legacy
 
 
+def split_csv(value: str) -> list[str]:
+    return [item.strip() for item in value.split(",") if item.strip()]
+
+
+class ReportFilters(BaseModel):
+    """Which parts of a report to render.
+
+    Keys can be written in snake_case or camelCase. Unknown keys are rejected.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid", alias_generator=humps.camelize, populate_by_name=True
+    )
+
+    sections: list[str] | None = None
+    exclude_sections: list[str] | None = None
+    mapping: StrictBool = True
+    min_count: Annotated[int, Field(ge=0, strict=True)] = 0
+    measure_contains: str | None = None
+
+    @field_validator("sections", "exclude_sections", mode="before")
+    @classmethod
+    def _split_csv(cls, value):
+        return split_csv(value) if isinstance(value, str) else value
+
+
 def render_markdown(
     db_path: Path,
     locale: str | None = None,
-    sections: list[str] | None = None,
-    exclude_sections: list[str] | None = None,
-    include_mapping: bool = True,
+    filters: ReportFilters | None = None,
     title: str | None = None,
 ) -> str:
     """Render the markdown report of a run.
@@ -104,12 +131,16 @@ def render_markdown(
     Args:
         db_path: The report database of a task run.
         locale: Render in this locale. Defaults to the active locale.
-        sections: Only include these section ids. Defaults to all.
-        exclude_sections: Leave out these section ids.
-        include_mapping: Include the mapped FOLIO and legacy field tables, if the
-            task recorded them.
+        filters: Which sections and measures to include. Defaults to everything,
+            including the mapped FOLIO and legacy field tables if the task recorded them.
         title: Override the report title. Defaults to the stored one.
+
+    Raises:
+        ValueError: If there is no run, or a section id is not in the run.
     """
+    filters = filters or ReportFilters()
+    sections, exclude_sections = filters.sections, filters.exclude_sections
+    min_count, measure_contains = filters.min_count, filters.measure_contains
     conn = connect_readonly(db_path)
     try:
         run = conn.execute("SELECT * FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
@@ -120,15 +151,79 @@ def render_markdown(
         folio, legacy = _mapping_fields(conn, run["run_id"])
         with _locale(locale):
             wanted = _sections(conn, run["run_id"])
+            known = [section_id for section_id, _ in wanted]
+            unknown = [s for s in (sections or []) + (exclude_sections or []) if s not in known]
+            if unknown:
+                raise ValueError(
+                    f"Unknown section(s): {', '.join(unknown)}. Available: {', '.join(known)}"
+                )
             if sections is not None:
                 wanted = [s for s in wanted if s[0] in sections]
             if exclude_sections:
                 wanted = [s for s in wanted if s[0] not in exclude_sections]
+            if min_count or measure_contains:
+                needle = (measure_contains or "").lower()
+                wanted = [
+                    (section_id, kept)
+                    for section_id, measures in wanted
+                    if (
+                        kept := [
+                            (label, count)
+                            for label, count in measures
+                            if count >= min_count and needle in str(label).lower()
+                        ]
+                    )
+                ]
             text = render_report_markdown(_title(run, title), started, finished, wanted)
-            if include_mapping and (folio or legacy):
+            if filters.mapping and (folio or legacy):
                 text += Helper.render_mapping_report(
                     run["mapping_total_records"] or 0, folio, legacy
                 )
         return text
+    finally:
+        conn.close()
+
+
+def list_sections(db_path: Path, locale: str | None = None) -> list[tuple[str, int, int]]:
+    """Return [(section_id, number of measures, total count)] of the latest run."""
+    conn = connect_readonly(db_path)
+    try:
+        run = conn.execute("SELECT run_id FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
+        if run is None:
+            raise ValueError(f"No run recorded in {db_path}")
+        with _locale(locale):
+            sections = _sections(conn, run["run_id"])
+        return [
+            (section_id, len(measures), sum(count for _, count in measures))
+            for section_id, measures in sections
+        ]
+    finally:
+        conn.close()
+
+
+def render_issues_tsv(db_path: Path, locale: str | None = None) -> str:
+    """Render the data issues of the latest run as the tab separated log.
+
+    Columns: issue type, record id, message, offending value. The message is in the
+    requested locale. Record ids are the normalized ids, not list representations.
+    """
+    conn = connect_readonly(db_path)
+    try:
+        run = conn.execute("SELECT run_id FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
+        if run is None:
+            raise ValueError(f"No run recorded in {db_path}")
+        lines = []
+        with _locale(locale):
+            for r in conn.execute(
+                "SELECT issue_type, record_id, record_id_raw, message_key, params_json,"
+                " translated, legacy_value FROM data_issue WHERE run_id = ? ORDER BY id",
+                (run["run_id"],),
+            ):
+                message = render_text(r["translated"], r["message_key"] or "", r["params_json"])
+                record_id = r["record_id"] or r["record_id_raw"] or ""
+                lines.append(
+                    f"{r['issue_type']}\t{record_id}\t{message}\t{r['legacy_value'] or ''}\n"
+                )
+        return "".join(lines)
     finally:
         conn.close()
