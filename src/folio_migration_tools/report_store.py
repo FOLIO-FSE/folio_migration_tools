@@ -250,8 +250,11 @@ class ReportStore:
             ),
         )
         self.conn.commit()
-        self.run_id = cur.lastrowid
-        return self.run_id
+        run_id = cur.lastrowid
+        if run_id is None:
+            raise sqlite3.DatabaseError("Could not create the run row")
+        self.run_id = run_id
+        return run_id
 
     def finish_run(self, finished: str):
         self.flush()
