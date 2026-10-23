@@ -20,7 +20,6 @@ from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
 )
-from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.library_configuration import (
     FileDefinition,
@@ -188,24 +187,14 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
     async def wrap_up(self):
         logger.info("Done. Transformer wrapping up...")
         self.extradata_writer.flush()
-        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logger.info(
-                "Writing migration- and mapping report to %s",
-                self.folder_structure.migration_reports_file,
-            )
-            self.mapper.migration_report.write_migration_report(
-                i18n_t("Manual fee/fine transformation report"),
-                migration_report_file,
-                self.start_datetime,
-            )
-
-            Helper.print_mapping_report(
-                migration_report_file,
+        self.write_reports(
+            i18n_t("Manual fee/fine transformation report"),
+            self.mapper.migration_report,
+            (
                 self.total_records,
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
-            )
-        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
-            self.mapper.migration_report.write_json_report(raw_report_file)
+            ),
+        )
 
         self.clean_out_empty_logs()

@@ -429,6 +429,7 @@ class TestUserImporterTaskWrapUp:
             UserImportTask._translate_stats_to_migration_report, importer
         )
         importer.wrap_up = MethodType(UserImportTask.wrap_up, importer)
+        importer.write_reports = MethodType(UserImportTask.write_reports, importer)
 
         await importer.wrap_up()
 

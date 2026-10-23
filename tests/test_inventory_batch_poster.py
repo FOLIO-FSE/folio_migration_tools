@@ -441,6 +441,7 @@ class TestInventoryBatchPosterWrapUp:
             InventoryBatchPoster._translate_stats_to_migration_report, poster
         )
         poster.wrap_up = MethodType(InventoryBatchPoster.wrap_up, poster)
+        poster.write_reports = MethodType(InventoryBatchPoster.write_reports, poster)
 
         await poster.wrap_up()
 
