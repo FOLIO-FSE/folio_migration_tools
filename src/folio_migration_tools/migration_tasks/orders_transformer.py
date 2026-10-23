@@ -330,25 +330,15 @@ class OrdersTransformer(MigrationTaskBase):
 
     async def wrap_up(self):
         logger.info("Done. Wrapping up...")
-        with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
-            logger.info(
-                "Writing migration- and mapping report to %s",
-                self.folder_structure.migration_reports_file,
-            )
-            self.mapper.migration_report.write_migration_report(
-                i18n_t("Pruchase Orders and Purchase Order Lines Transformation Report"),
-                migration_report_file,
-                self.start_datetime,
-            )
-
-            Helper.print_mapping_report(
-                migration_report_file,
+        self.write_reports(
+            i18n_t("Pruchase Orders and Purchase Order Lines Transformation Report"),
+            self.mapper.migration_report,
+            (
                 self.total_records,
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
-            )
-        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
-            self.mapper.migration_report.write_json_report(raw_report_file)
+            ),
+        )
         self.close_report_store()
         logger.info("All done!")
 

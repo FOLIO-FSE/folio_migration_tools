@@ -158,12 +158,10 @@ class ReservesMigrator(MigrationTaskBase):
         )
         self.write_failed_reserves_to_file()
 
-        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            self.migration_report.write_migration_report(
-                i18n_t("Reserves migration report"), report_file, self.start_datetime
-            )
-        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
-            self.migration_report.write_json_report(raw_report_file)
+        self.write_reports(
+            i18n_t("Reserves migration report"),
+            self.migration_report,
+        )
         self.clean_out_empty_logs()
 
     def write_failed_reserves_to_file(self):

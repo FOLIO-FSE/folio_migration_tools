@@ -36,6 +36,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools.helper import Helper
 from folio_migration_tools.logging_config import setup_logging
 from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
     RefDataMapping,
@@ -179,6 +180,35 @@ class MigrationTaskBase:
         finally:
             if get_active_store() is store or store.closed:
                 set_active_store(None)
+
+    def write_reports(
+        self,
+        report_title,
+        migration_report,
+        mapping_stats: Optional[tuple] = None,
+        write_json: bool = True,
+        time_started: Optional[datetime] = None,
+    ):
+        """Write the markdown report, the mapping tables and the raw JSON report.
+
+        Args:
+            report_title: Title of the markdown report.
+            migration_report: The MigrationReport to write.
+            mapping_stats: Optional (total_records, mapped_folio_fields,
+                mapped_legacy_fields) to append the field mapping tables.
+            write_json: Whether to also write the raw JSON report.
+            time_started: Start time to report; defaults to the task's start time.
+        """
+        logger.info("Writing migration report to %s", self.folder_structure.migration_reports_file)
+        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
+            migration_report.write_migration_report(
+                report_title, report_file, time_started or self.start_datetime
+            )
+            if mapping_stats:
+                Helper.print_mapping_report(report_file, *mapping_stats)
+        if write_json:
+            with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
+                migration_report.write_json_report(raw_report_file)
 
     def clean_out_empty_logs(self):
         self.close_report_store()

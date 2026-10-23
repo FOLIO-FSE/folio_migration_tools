@@ -399,17 +399,10 @@ class InventoryBatchPoster(MigrationTaskBase):
                 self.folder_structure.failed_recs_path,
             )
 
-        # Write markdown report
-        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            self.migration_report.write_migration_report(
-                f"{self.task_configuration.object_type} loading report",
-                report_file,
-                self.start_datetime,
-            )
-
-        # Write raw JSON report
-        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
-            self.migration_report.write_json_report(raw_report_file)
+        self.write_reports(
+            f"{self.task_configuration.object_type} loading report",
+            self.migration_report,
+        )
 
         # Clean up empty log files
         self.clean_out_empty_logs()

@@ -195,12 +195,11 @@ class CoursesMigrator(MigrationTaskBase):
 
     async def wrap_up(self):
         self.extradata_writer.flush()
-        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            self.mapper.migration_report.write_migration_report(
-                i18n_t("Courses migration report"), report_file, self.mapper.start_datetime
-            )
-        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
-            self.mapper.migration_report.write_json_report(raw_report_file)
+        self.write_reports(
+            i18n_t("Courses migration report"),
+            self.mapper.migration_report,
+            time_started=self.mapper.start_datetime,
+        )
         self.clean_out_empty_logs()
 
 

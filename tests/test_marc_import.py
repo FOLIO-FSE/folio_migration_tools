@@ -496,6 +496,7 @@ class TestMARCImportTaskWrapUp:
             MARCImportTask._translate_stats_to_migration_report, importer
         )
         importer.wrap_up = MethodType(MARCImportTask.wrap_up, importer)
+        importer.write_reports = MethodType(MARCImportTask.write_reports, importer)
 
         await importer.wrap_up()
 

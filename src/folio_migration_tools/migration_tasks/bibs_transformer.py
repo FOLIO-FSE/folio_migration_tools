@@ -193,20 +193,15 @@ class BibsTransformer(MigrationTaskBase):
                 len(self.mapper.bib_relationship_records),
                 relationships_path,
             )
-        with open(self.folder_structure.migration_reports_file, "w+") as report_file:
-            self.mapper.migration_report.write_migration_report(
-                i18n_t("Bibliographic records transformation report"),
-                report_file,
-                self.start_datetime,
-            )
-            Helper.print_mapping_report(
-                report_file,
+        self.write_reports(
+            i18n_t("Bibliographic records transformation report"),
+            self.mapper.migration_report,
+            (
                 self.mapper.parsed_records,
                 self.mapper.mapped_folio_fields,
                 self.mapper.mapped_legacy_fields,
-            )
-        with open(self.folder_structure.migration_reports_raw_file, "w") as raw_report_file:
-            self.mapper.migration_report.write_json_report(raw_report_file)
+            ),
+        )
 
         logger.info(
             "Done. Transformation report written to %s",
