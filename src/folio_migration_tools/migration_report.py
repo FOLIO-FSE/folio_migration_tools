@@ -83,46 +83,19 @@ class MigrationReport:
             time_started (datetime): The datetime stamp (in utc), of when the process started
         """
         time_finished = datetime.now(timezone.utc)
-        report_file.write(
-            "\n".join(
-                [
-                    "# " + report_title,
-                    i18n_t("blurbs.Introduction.description"),
-                    "## " + i18n_t("Timings"),
-                    "",
-                    i18n_t("Measure") + " | " + i18n_t("Value"),
-                    "--- | ---:",
-                    i18n_t("Time Started:") + " | " + datetime.isoformat(time_started),
-                    i18n_t("Time Finished:") + " | " + datetime.isoformat(time_finished),
-                    i18n_t("Elapsed time:") + " | " + str(time_finished - time_started),
-                ]
-            )
-        )
-        logger.info(f"Elapsed time: {time_finished - time_started}")
+        if store := get_active_store():
+            store.set_report_title(report_title)
+        sections = []
         for a in self.report:
             # Sections created via set() have no blurb_id entry; the section key is the blurb id
             blurb_id = self.report[a].get("blurb_id") or a
-            measures = [k for k in self.report[a] if k != "blurb_id"]
-            report_file.write(
-                "\n".join(
-                    [
-                        "",
-                        "## " + i18n_t(f"blurbs.{blurb_id}.title"),
-                        i18n_t(f"blurbs.{blurb_id}.description"),
-                        "<details><summary>"
-                        + i18n_t("Click to expand all %{count} things", count=len(measures))
-                        + "</summary>",
-                        "",
-                        i18n_t("Measure") + " | " + i18n_t("Count"),
-                        "--- | ---:",
-                    ]
-                    + [
-                        f"{k or 'EMPTY'} | {self.report[a][k]:,}"
-                        for k in sorted(measures, key=as_str)
-                    ]
-                    + ["</details>", ""]
-                )
+            sections.append(
+                (blurb_id, [(k, v) for k, v in self.report[a].items() if k != "blurb_id"])
             )
+        report_file.write(
+            render_report_markdown(report_title, time_started, time_finished, sections)
+        )
+        logger.info(f"Elapsed time: {time_finished - time_started}")
 
     def log_me(self):
         for a in self.report:
@@ -133,6 +106,54 @@ class MigrationReport:
             sortedlist = [(k, b[k]) for k in sorted(b, key=as_str) if k != "blurb_id"]
             for b in sortedlist:
                 logger.info(f"{b[0] or 'EMPTY'} \t\t{b[1]:,}   ")
+
+
+def render_report_markdown(
+    report_title, time_started: datetime, time_finished: datetime, sections: list
+) -> str:
+    """Build the markdown report text.
+
+    Shared by the in-memory report and the database renderer, so both produce the
+    same layout.
+
+    Args:
+        report_title: The header of the report.
+        time_started: When the process started.
+        time_finished: When the process finished.
+        sections: A list of (blurb_id, [(measure, count), ...]) in display order.
+    """
+    lines = [
+        "# " + report_title,
+        i18n_t("blurbs.Introduction.description"),
+        "## " + i18n_t("Timings"),
+        "",
+        i18n_t("Measure") + " | " + i18n_t("Value"),
+        "--- | ---:",
+        i18n_t("Time Started:") + " | " + datetime.isoformat(time_started),
+        i18n_t("Time Finished:") + " | " + datetime.isoformat(time_finished),
+        i18n_t("Elapsed time:") + " | " + str(time_finished - time_started),
+    ]
+    text = "\n".join(lines)
+    for blurb_id, measures in sections:
+        text += "\n".join(
+            [
+                "",
+                "## " + i18n_t(f"blurbs.{blurb_id}.title"),
+                i18n_t(f"blurbs.{blurb_id}.description"),
+                "<details><summary>"
+                + i18n_t("Click to expand all %{count} things", count=len(measures))
+                + "</summary>",
+                "",
+                i18n_t("Measure") + " | " + i18n_t("Count"),
+                "--- | ---:",
+            ]
+            + [
+                f"{k or 'EMPTY'} | {count:,}"
+                for k, count in sorted(measures, key=lambda m: as_str(m[0]))
+            ]
+            + ["</details>", ""]
+        )
+    return text
 
 
 def as_str(s):

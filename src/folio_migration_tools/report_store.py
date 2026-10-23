@@ -33,7 +33,8 @@ CREATE TABLE run (
     tool_version TEXT,
     locale_at_run TEXT,
     config_json TEXT,
-    mapping_total_records INTEGER
+    mapping_total_records INTEGER,
+    report_title_json TEXT  -- {"key", "params"} or {"text"}, so the title can be re-translated
 );
 CREATE TABLE report_stat (
     run_id INTEGER NOT NULL REFERENCES run(run_id),
@@ -276,6 +277,19 @@ class ReportStore:
             " ON CONFLICT (run_id, section_id, measure_key, params_json)"
             " DO UPDATE SET count = count + excluded.count",
             rows,
+        )
+        self.conn.commit()
+
+    def set_report_title(self, title: Any):
+        """Remember the report title as a translation key so it can be re-rendered."""
+        text, params_json, translated = describe_text(title)
+        if translated == 1:
+            data = {"key": text, "params": json.loads(params_json) if params_json else {}}
+        else:
+            data = {"text": text}
+        self.conn.execute(
+            "UPDATE run SET report_title_json = ? WHERE run_id = ?",
+            (json.dumps(data, default=str), self.run_id),
         )
         self.conn.commit()
 
