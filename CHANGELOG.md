@@ -1,4 +1,17 @@
 # Changelog
+## Unreleased
+
+#### New Features
+* Report database: every task now writes a SQLite database, `reports/.raw/migration_<timestamp>_<task_name>.sqlite`, with the report statistics, the data issues, the legacy records behind them and the reference data files the task used. Statistics and issue messages are stored as translation keys and parameters.
+* New `folio-migration-tools report` subcommand, which takes a configuration file and task name (or `--db`), that regenerates the markdown report, the data issues TSV and the JSON statistics from a report database, in any locale, with section and measure filters that can be kept in a JSON config file.
+* New `reportPrivacy` task option (`captureLegacyRecords`, `maskFields`) to limit the legacy data stored in the report database.
+
+#### Other Changes
+* The data issues log shows normalized record ids: a record with one legacy id shows that id instead of a list representation such as `['b1234']`. Check any script that parses the old form.
+* The MFHD transformation report now has its own title, "MFHD records transformation report".
+
+See [Report Database](docs/source/migration_reports.md#report-database).
+
 ## v1.13.1 (15/10/2026)
 
 #### Other Changes

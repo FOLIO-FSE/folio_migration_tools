@@ -200,3 +200,62 @@ def test_report_cli_json_output(run, tmp_path):
     args = ["--db", str(db), "--locale", "en", "--json-output", str(localized), "--json-localized"]
     assert report_main(args) == 0
     assert "sections" not in json.loads(localized.read_text())
+
+
+@pytest.fixture
+def library(tmp_path, run):
+    """A base folder with two timestamped runs of task 'items' and a config naming it."""
+    db, _ = run
+    base = tmp_path / "base"
+    raw = base / "iterations" / "it1" / "reports" / ".raw"
+    raw.mkdir(parents=True)
+    for stamp in ("20260101-000000", "20260102-000000"):
+        (raw / f"migration_{stamp}_items.sqlite").write_bytes(db.read_bytes())
+    config = tmp_path / "config.json"
+    config.write_text(
+        json.dumps(
+            {
+                "libraryInformation": {"iterationIdentifier": "it1"},
+                "migrationTasks": [{"name": "items", "migrationTaskType": "ItemsTransformer"}],
+            }
+        )
+    )
+    return base, config, raw.parent
+
+
+def _by_task(library, *extra):
+    base, config, _ = library
+    return report_main([str(config), "items", "--base_folder_path", str(base), *extra])
+
+
+def test_report_cli_by_task_name(library, capsys):
+    reports = library[2]
+    assert _by_task(library, "--run", "latest", "--locale", "en") == 0
+    assert (reports / "report_20260102-000000_items_en.md").exists()
+    assert not (reports / "report_20260101-000000_items_en.md").exists()
+    assert _by_task(library, "--run", "20260101-000000", "--locale", "en") == 0
+    assert (reports / "report_20260101-000000_items_en.md").exists()
+    assert _by_task(library, "--run", "nope") == 1
+    assert "Available" in capsys.readouterr().err
+
+
+def test_report_cli_task_name_errors(library, capsys):
+    base, config, _ = library
+    assert report_main([str(config), "bogus", "--base_folder_path", str(base)]) == 1
+    assert "Use one of: items" in capsys.readouterr().err
+    assert _by_task(library) == 1  # several runs, stdin is not a terminal
+    assert "--run" in capsys.readouterr().err
+    assert report_main(["--db", str(library[0]), "--run", "latest"]) == 1
+
+
+def test_report_cli_prompts_for_run(library, monkeypatch, capsys):
+    monkeypatch.setattr("sys.stdin", type("T", (), {"isatty": lambda self: True})())
+    monkeypatch.setattr("builtins.input", lambda prompt="": "1")
+    assert _by_task(library, "--locale", "en") == 0
+    assert (library[2] / "report_20260101-000000_items_en.md").exists()
+
+
+def test_report_cli_output_to_stdout(run, capsys):
+    db, _ = run
+    assert report_main(["--db", str(db), "--locale", "en", "--output", "-"]) == 0
+    assert "# Item transformation report" in capsys.readouterr().out

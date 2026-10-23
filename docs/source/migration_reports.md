@@ -16,15 +16,16 @@ Every migration task generates a migration report upon completion. These reports
 
 ### Report Formats
 
-Each task generates two report formats:
+Each task generates three report outputs:
 
 | Format | File Location | Purpose |
 |--------|---------------|---------|
 | **Markdown** | `reports/report_<timestamp>_<task_name>.md` | Human-readable report for review and documentation |
 | **JSON** | `reports/.raw/raw_report_<timestamp>_<task_name>.json` | Machine-readable format for automated processing and analysis |
+| **SQLite database** | `reports/.raw/migration_<timestamp>_<task_name>.sqlite` | The statistics and data issues in a queryable form. The markdown report and the issues log can be regenerated from it, in any language. See [Report Database](#report-database) |
 
 ```{note}
-The raw JSON reports were introduced to enable downstream processing such as aggregating statistics across multiple runs, building dashboards, or integrating with data quality monitoring tools.
+The raw JSON reports were introduced to enable downstream processing such as aggregating statistics across multiple runs, building dashboards, or integrating with data quality monitoring tools. SQLite databases were added later to support external query-based analysis and reporting tools.
 ```
 
 ### When Reports Are Generated
@@ -103,7 +104,8 @@ iterations/
     │   ├── data_issues_log_<timestamp>_<task_name>.tsv  # Detailed issues
     │   ├── log_<object_type>_<timestamp>_<task_name>.log  # Execution log
     │   └── .raw/
-    │       └── raw_report_<timestamp>_<task_name>.json  # JSON report
+    │       ├── raw_report_<timestamp>_<task_name>.json  # JSON report
+    │       └── migration_<timestamp>_<task_name>.sqlite  # Report database
     ├── results/
     └── source_data/
 ```
@@ -300,7 +302,7 @@ reports/data_issues_log_<timestamp>_<task_name>.tsv
 ```
 
 This file contains per-record issues with columns for:
-- Record identifier (row number or legacy ID)
+- Record identifier (legacy ID, barcode or row number; a record with several legacy IDs shows the first)
 - Issue type
 - Issue description
 - Affected field
@@ -333,6 +335,194 @@ Transformation tasks that use mapping files append a **mapping report** to the m
 This helps identify:
 - Unmapped legacy fields that might contain valuable data
 - FOLIO fields that were never populated
+
+## Report Database
+
+Alongside the markdown and JSON reports, every task writes a SQLite database,
+`reports/.raw/migration_<timestamp>_<task_name>.sqlite`. It holds the report statistics, the
+data issues, and, for the records that have issues, the legacy record itself. The database is
+rebuilt each time the task runs, like the other report files. If it cannot be created, the task
+logs a warning and carries on with the other outputs.
+
+Statistics and issue messages are stored as translation keys and parameters, not as translated
+text. The language of a report is therefore chosen when it is rendered, not when the task runs.
+
+### Regenerating reports
+
+The `report` subcommand renders a run from a task's report database. It does not need a FOLIO
+connection or password. Give it the configuration file and the task name, as when running the task:
+
+```bash
+# The report for the task's latest run, written to the iteration's reports folder
+# as report_<timestamp>_<task_name>_<locale>.md
+folio-migration-tools report config.json transform_items --base_folder_path ./
+
+# A specific run, by the timestamp in the database file name
+folio-migration-tools report config.json transform_items --run 20261023-101500
+
+# Several languages at once: writes ..._en.md and ..._fr.md
+folio-migration-tools report config.json transform_items --locale en,fr
+
+# The data issues as a tab-separated file, with messages in French
+folio-migration-tools report config.json transform_items --locale fr --issues-tsv issues.tsv
+
+# The statistics as JSON
+folio-migration-tools report config.json transform_items --json-output stats.json
+
+# A database file directly, with the report on the console
+folio-migration-tools report --db reports/.raw/migration_<timestamp>_<task_name>.sqlite --output -
+```
+
+An unknown task name is an error that lists the tasks in the configuration. If the task has
+several runs and neither `--run` nor `--db` is given, you are asked to choose one. Without a
+terminal the command stops and lists the runs instead. The report never overwrites the one the
+task wrote, because the file name includes the locale.
+
+| Option | Description |
+|--------|-------------|
+| `--base_folder_path` | The base folder of the migration project, if not set in the configuration. Also read from `FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH` |
+| `--run` | The run to use: the timestamp in the database file name, or `latest` |
+| `--db` | Use this report database instead of looking up the task's |
+| `--locale` | Comma-separated locales. Defaults to the configured report language. With several locales, `--output`, `--issues-tsv` or `--json-output` is required and the locale is added to each file name |
+| `--output` | Write the markdown report to this file, or to the console if `-`, instead of the reports folder |
+| `--issues-tsv` | Also write the data issues as TSV |
+| `--json-output` | Also write the statistics as JSON |
+| `--json-localized` | Write the JSON as `{section: {label: count}}` with labels in the locale, instead of locale-neutral keys and parameters |
+| `--list-sections` | List the section ids in the run, with the number of measures and the total count, and exit |
+| `--sections`, `--exclude-sections` | Comma-separated section ids to include or leave out |
+| `--no-mapping` | Leave out the mapped FOLIO and legacy field tables |
+| `--min-count` | Hide measures with a count below this |
+| `--measure-contains` | Only show measures whose text contains this, ignoring case |
+| `--config` | A JSON file with default values for the options above |
+
+With no filters, the markdown report is identical to the one the task wrote, apart from the
+finish time and elapsed time, which are the ones stored for the run.
+
+The filter options can be kept in a JSON file and passed with `--config`. Keys are the option
+names without the dashes, in snake_case or camelCase, and unknown keys are an error. Options
+given on the command line take precedence over the file.
+
+```json
+{
+  "locale": ["en", "fr"],
+  "excludeSections": ["Trivia"],
+  "minCount": 2,
+  "mapping": false,
+  "output": "report.md"
+}
+```
+
+The locale-neutral JSON has this shape. `kind` is `key` for a translation key with its
+parameters, `literal` for text that was never translated, and `composed` when `params.parts`
+lists keys and text that are joined together.
+
+```json
+{
+  "run": {"task_name": "transform_bibs", "started": "...", "finished": "...", "total_records": 10000},
+  "sections": {
+    "GeneralStatistics": [
+      {"kind": "key", "key": "Records processed", "params": {}, "count": 10000}
+    ]
+  },
+  "mapping": {"folio": {"title": [9900]}, "legacy": {"245": [10000, 9900]}}
+}
+```
+
+### Tables
+
+Every table except `schema_info` has a `run_id` that points to `run`. The database of a task
+run holds one run. The renderer and the `report` subcommand use the latest one.
+
+| Table | Contents |
+|-------|----------|
+| `schema_info` | The schema version |
+| `run` | Task name and type, start and finish time, tool version, the locale the task ran in, the task configuration with credentials removed (`config_json`), and the report title |
+| `report_stat` | One row per section and measure: `section_id`, `measure_key`, `params_json`, `count`. `translated` is 1 for a translation key with parameters, 2 for a message composed of several keys and text, and 0 for text that was never translated |
+| `mapping_stat` | The mapped FOLIO fields (`side = 'folio'`) and legacy fields (`side = 'legacy'`) with how many records had and mapped each |
+| `data_issue` | One row per data issue, described below |
+| `legacy_record` | The legacy record behind one or more issues, stored once however many issues it has |
+| `record_alias` | The ids of a record with several legacy ids, so that a record can be found by any of them |
+| `reference_file`, `reference_content`, `reference_row` | The mapping and reference data files the task used, as they were when it ran |
+
+#### Data issues
+
+| Column | Description |
+|--------|-------------|
+| `issue_type` | The category, such as `FIELD MAPPING FAILED` |
+| `message_key`, `params_json`, `translated` | The message as a translation key and parameters. When `translated` is 0, `message_key` holds the literal text |
+| `legacy_value` | The offending value |
+| `record_id`, `record_id_kind` | The normalized id of the record, and what it is: `legacy_id`, `row_number`, `file_index` or `none`. Barcodes passed by circulation tasks are stored as `legacy_id` |
+| `record_id_raw` | The value as the task logged it, kept when it differs from `record_id` |
+| `record_pk` | The `legacy_record` the issue belongs to, when one was captured |
+| `location_kind`, `location_path` | Where in the record the problem is, if the task knows |
+| `ts` | When the issue was logged |
+
+A `location_path` for `location_kind = 'marc'` is `TAG[OCCURRENCE]$CODE/SPAN`. Only the tag is
+required. The occurrence is the zero-based position among fields with the same tag, and the span
+is a zero-based, inclusive character position or range in the value: `245`, `245$a`, `245[0]$a`,
+`LDR/05`, `008/35-37`. For `location_kind = 'column'` the path is the column name.
+
+`legacy_record.format` is `marc` for a record stored as MARC21 (ISO 2709) bytes and `json` for a
+row or object stored as a JSON object of column or key to value. The record is identified by
+`source_file` and `source_index`, the zero-based position of the record in the file.
+
+#### Example queries
+
+```sql
+-- The most common data issue messages
+SELECT issue_type, message_key, COUNT(*) AS n
+FROM data_issue GROUP BY issue_type, message_key ORDER BY n DESC LIMIT 20;
+
+-- The issues on one record, whichever of its ids you have
+SELECT d.issue_type, d.message_key, d.location_path, d.legacy_value
+FROM data_issue d
+WHERE d.record_id = 'b1234567'
+   OR d.record_pk IN (SELECT record_pk FROM record_alias WHERE legacy_id = 'b1234567');
+
+-- MARC records with a problem in the 245 field
+SELECT r.source_file, r.source_index, d.location_path, d.legacy_value
+FROM data_issue d JOIN legacy_record r USING (record_pk)
+WHERE d.location_kind = 'marc' AND d.location_path LIKE '245%';
+```
+
+The database is plain SQLite, so it can be read from any language. With
+[polars](https://pola.rs):
+
+```python
+import polars as pl
+
+issues = pl.read_database_uri(
+    "SELECT issue_type, message_key, record_id FROM data_issue",
+    "sqlite:///reports/.raw/migration_<timestamp>_<task_name>.sqlite",
+)
+print(issues.group_by("message_key").len().sort("len", descending=True))
+```
+
+### Privacy
+
+The stored legacy records can contain personal data, for example in user migrations. The
+database sits in the same iteration folder as the logs and the data issues log, and should be
+handled in the same way. Two task configuration options under `reportPrivacy` limit what is
+stored:
+
+```json
+{
+  "name": "transform_users",
+  "migrationTaskType": "UserTransformer",
+  "reportPrivacy": {
+    "captureLegacyRecords": true,
+    "maskFields": ["ssn", "dateOfBirth"]
+  }
+}
+```
+
+- `captureLegacyRecords`: set to `false` to store no legacy record data. Statistics and issue
+  messages are still stored.
+- `maskFields`: column or key names for delimited and JSON data, or tags and subfields such as
+  `100`, `245$a` or `008` for MARC. The values are replaced by a fixed token before anything is
+  written, including the `legacy_value` and message parameters of issues raised on those fields.
+  A masked `legacy_record` has `masked = 1` and a `mask_note` pointing to the source file and
+  position of the original.
 
 ## Using Reports for Data Cleaning
 

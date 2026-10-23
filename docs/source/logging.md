@@ -7,6 +7,7 @@ When you run a migration task, the tools set up logging automatically. You get a
 - Files (per task run):
   - `reports/log_<object>_<timestamp>.log` — full run log at INFO/DEBUG.
   - `reports/data_issues_log_<timestamp>.tsv` — only data issues (custom level 26).
+  - `reports/.raw/migration_<timestamp>_<task>.sqlite` — the report statistics and data issues in a database. See [Report Database](migration_reports.md#report-database).
 - Noise control: `httpx` and `pymarc` are reduced to WARNING so they do not flood the console.
 
 ## Turning on DEBUG
@@ -28,3 +29,8 @@ Handlers are attached at the root logger, so module-level loggers inside depende
 
 ## Tips for noisy environments
 - If you enable DEBUG and see too much from HTTP clients, you can lower them via env or a small shim before invoking the CLI (e.g., set `LOGGING_HTTPX_LEVEL=WARNING` in your wrapper). By default, they are already set to WARNING.
+
+## Data issues in the report database
+Data issues are also written to the task's report database, with the message stored as a translation key and parameters. The TSV above stays in the language the task ran in. To get it in another language, run `folio-migration-tools report <configuration_path> <task_name> --locale <locale> --issues-tsv <file>`. See [Report Database](migration_reports.md#report-database).
+
+In both outputs the record id is normalized: a record with one legacy id shows that id, not a list such as `['b1234']`, and a record with several shows the first.
