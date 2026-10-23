@@ -19,6 +19,7 @@ from folio_migration_tools.report_renderer import (
     list_sections,
     render_issues_tsv,
     render_markdown,
+    render_report_json,
     split_csv,
 )
 
@@ -68,6 +69,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Also write the data issues as a tab separated file. Locale suffix as --output.",
     )
+    parser.add_argument(
+        "--json-output",
+        type=Path,
+        help="Also write the statistics as JSON. Locale suffix as --output.",
+    )
+    parser.add_argument(
+        "--json-localized",
+        action="store_true",
+        help="Write the JSON with labels in the locale ({section: {label: count}}) instead"
+        " of locale-neutral keys and params.",
+    )
     return parser
 
 
@@ -77,6 +89,8 @@ class ReportFilterConfig(ReportFilters):
     locale: list[str] = []
     output: Path | None = None
     issues_tsv: Path | None = None
+    json_output: Path | None = None
+    json_localized: bool = False
 
     @field_validator("locale", mode="before")
     @classmethod
@@ -142,20 +156,23 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         locales = args.locale or [None]
         several = len(locales) > 1
-        if several and not (args.output or args.issues_tsv):
-            sys.exit("--output or --issues-tsv is required with more than one locale")
+        if several and not (args.output or args.issues_tsv or args.json_output):
+            sys.exit(
+                "--output, --issues-tsv or --json-output is required with more than one locale"
+            )
+        filters = ReportFilters(
+            sections=args.sections,
+            exclude_sections=args.exclude_sections,
+            mapping=not args.no_mapping,
+            min_count=args.min_count,
+            measure_contains=args.measure_contains,
+        )
         for locale in locales:
-            if args.output or not args.issues_tsv:
+            if args.output or not (args.issues_tsv or args.json_output):
                 text = render_markdown(
                     args.db,
                     locale=locale,
-                    filters=ReportFilters(
-                        sections=args.sections,
-                        exclude_sections=args.exclude_sections,
-                        mapping=not args.no_mapping,
-                        min_count=args.min_count,
-                        measure_contains=args.measure_contains,
-                    ),
+                    filters=filters,
                 )
                 if args.output:
                     _target(args.output, locale, several).write_text(text, encoding="utf-8")
@@ -164,6 +181,11 @@ def main(argv: list[str] | None = None) -> int:
             if args.issues_tsv:
                 _target(args.issues_tsv, locale, several).write_text(
                     render_issues_tsv(args.db, locale), encoding="utf-8"
+                )
+            if args.json_output:
+                _target(args.json_output, locale, several).write_text(
+                    render_report_json(args.db, locale, filters, args.json_localized),
+                    encoding="utf-8",
                 )
     except (FileNotFoundError, ValueError) as ex:
         print(ex, file=sys.stderr)
