@@ -23,18 +23,27 @@ class Helper:
                 store.write_mapping_stats(total_records, mapped_folio_fields, mapped_legacy_fields)
             except Exception as ex:  # a reporting failure must not stop a migration
                 logging.getLogger(__name__).warning("Could not store mapping stats: %s", ex)
+        report_file.write(
+            Helper.render_mapping_report(total_records, mapped_folio_fields, mapped_legacy_fields)
+        )
+
+    @staticmethod
+    def render_mapping_report(
+        total_records: int, mapped_folio_fields, mapped_legacy_fields
+    ) -> str:
+        """Build the markdown of the mapped FOLIO and legacy field tables."""
+        out = []
         details_start = (
             "<details><summary>" + i18n_t("Click to expand field report") + "</summary>\n\n"
         )
         details_end = "</details>\n"
-        report_file.write("\n## " + i18n_t("Mapped FOLIO fields") + "\n")
-        # report_file.write(f"{blurbs[header]}\n")
+        out.append("\n## " + i18n_t("Mapped FOLIO fields") + "\n")
 
         d_sorted = {k: mapped_folio_fields[k] for k in sorted(mapped_folio_fields)}
-        report_file.write(details_start)
+        out.append(details_start)
         columns = [i18n_t("FOLIO Field"), i18n_t("Mapped"), i18n_t("Unmapped")]
-        report_file.write(" | ".join(columns) + "\n")
-        report_file.write("|".join(len(columns) * ["---"]) + "\n")
+        out.append(" | ".join(columns) + "\n")
+        out.append("|".join(len(columns) * ["---"]) + "\n")
         for k, v in d_sorted.items():
             unmapped = max(total_records - v[0], 0)
             mapped = v[0]
@@ -42,19 +51,18 @@ class Helper:
             mapped_per = "{:.0%}".format(max(mp, 0))
             up = unmapped / total_records if total_records else 0
             unmapped_per = "{:.0%}".format(max(up, 0))
-            report_file.write(
+            out.append(
                 f"{k} | {max(mapped, 0):,} ({mapped_per}) | {unmapped:,} ({unmapped_per}) \n"
             )
-        report_file.write(details_end)
+        out.append(details_end)
 
-        report_file.write("\n## " + i18n_t("Mapped Legacy fields") + "\n")
-        # report_file.write(f"{blurbs[header]}\n")
+        out.append("\n## " + i18n_t("Mapped Legacy fields") + "\n")
 
         d_sorted = {k: mapped_legacy_fields[k] for k in sorted(mapped_legacy_fields)}
-        report_file.write(details_start)
+        out.append(details_start)
         columns = [i18n_t("Legacy Field"), i18n_t("Present"), i18n_t("Mapped"), i18n_t("Unmapped")]
-        report_file.write("|".join(columns) + "\n")
-        report_file.write("|".join(len(columns) * ["---"]) + "\n")
+        out.append("|".join(columns) + "\n")
+        out.append("|".join(len(columns) * ["---"]) + "\n")
         for k, v in d_sorted.items():
             present = v[0]
             present_per = "{:.1%}".format(present / total_records if total_records else 0)
@@ -62,11 +70,13 @@ class Helper:
             mapped = v[1]
             mp = mapped / total_records if total_records else 0
             mapped_per = "{:.0%}".format(max(mp, 0))
-            report_file.write(
+            out.append(
                 f"{k} | {max(present, 0):,} ({present_per}) | {max(mapped, 0):,} "
                 f"({mapped_per}) | {unmapped:,}  \n"
             )
-        report_file.write(details_end)
+        out.append(details_end)
+
+        return "".join(out)
 
     @staticmethod
     def log_data_issue(index_or_id, message, legacy_value, location=None):
