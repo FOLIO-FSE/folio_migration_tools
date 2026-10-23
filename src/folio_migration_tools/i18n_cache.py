@@ -48,9 +48,9 @@ class TranslatedStr(str):
         """A TranslatedStr is a single part."""
         return (self,)
 
-    def __getnewargs__(self):
+    def __reduce__(self):
         """Support copy and pickle, since __new__ needs the key and params."""
-        return (str(self), self.key, self.params)
+        return (type(self), (str(self), self.key, self.params))
 
     def __add__(self, other):
         """Concatenate, returning a ComposedStr that keeps the translation key."""
@@ -97,9 +97,9 @@ class ComposedStr(str):
         obj.parts = parts
         return obj
 
-    def __getnewargs__(self):
+    def __reduce__(self):
         """Support copy and pickle, since __new__ needs the parts."""
-        return (str(self), self.parts)
+        return (type(self), (str(self), self.parts))
 
     def __add__(self, other):
         """Concatenate, keeping the parts."""
