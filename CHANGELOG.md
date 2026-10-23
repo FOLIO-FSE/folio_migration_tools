@@ -1,9 +1,18 @@
 # Changelog
 ## Unreleased
 
+#### New Features
+* Report database: every task now writes a SQLite database, `reports/.raw/migration_<timestamp>_<task_name>.sqlite`, with the report statistics, the data issues, the legacy records behind them and the reference data files the task used. Statistics and issue messages are stored as translation keys and parameters.
+* New `folio-migration-tools report` subcommand, which takes a configuration file and task name (or `--db`), that regenerates the markdown report, the data issues TSV and the JSON statistics from a report database, in any locale, with section and measure filters that can be kept in a JSON config file.
+* New `reportPrivacy` task option (`captureLegacyRecords`, `maskFields`) to limit the legacy data stored in the report database.
+
 #### Other Changes
 * Fix: Count each mapped legacy field once per array element in the "Mapped Legacy fields" report. Fields mapped inside arrays of objects (for example `compositePoLines[n]` in orders) were counted once per sub-path of the array element, which produced percentages well over 100% (#1077). The mapped output is unchanged; only the report counts, and the repeated mapping work, are affected.
 * Fix: Mapping an array of objects that sits inside a nested object of an array element, such as `compositePoLines[n].vendorDetail.referenceNumbers[m].*`, no longer fails with `'list' object has no attribute 'setdefault'`. The array is now written relative to the element being built (#1085).
+* The data issues log shows normalized record ids: a record with one legacy id shows that id instead of a list representation such as `['b1234']`. Check any script that parses the old form.
+* The MFHD transformation report now has its own title, "MFHD records transformation report".
+
+See [Report Database](docs/source/migration_reports.md#report-database).
 
 ## v1.14.0 (11/11/2026)
 
