@@ -110,6 +110,8 @@ CREATE TABLE data_issue (
     ts TEXT
 );
 CREATE INDEX ix_data_issue_msg ON data_issue (run_id, message_key);
+CREATE INDEX ix_data_issue_type ON data_issue (run_id, issue_type);
+CREATE INDEX ix_legacy_record_file ON legacy_record (run_id, source_file);
 CREATE INDEX ix_data_issue_record ON data_issue (record_pk);
 CREATE INDEX ix_data_issue_record_id ON data_issue (record_id);
 CREATE INDEX ix_record_alias ON record_alias (legacy_id);
