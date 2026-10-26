@@ -144,3 +144,17 @@ def test_composed_str_copies():
     value = i18n_t("Some key") + ": 1"
     assert copy.deepcopy(value).parts == value.parts
     assert pickle.loads(pickle.dumps(value)).parts == value.parts  # noqa: S301
+
+
+def test_translated_str_copies_are_the_same_object():
+    import copy
+
+    from folio_migration_tools.i18n_cache import ComposedStr, TranslatedStr
+
+    t = TranslatedStr("Hi", "key", {"a": 1})
+    c = t + ": x"
+    assert isinstance(c, ComposedStr)
+    assert c.parts == (t, ": x")
+    for value in (t, c):
+        assert copy.copy(value) is value
+        assert copy.deepcopy({"v": value})["v"] is value
