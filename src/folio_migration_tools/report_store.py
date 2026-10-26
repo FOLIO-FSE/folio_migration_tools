@@ -413,11 +413,10 @@ class ReportStore:
         payload_getter is called lazily, once, when the first issue for this record
         is added, so clean records cost only this pointer assignment.
         """
-        ref = normalize_record_ref(record_id)
-        if kind and ref.ids:
-            ref.kind = kind
         self._current = {
-            "ref": ref,
+            "ref": None,
+            "raw_id": record_id,
+            "kind": kind,
             "source_file": source_file,
             "source_index": source_index,
             "format": format,
@@ -429,11 +428,21 @@ class ReportStore:
         """Add ids (such as the legacy id found while mapping) to the current record."""
         if self._current is None:
             return
-        ref = self._current["ref"]
+        ref = self._current_ref()
         extra = [i for i in normalize_record_ref(ids).ids if i not in ref.ids]
         if extra and self._current["pk"] is None:
             ref.ids.extend(extra)
             ref.kind = "legacy_id"
+
+    def _current_ref(self) -> RecordRef:
+        """The normalized ref of the current record, computed on first use."""
+        cur = self._current
+        if cur["ref"] is None:
+            ref = normalize_record_ref(cur["raw_id"])
+            if cur["kind"] and ref.ids:
+                ref.kind = cur["kind"]
+            cur["ref"] = ref
+        return cur["ref"]
 
     def clear_current_record(self):
         self._current = None
@@ -453,7 +462,7 @@ class ReportStore:
                     "Fields masked; refer to the original data file at "
                     f"{cur['source_file']}, index {cur['source_index']}"
                 )
-            ids = sorted(cur["ref"].ids)
+            ids = sorted(self._current_ref().ids)
             row = self.conn.execute(
                 "INSERT INTO legacy_record (run_id, record_id, record_id_kind, source_file,"
                 " source_index, format, payload, payload_hash, masked, mask_note)"
@@ -463,7 +472,7 @@ class ReportStore:
                 (
                     self.run_id,
                     ids[0] if ids else "",
-                    cur["ref"].kind,
+                    self._current_ref().kind,
                     cur["source_file"],
                     cur["source_index"],
                     cur["format"],
@@ -494,10 +503,11 @@ class ReportStore:
         ref = normalize_record_ref(record)
         record_pk = None
         if self._current is not None:
-            current_ids = set(self._current["ref"].ids)
+            current_ref = self._current_ref()
+            current_ids = set(current_ref.ids)
             if not ref.ids:
-                ref = self._current["ref"]
-            if set(ref.ids) & current_ids or self._current["ref"].kind == "file_index":
+                ref = current_ref
+            if set(ref.ids) & current_ids or current_ref.kind == "file_index":
                 record_pk = self._current_record_pk()
         if len(ref.ids) > 1:
             ref = RecordRef(sorted(ref.ids), ref.kind, ref.raw)

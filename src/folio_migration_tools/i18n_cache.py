@@ -52,6 +52,14 @@ class TranslatedStr(str):
         """Support copy and pickle, since __new__ needs the key and params."""
         return (type(self), (str(self), self.key, self.params))
 
+    def __copy__(self):
+        """Immutable, so a copy is the object itself."""
+        return self
+
+    def __deepcopy__(self, memo):
+        """Immutable, so a deep copy is the object itself."""
+        return self
+
     def __add__(self, other):
         """Concatenate, returning a ComposedStr that keeps the translation key."""
         if not isinstance(other, str):
@@ -73,6 +81,8 @@ def _parts_of(value) -> tuple:
 
 
 def _compose(left, right) -> "ComposedStr":
+    if type(right) is str and type(left) is TranslatedStr:
+        return ComposedStr(str.__add__(left, right), (left, right))
     parts = []
     for part in _parts_of(left) + _parts_of(right):
         if parts and type(part) is str and type(parts[-1]) is str:
@@ -100,6 +110,14 @@ class ComposedStr(str):
     def __reduce__(self):
         """Support copy and pickle, since __new__ needs the parts."""
         return (type(self), (str(self), self.parts))
+
+    def __copy__(self):
+        """Immutable, so a copy is the object itself."""
+        return self
+
+    def __deepcopy__(self, memo):
+        """Immutable, so a deep copy is the object itself."""
+        return self
 
     def __add__(self, other):
         """Concatenate, keeping the parts."""
