@@ -133,3 +133,4 @@ poetry.lock
 pylock.toml
 reference_material/
 .prompts/
+profile*.json
