@@ -327,14 +327,13 @@ class HoldingsMarcTransformer(MigrationTaskBase):
 
     def add_supplemental_mfhd_mappings(self):
         if self.task_configuration.supplemental_mfhd_mapping_rules_file:
+            rules_path = (
+                self.folder_structure.mapping_files_folder
+                / self.task_configuration.supplemental_mfhd_mapping_rules_file
+            )
+            capture_reference_file("supplementalMfhdMappingRules", rules_path)
             try:
-                with open(
-                    (
-                        self.folder_structure.mapping_files_folder
-                        / self.task_configuration.supplemental_mfhd_mapping_rules_file
-                    ),
-                    "r",
-                ) as new_rules_file:
+                with open(rules_path, "r") as new_rules_file:
                     new_rules = json.load(new_rules_file)
                     if not isinstance(new_rules, dict):
                         raise TransformationProcessError(

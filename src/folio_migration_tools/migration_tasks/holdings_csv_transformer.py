@@ -18,7 +18,7 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from httpx import HTTPError
 from pydantic import Field
 
-from folio_migration_tools.report_store import capture_row
+from folio_migration_tools.report_store import capture_reference_file, capture_row
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -334,35 +334,42 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         return None
 
     def load_call_number_type_map(self):
-        with open(
+        map_path = (
             self.folder_structure.mapping_files_folder
-            / self.task_configuration.call_number_type_map_file_name,
-            "r",
-        ) as callnumber_type_map_f:
+            / self.task_configuration.call_number_type_map_file_name
+        )
+        with open(map_path, "r") as callnumber_type_map_f:
             return self.load_ref_data_map_from_file(
-                callnumber_type_map_f, "Found %s rows in call number type map"
+                callnumber_type_map_f,
+                "Found %s rows in call number type map",
+                "callNumberTypeId",
+                map_path,
             )
 
     def load_location_map(self):
-        with open(
+        map_path = (
             self.folder_structure.mapping_files_folder
             / self.task_configuration.location_map_file_name
-        ) as location_map_f:
+        )
+        with open(map_path) as location_map_f:
             return self.load_ref_data_map_from_file(
-                location_map_f, "Found %s rows in location map"
+                location_map_f, "Found %s rows in location map", "locationMap", map_path
             )
 
-    # TODO Rename this here and in `load_call_number_type_map` and `load_location_map`
-    def load_ref_data_map_from_file(self, file, message):
+    def load_ref_data_map_from_file(self, file, message, role=None, path=None):
         ref_dat_map = list(csv.DictReader(file, dialect="tsv"))
         logger.info(message, len(ref_dat_map))
+        if role and path:
+            capture_reference_file(role, path, ref_dat_map)
         return ref_dat_map
 
     def load_mapped_fields(self):
-        with open(
+        holdings_map_path = (
             self.folder_structure.mapping_files_folder
-            / self.task_configuration.holdings_map_file_name  # noqa: E501
-        ) as holdings_mapper_f:
+            / self.task_configuration.holdings_map_file_name
+        )
+        capture_reference_file("mapping", holdings_map_path)
+        with open(holdings_map_path) as holdings_mapper_f:
             holdings_map = json.load(holdings_mapper_f)
             logger.info("%s fields in holdings mapping file map", len(holdings_map["data"]))
             mapped_fields = MappingFileMapperBase.get_mapped_folio_properties_from_map(

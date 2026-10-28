@@ -133,9 +133,7 @@ def test_current_record_captured_lazily_once(tmp_path):
     store = ReportStore(tmp_path / "r.sqlite")
     store.start_run("t")
     calls = []
-    store.set_current_record(
-        ["b2", "a1"], "f.mrc", 3, "marc", lambda: calls.append(1) or b"raw"
-    )
+    store.set_current_record(["b2", "a1"], "f.mrc", 3, "marc", lambda: calls.append(1) or b"raw")
     assert store.conn.execute("SELECT count(*) FROM legacy_record").fetchone()[0] == 0
     store.add_issue("warning", ["b2", "a1"], "one", "v")
     store.add_issue("warning", "a1", "two", "v")
@@ -369,7 +367,9 @@ def test_masked_marc_and_json_never_reach_db(tmp_path):
     store.configure_privacy(True, ["100$a", "ssn"])
     store.set_current_record("b1", "f.mrc", 0, "marc", _marc_bytes)
     store.add_issue("DATA ISSUE", "b1", "m", "Secret, Person", "marc", "100[0]$a")
-    store.set_current_record("r2", "p.tsv", 1, "json", lambda: json.dumps({"ssn": "123", "n": "x"}))
+    store.set_current_record(
+        "r2", "p.tsv", 1, "json", lambda: json.dumps({"ssn": "123", "n": "x"})
+    )
     store.add_issue("DATA ISSUE", "r2", "m", "123", "column", "ssn")
     store.flush()
     rows = store.conn.execute("SELECT payload, masked, mask_note FROM legacy_record").fetchall()
@@ -462,7 +462,10 @@ def test_same_row_index_in_different_files_is_not_merged(tmp_path):
         rows = store.conn.execute(
             "SELECT source_file, payload FROM legacy_record ORDER BY source_file"
         ).fetchall()
-        assert rows == [("a.tsv", b'{"item_barcode": "a.tsv"}'), ("b.tsv", b'{"item_barcode": "b.tsv"}')]
+        assert rows == [
+            ("a.tsv", b'{"item_barcode": "a.tsv"}'),
+            ("b.tsv", b'{"item_barcode": "b.tsv"}'),
+        ]
     finally:
         set_active_store(None)
         store.close()
@@ -483,3 +486,44 @@ def test_debug_logging_flags_untranslated_measures(tmp_path, caplog):
     assert "Records processed" not in caplog.text
     assert "Untranslated data issue message: 'plain issue'" in caplog.text
     store.close()
+
+
+def test_holdings_csv_transformer_snapshots_its_reference_files(tmp_path):
+    import csv
+    from functools import partial
+    from unittest.mock import Mock
+
+    from folio_migration_tools.migration_tasks.holdings_csv_transformer import (
+        HoldingsCsvTransformer,
+    )
+    from folio_migration_tools.report_store import set_active_store
+
+    csv.register_dialect("tsv", delimiter="\t")
+    (tmp_path / "locations.tsv").write_text("legacy_code\tfolio_code\nmain\tMAIN\n")
+    (tmp_path / "callnumbers.tsv").write_text("legacy_code\tfolio_code\nlc\tLC\n")
+    (tmp_path / "holdings_mapping.json").write_text('{"data": []}')
+    transformer = Mock(spec=HoldingsCsvTransformer)
+    transformer.folder_structure = Mock()
+    transformer.task_configuration = Mock()
+    transformer.folder_structure.mapping_files_folder = tmp_path
+    transformer.task_configuration.location_map_file_name = "locations.tsv"
+    transformer.task_configuration.call_number_type_map_file_name = "callnumbers.tsv"
+    transformer.task_configuration.holdings_map_file_name = "holdings_mapping.json"
+    transformer.load_ref_data_map_from_file = partial(
+        HoldingsCsvTransformer.load_ref_data_map_from_file, transformer
+    )
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        locations = HoldingsCsvTransformer.load_location_map(transformer)
+        HoldingsCsvTransformer.load_call_number_type_map(transformer)
+        HoldingsCsvTransformer.load_mapped_fields(transformer)
+        roles = store.conn.execute(
+            "SELECT role, format FROM reference_file ORDER BY role"
+        ).fetchall()
+        assert roles == [("callNumberTypeId", "tsv"), ("locationMap", "tsv"), ("mapping", "json")]
+        assert locations == [{"legacy_code": "main", "folio_code": "MAIN"}]
+    finally:
+        set_active_store(None)
+        store.close()
