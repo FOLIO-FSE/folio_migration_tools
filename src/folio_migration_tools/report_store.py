@@ -428,15 +428,15 @@ class ReportStore:
         """Add ids (such as the legacy id found while mapping) to the current record."""
         if self._current is None:
             return
-        ref = self._current_ref()
+        ref = self._current_ref(self._current)
         extra = [i for i in normalize_record_ref(ids).ids if i not in ref.ids]
         if extra and self._current["pk"] is None:
             ref.ids.extend(extra)
             ref.kind = "legacy_id"
 
-    def _current_ref(self) -> RecordRef:
-        """The normalized ref of the current record, computed on first use."""
-        cur = self._current
+    @staticmethod
+    def _current_ref(cur: dict) -> RecordRef:
+        """The normalized ref of a current record, computed on first use."""
         if cur["ref"] is None:
             ref = normalize_record_ref(cur["raw_id"])
             if cur["kind"] and ref.ids:
@@ -462,7 +462,7 @@ class ReportStore:
                     "Fields masked; refer to the original data file at "
                     f"{cur['source_file']}, index {cur['source_index']}"
                 )
-            ids = sorted(self._current_ref().ids)
+            ids = sorted(self._current_ref(cur).ids)
             row = self.conn.execute(
                 "INSERT INTO legacy_record (run_id, record_id, record_id_kind, source_file,"
                 " source_index, format, payload, payload_hash, masked, mask_note)"
@@ -472,7 +472,7 @@ class ReportStore:
                 (
                     self.run_id,
                     ids[0] if ids else "",
-                    self._current_ref().kind,
+                    self._current_ref(cur).kind,
                     cur["source_file"],
                     cur["source_index"],
                     cur["format"],
@@ -503,7 +503,7 @@ class ReportStore:
         ref = normalize_record_ref(record)
         record_pk = None
         if self._current is not None:
-            current_ref = self._current_ref()
+            current_ref = self._current_ref(self._current)
             current_ids = set(current_ref.ids)
             if not ref.ids:
                 ref = current_ref
