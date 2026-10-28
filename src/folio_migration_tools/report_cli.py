@@ -195,16 +195,14 @@ def _choose_run(task_name: str, databases: list[tuple[str, Path]]) -> Path:
         print(f"Not a run: {answer}", file=sys.stderr)
 
 
-def resolve_db(args: argparse.Namespace) -> Path:
-    """Find the report database to use from --db or the configuration and task name.
+def resolve_databases(args: argparse.Namespace) -> list[tuple[str, Path]]:
+    """Find all report databases of a task from the configuration, oldest first.
+
+    Uses ``configuration_path``, ``task_name`` and ``base_folder_path`` of ``args``.
 
     Raises:
-        ValueError: If the task or its database cannot be found, or the run is ambiguous.
+        ValueError: If the task or its databases cannot be found.
     """
-    if args.db:
-        if args.run:
-            raise ValueError("--run cannot be used with --db")
-        return args.db
     if not (args.configuration_path and args.task_name):
         raise ValueError("Give a configuration path and task name, or --db")
     try:
@@ -229,6 +227,20 @@ def resolve_db(args: argparse.Namespace) -> Path:
     databases = find_databases(raw_folder, args.task_name)
     if not databases:
         raise ValueError(f"No report database for {args.task_name} found in {raw_folder}")
+    return databases
+
+
+def resolve_db(args: argparse.Namespace) -> Path:
+    """Find the report database to use from --db or the configuration and task name.
+
+    Raises:
+        ValueError: If the task or its database cannot be found, or the run is ambiguous.
+    """
+    if args.db:
+        if args.run:
+            raise ValueError("--run cannot be used with --db")
+        return args.db
+    databases = resolve_databases(args)
     if args.run and args.run != "latest":
         for run, path in databases:
             if args.run == run:
@@ -247,7 +259,7 @@ def _default_output(db: Path, locale: str | None) -> Path:
     return reports_folder / f"report{stem}_{locale or i18n.get('locale') or 'en'}.md"
 
 
-def _load_i18n():
+def load_i18n():
     base = environ.get("FOLIO_MIGRATION_TOOLS_I18N_CONFIG_BASE_PATH")
     try:
         if not base:
@@ -267,7 +279,7 @@ def _target(path: Path, locale: str | None, several: bool) -> Path:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    _load_i18n()
+    load_i18n()
     try:
         if args.config:
             parser.set_defaults(**load_config(args.config))

@@ -23,7 +23,7 @@ from folio_migration_tools.migration_report import render_report_markdown
 
 
 @contextmanager
-def _locale(locale: str | None):
+def locale_context(locale: str | None):
     """Switch the i18n locale for the duration of a render."""
     original = i18n.get("locale")
     if locale:
@@ -57,7 +57,7 @@ def render_text(translated: int, key: str, params_json: str | None) -> str:
     return key
 
 
-def _title(row: sqlite3.Row, title: str | None) -> str:
+def report_title(row: sqlite3.Row, title: str | None) -> str:
     if title is not None:
         return title
     data = json.loads(row["report_title_json"]) if row["report_title_json"] else {}
@@ -66,7 +66,7 @@ def _title(row: sqlite3.Row, title: str | None) -> str:
     return data.get("text") or row["task_name"] or ""
 
 
-def _sections(conn: sqlite3.Connection, run_id: int) -> list:
+def load_sections(conn: sqlite3.Connection, run_id: int) -> list:
     """Return [(section_id, [(label, count), ...])] in the order they were written."""
     sections: dict = {}
     for r in conn.execute(
@@ -81,7 +81,7 @@ def _sections(conn: sqlite3.Connection, run_id: int) -> list:
     return [(section_id, list(measures.items())) for section_id, measures in sections.items()]
 
 
-def _mapping_fields(conn: sqlite3.Connection, run_id: int) -> tuple:
+def mapping_fields(conn: sqlite3.Connection, run_id: int) -> tuple:
     folio = {}
     legacy = {}
     for r in conn.execute(
@@ -120,7 +120,7 @@ class ReportFilters(BaseModel):
         return split_csv(value) if isinstance(value, str) else value
 
 
-def _filter_sections(sections: list, filters: ReportFilters) -> list:
+def filter_sections(sections: list, filters: ReportFilters) -> list:
     """Apply the section and measure filters to [(section_id, [(label, count)])].
 
     Raises:
@@ -180,10 +180,10 @@ def render_markdown(
             raise ValueError(f"No run recorded in {db_path}")
         started = datetime.fromisoformat(run["started"])
         finished = datetime.fromisoformat(run["finished"] or run["started"])
-        folio, legacy = _mapping_fields(conn, run["run_id"])
-        with _locale(locale):
-            wanted = _filter_sections(_sections(conn, run["run_id"]), filters)
-            text = render_report_markdown(_title(run, title), started, finished, wanted)
+        folio, legacy = mapping_fields(conn, run["run_id"])
+        with locale_context(locale):
+            wanted = filter_sections(load_sections(conn, run["run_id"]), filters)
+            text = render_report_markdown(report_title(run, title), started, finished, wanted)
             if filters.mapping and (folio or legacy):
                 text += Helper.render_mapping_report(
                     run["mapping_total_records"] or 0, folio, legacy
@@ -224,8 +224,8 @@ def render_report_json(
         run = conn.execute("SELECT * FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
         if run is None:
             raise ValueError(f"No run recorded in {db_path}")
-        with _locale(locale):
-            wanted = _filter_sections(_sections(conn, run["run_id"]), filters)
+        with locale_context(locale):
+            wanted = filter_sections(load_sections(conn, run["run_id"]), filters)
             if localized:
                 data = {section_id: dict(measures) for section_id, measures in wanted}
                 return json.dumps(data, indent=2, ensure_ascii=False)
@@ -253,7 +253,7 @@ def render_report_json(
             "sections": sections,
         }
         if filters.mapping:
-            folio, legacy = _mapping_fields(conn, run["run_id"])
+            folio, legacy = mapping_fields(conn, run["run_id"])
             if folio or legacy:
                 data["mapping"] = {"folio": folio, "legacy": legacy}
         return json.dumps(data, indent=2, ensure_ascii=False)
@@ -268,8 +268,8 @@ def list_sections(db_path: Path, locale: str | None = None) -> list[tuple[str, i
         run = conn.execute("SELECT run_id FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
         if run is None:
             raise ValueError(f"No run recorded in {db_path}")
-        with _locale(locale):
-            sections = _sections(conn, run["run_id"])
+        with locale_context(locale):
+            sections = load_sections(conn, run["run_id"])
         return [
             (section_id, len(measures), sum(count for _, count in measures))
             for section_id, measures in sections
@@ -290,7 +290,7 @@ def render_issues_tsv(db_path: Path, locale: str | None = None) -> str:
         if run is None:
             raise ValueError(f"No run recorded in {db_path}")
         lines = []
-        with _locale(locale):
+        with locale_context(locale):
             for r in conn.execute(
                 "SELECT issue_type, record_id, record_id_raw, message_key, params_json,"
                 " translated, legacy_value FROM data_issue WHERE run_id = ? ORDER BY id",
