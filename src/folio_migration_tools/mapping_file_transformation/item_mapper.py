@@ -23,6 +23,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
+from folio_migration_tools.report_store import mapping_ref_json
 from folio_migration_tools.library_configuration import (
     FileDefinition,
     LibraryConfiguration,
@@ -94,6 +95,7 @@ class ItemMapper(MappingFileMapperBase):
         self.holdings_id_map = holdings_id_map
         self.unique_barcodes: Set[str] = set()
         self.status_mapping: dict = {}
+        self.status_links: dict = {}
         if temporary_loan_type_mapping:
             self.temp_loan_type_mapping = RefDataMapping(
                 self.folio_client,
@@ -241,6 +243,11 @@ class ItemMapper(MappingFileMapperBase):
                 self.status_mapping = {
                     v["legacy_code"]: v["folio_name"] for v in item_statuses_map
                 }
+        role = getattr(item_statuses_map, "role", None)
+        self.status_links = {
+            m["legacy_code"]: mapping_ref_json(role, [m["legacy_code"]], i)
+            for i, m in enumerate(item_statuses_map)
+        }
         logger.info(json.dumps(statuses, indent=True))
 
     def get_prop(self, legacy_item, folio_prop_name, index_or_id, schema_default_value):  # noqa: C901
@@ -350,5 +357,9 @@ class ItemMapper(MappingFileMapperBase):
 
     def transform_status(self, legacy_value):
         status = self.status_mapping.get(legacy_value, "Available")
-        self.migration_report.add("StatusMapping", f"'{legacy_value}' -> {status}")
+        self.migration_report.add(
+            "StatusMapping",
+            f"'{legacy_value}' -> {status}",
+            link=self.status_links.get(legacy_value),
+        )
         return status

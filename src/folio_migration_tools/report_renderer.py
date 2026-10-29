@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import render_report_markdown
+from folio_migration_tools.report_store import MAPPING_REF
 
 
 @contextmanager
@@ -195,6 +196,7 @@ def render_markdown(
 
 def _measure_json(row: sqlite3.Row) -> dict:
     params = json.loads(row["params_json"]) if row["params_json"] else {}
+    params.pop(MAPPING_REF, None)  # a link to a mapping file row, for the database only
     kind = {0: "literal", 1: "key", 2: "composed"}[row["translated"]]
     return {"kind": kind, "key": row["measure_key"], "params": params, "count": row["count"]}
 
@@ -233,6 +235,7 @@ def render_report_json(
                 section_id: {label for label, _ in measures} for section_id, measures in wanted
             }
             sections: dict = {section_id: [] for section_id in kept}
+            merged: dict = {section_id: {} for section_id in kept}
             for r in conn.execute(
                 "SELECT section_id, measure_key, params_json, translated, count FROM report_stat"
                 " WHERE run_id = ? ORDER BY rowid",
@@ -240,7 +243,18 @@ def render_report_json(
             ):
                 label = render_text(r["translated"], r["measure_key"], r["params_json"])
                 if r["section_id"] in kept and label in kept[r["section_id"]]:
-                    sections[r["section_id"]].append(_measure_json(r))
+                    entry = _measure_json(r)
+                    # Rows that differ only in their mapping file link are one measure
+                    ident = (
+                        entry["kind"],
+                        entry["key"],
+                        json.dumps(entry["params"], sort_keys=True),
+                    )
+                    if ident in merged[r["section_id"]]:
+                        merged[r["section_id"]][ident]["count"] += entry["count"]
+                    else:
+                        merged[r["section_id"]][ident] = entry
+                        sections[r["section_id"]].append(entry)
         data = {
             "run": {
                 "task_name": run["task_name"],

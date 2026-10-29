@@ -4,6 +4,7 @@
 #### New Features
 * Report database: every task now writes a SQLite database, `reports/.raw/migration_<timestamp>_<task_name>.sqlite`, with the report statistics, the data issues, the legacy records behind them and the reference data files the task used. Statistics and issue messages are stored as translation keys and parameters.
 * New `folio-migration-tools report` subcommand, which takes a configuration file and task name (or `--db`), that regenerates the markdown report, the data issues TSV and the JSON statistics from a report database, in any locale, with section and measure filters that can be kept in a JSON config file.
+* Mapping counts in the report database link to the mapping file row that produced them (`mapping_ref` in `report_stat.params_json`), without changing report text.
 * New `reportPrivacy` task option (`captureLegacyRecords`, `maskFields`) to limit the legacy data stored in the report database.
 
 #### Other Changes

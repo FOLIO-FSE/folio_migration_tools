@@ -527,3 +527,135 @@ def test_holdings_csv_transformer_snapshots_its_reference_files(tmp_path):
     finally:
         set_active_store(None)
         store.close()
+
+
+def _link_run(tmp_path, maps):
+    """Run mapped-value lookups against `maps` ({role: (rows, lookups)}) and finalize a run DB.
+
+    An empty role gives a plain list (no reference role). Returns the db path, the rendered
+    markdown, the neutral JSON and the markdown the live report wrote.
+    """
+    import io
+    from datetime import datetime, timezone
+    from types import SimpleNamespace
+
+    from folio_migration_tools.mapper_base import MapperBase
+    from folio_migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+    from folio_migration_tools.migration_report import MigrationReport
+    from folio_migration_tools.report_renderer import render_markdown, render_report_json
+    from folio_migration_tools.report_store import ReferenceRows, set_active_store
+
+    from .test_infrastructure import mocked_classes
+
+    db = tmp_path / "r.sqlite"
+    store = ReportStore(db)
+    store.start_run("t", started=datetime.now(timezone.utc).isoformat())
+    set_active_store(store)
+    report = MigrationReport()
+    fake = SimpleNamespace(migration_report=report)
+    out = io.StringIO()
+    try:
+        for role, (rows, lookups) in maps.items():
+            mapping = RefDataMapping(
+                mocked_classes.mocked_folio_client(),
+                "/material-types",
+                "mtypes",
+                ReferenceRows(rows, role) if role else rows,
+                "name",
+                "MaterialTypeMapping",
+            )
+            for legacy in lookups:
+                MapperBase.get_mapped_ref_data_value(fake, mapping, legacy, "id")
+        report.write_migration_report("Test report", out, datetime.now(timezone.utc))
+        store.finalize(datetime.now(timezone.utc).isoformat())
+    finally:
+        set_active_store(None)
+        store.close()
+    return db, render_markdown(db), render_report_json(db), out.getvalue()
+
+
+def _stat_rows(db):
+    conn = sqlite3.connect(db)
+    try:
+        return conn.execute(
+            "SELECT measure_key, params_json, count FROM report_stat"
+            " WHERE section_id = 'MaterialTypeMapping' ORDER BY params_json"
+        ).fetchall()
+    finally:
+        conn.close()
+
+
+def _label_lines(text):
+    return [ln for ln in text.splitlines() if "-> Book" in ln]
+
+
+def test_same_legacy_key_in_two_files_links_separately_but_renders_as_one(tmp_path):
+    one = [{"mt": "book", "folio_name": "Book"}, {"mt": "*", "folio_name": "Book"}]
+    two = [{"mt": "book", "folio_name": "Book"}, {"mt": "*", "folio_name": "Book"}]
+    book = {"mt": "book"}
+    db, md, js, live = _link_run(
+        tmp_path,
+        {"materialTypeId": (one, [book, book]), "otherMaterialTypeId": (two, [book])},
+    )
+    stats = [(k, json.loads(p), c) for k, p, c in _stat_rows(db)]
+    assert stats == [
+        ("book -> Book", {"mapping_ref": {"key": ["book"], "role": "materialTypeId", "row": 0}}, 2),
+        (
+            "book -> Book",
+            {"mapping_ref": {"key": ["book"], "role": "otherMaterialTypeId", "row": 0}},
+            1,
+        ),
+    ]
+    assert _label_lines(md) and _label_lines(md) == _label_lines(live)
+    assert "3" in _label_lines(md)[0]
+    measures = json.loads(js)["sections"]["MaterialTypeMapping"]
+    assert [(m["key"], m["params"], m["count"]) for m in measures] == [("book -> Book", {}, 3)]
+
+
+def test_link_key_with_spaces_and_wildcard_row(tmp_path):
+    rows = [
+        {"mt": "Rare Book", "folio_name": "Book"},
+        {"mt": "*", "folio_name": "Book"},
+    ]
+    db, md, js, live = _link_run(
+        tmp_path, {"materialTypeId": (rows, [{"mt": "Rare Book"}, {"mt": "zzz"}])}
+    )
+    stats = {k: json.loads(p) for k, p, c in _stat_rows(db)}
+    assert stats["Rare Book -> Book"] == {
+        "mapping_ref": {"key": ["Rare Book"], "role": "materialTypeId", "row": 0}
+    }
+    # A value that falls back to the "*" row is reported as unmapped: no map row produced it
+    unmapped = [p for k, p in stats.items() if "zzz" in k]
+    assert unmapped and all("mapping_ref" not in p for p in unmapped)
+    assert _label_lines(md) == _label_lines(live)
+
+
+def test_multi_key_link_is_in_file_column_order():
+    from folio_migration_tools.mapping_file_transformation.ref_data_mapping import RefDataMapping
+    from folio_migration_tools.report_store import ReferenceRows
+
+    from .test_infrastructure import mocked_classes
+
+    rows = [
+        {"branch": "Main Library", "type": "Book Club", "folio_name": "Book"},
+        {"branch": "*", "type": "*", "folio_name": "Book"},
+    ]
+    mapping = RefDataMapping(
+        mocked_classes.mocked_folio_client(),
+        "/material-types",
+        "mtypes",
+        ReferenceRows(rows, "materialTypeId"),
+        "name",
+        "MaterialTypeMapping",
+    )
+    assert mapping.mapped_legacy_keys == ["branch", "type"]
+    assert json.loads(mapping.link_json(rows[0])) == {
+        "mapping_ref": {"key": ["Main Library", "Book Club"], "role": "materialTypeId", "row": 0}
+    }
+    assert json.loads(mapping.link_json(rows[1]))["mapping_ref"]["key"] == ["*", "*"]
+
+
+def test_plain_list_map_has_no_link(tmp_path):
+    rows = [{"mt": "book", "folio_name": "Book"}, {"mt": "*", "folio_name": "Book"}]
+    db, md, js, live = _link_run(tmp_path, {"": (rows, [{"mt": "book"}])})
+    assert _stat_rows(db) == [("book -> Book", "{}", 1)]

@@ -13,7 +13,7 @@ import traceback
 from folioclient import FolioClient
 from pymarc import field
 
-from folio_migration_tools.report_store import marc_location
+from folio_migration_tools.report_store import mapping_ref_json, marc_location
 from folio_migration_tools.custom_exceptions import (
     TransformationFieldMappingError,
     TransformationProcessError,
@@ -713,6 +713,11 @@ class Conditions:
             try:
                 d = {lm["legacy_code"]: lm["folio_code"] for lm in self.mapper.location_map}  # type: ignore
                 self.ref_data_dicts["legacy_locations"] = d
+                role = getattr(self.mapper.location_map, "role", None)  # type: ignore
+                self.ref_data_dicts["legacy_location_links"] = {
+                    lm["legacy_code"]: mapping_ref_json(role, [lm["legacy_code"]], i)
+                    for i, lm in enumerate(self.mapper.location_map)  # type: ignore
+                }
                 for folio_code in d.values():
                     t = self.get_ref_data_tuple_by_code(
                         self.folio.locations, "locations", folio_code
@@ -741,8 +746,10 @@ class Conditions:
                     ) from ke
 
         # Get the right code from the location map
-        mapped_code = self.ref_data_dicts["legacy_locations"].get(value.strip(), "").strip()
+        map_key = value.strip()
+        mapped_code = self.ref_data_dicts["legacy_locations"].get(map_key, "").strip()
         if not mapped_code:
+            map_key = "*"
             mapped_code = self.ref_data_dicts["legacy_locations"].get("*", "").strip()
             if mapped_code:
                 self.mapper.migration_report.add(
@@ -757,7 +764,11 @@ class Conditions:
             raise TransformationRecordFailedError(
                 legacy_id, "Could not map location from legacy code", value
             )
-        self.mapper.migration_report.add("LocationMapping", f"'{value}' ({mapped_code}) -> {t[1]}")
+        self.mapper.migration_report.add(
+            "LocationMapping",
+            f"'{value}' ({mapped_code}) -> {t[1]}",
+            link=self.ref_data_dicts["legacy_location_links"].get(map_key),
+        )
         return t[0]
 
     def get_ref_data_tuple_by_code(self, ref_data, ref_name, code):

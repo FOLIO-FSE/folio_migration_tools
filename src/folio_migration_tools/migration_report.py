@@ -22,16 +22,21 @@ class MigrationReport:
         """Initialize a new migration report for tracking statistics and issues."""
         self.report = {}
         self.stats = {}
+        # {section: {measure: {params_json: count}}}: the part of a count that is tied to a
+        # row of a mapping file (see mapping_ref_json). Does not change the report itself.
+        self.links = {}
         if store := get_active_store():
             store.register_report(self)
 
-    def add(self, blurb_id, measure_to_add, number=1):
+    def add(self, blurb_id, measure_to_add, number=1, link=None):
         """Add section header and values to migration report.
 
         Args:
             blurb_id (string): ID of Blurb in translations file
             measure_to_add (_type_): _description_
             number (int, optional): _description_. Defaults to 1.
+            link (str, optional): params_json from mapping_ref_json, to record which row of
+                a mapping file produced this count. Only affects the report database.
         """
         try:
             self.report[blurb_id][measure_to_add] += number
@@ -40,6 +45,9 @@ class MigrationReport:
                 self.report[blurb_id] = {"blurb_id": blurb_id}
             if measure_to_add not in self.report[blurb_id]:
                 self.report[blurb_id][measure_to_add] = number
+        if link is not None:
+            linked = self.links.setdefault(blurb_id, {}).setdefault(measure_to_add, {})
+            linked[link] = linked.get(link, 0) + number
 
     def set(self, blurb_id, measure_to_add: str, number: int):
         """Set a section value to a specific number.

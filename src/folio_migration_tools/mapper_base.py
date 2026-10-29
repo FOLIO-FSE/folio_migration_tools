@@ -141,6 +141,7 @@ class MapperBase:
                     f"{' - '.join(fieldvalues)} "
                     f"-> {right_mapping[f'folio_{ref_data_mapping.key_type}']}"
                 ),
+                link=ref_data_mapping.link_json(right_mapping),
             )
             return next(v for k, v in right_mapping.items() if k.startswith("folio_"))
 
@@ -213,6 +214,7 @@ class MapperBase:
                     f"{' - '.join(fieldvalues)} "
                     f"-> {right_mapping[f'folio_{ref_data_mapping.key_type}']}"
                 ),
+                link=ref_data_mapping.link_json(right_mapping),
             )
             return right_mapping["folio_id"]
         except StopIteration:

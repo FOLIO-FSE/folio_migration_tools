@@ -49,6 +49,7 @@ from folio_migration_tools.marc_rules_transformation.marc_reader_wrapper import 
     MARCReaderWrapper,
 )
 from folio_migration_tools.report_store import (
+    ReferenceRows,
     ReportStore,
     capture_reference_file,
     get_active_store,
@@ -527,7 +528,7 @@ class MigrationTaskBase:
                         folio_property_name,
                     )
                     capture_reference_file(folio_property_name, map_file_path, ref_data_map)
-                    return ref_data_map
+                    return ReferenceRows(ref_data_map, folio_property_name)
             except Exception as exception:
                 raise exception
 
