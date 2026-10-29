@@ -165,6 +165,35 @@ def normalize_record_ref(value: Any) -> RecordRef:
     return RecordRef([text], "legacy_id", raw)
 
 
+MAPPING_REF = "mapping_ref"
+
+
+class ReferenceRows(list):
+    """Rows of a reference file, remembering the role they were captured under.
+
+    The role is the one stored in reference_file.role and a row's position is its
+    reference_row.row_index, so a count can be tied back to the row that produced it.
+    Slicing or copying into a plain list drops the role, and with it the link.
+    """
+
+    def __init__(self, rows, role: str):
+        super().__init__(rows)
+        self.role = role
+
+
+def mapping_ref_json(role: str | None, key: list, row: int) -> str | None:
+    """The params_json that links a report count to a row of a captured mapping file.
+
+    The params hold one entry, ``mapping_ref``, with ``role`` (reference_file.role of the
+    file), ``key`` (the row's legacy key values, one per key column in column order) and
+    ``row`` (reference_row.row_index). Returns None when the file has no role.
+    """
+    if not role:
+        return None
+    ref = {"role": role, "key": [str(v) for v in key], "row": row}
+    return json.dumps({MAPPING_REF: ref}, sort_keys=True)
+
+
 def describe_text(value: Any) -> tuple:
     """Return (key_or_text, params_json, translated) for a measure or issue message.
 
@@ -220,7 +249,7 @@ class ReportStore:
         if self.closed:
             return
         for report in self._reports:
-            self.write_report_stats(report.report)
+            self.write_report_stats(report.report, report.links)
         self.finish_run(finished)
         self.close()
 
@@ -261,14 +290,28 @@ class ReportStore:
         self.conn.execute("UPDATE run SET finished = ? WHERE run_id = ?", (finished, self.run_id))
         self.conn.commit()
 
-    def write_report_stats(self, report: dict):
-        """Persist an in-memory MigrationReport.report dict as report_stat rows."""
+    def write_report_stats(self, report: dict, links: dict | None = None):
+        """Persist an in-memory MigrationReport.report dict as report_stat rows.
+
+        links is MigrationReport.links: {section: {measure: {params_json: count}}}. A
+        plain-text measure with links is written as one row per link, with the link as
+        its params_json, plus a row with the remaining count if some of it had no link.
+        The rendered text and the total count of the measure do not change.
+        """
         rows = []
         for section_id, measures in report.items():
+            section_links = (links or {}).get(section_id, {})
             for measure, count in measures.items():
                 if measure == "blurb_id":
                     continue
                 text, params_json, translated = describe_text(measure)
+                linked = None if translated else section_links.get(measure)
+                if linked and sum(linked.values()) <= count:
+                    for link_params, linked_count in linked.items():
+                        rows.append((self.run_id, section_id, text, link_params, 0, linked_count))
+                    count -= sum(linked.values())
+                    if not count:
+                        continue
                 rows.append(
                     (self.run_id, section_id, text, params_json or "{}", translated, count)
                 )

@@ -12,6 +12,7 @@ import sys
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import TransformationProcessError
+from folio_migration_tools.report_store import mapping_ref_json
 from folio_migration_tools.utils import normalize_for_compare
 
 logger = logging.getLogger(__name__)
@@ -44,6 +45,8 @@ class RefDataMapping(object):
         logger.info("Fetching %s reference data from FOLIO", self.name)
         self.ref_data = list(folio_client.folio_get_all(ref_data_path, array_name, "", 1000))
         self.map = the_map
+        self._row_index = {id(row): i for i, row in enumerate(the_map or [])}
+        self._links: dict = {}
         self.regular_mappings: list = []
         self.key_type = key_type
         self.hybrid_mappings = []
@@ -53,6 +56,26 @@ class RefDataMapping(object):
         self.cached_dict = {}
         self.setup_mappings()
         logger.info("%s reference data mapping. Done init", self.name)
+
+    def link_json(self, mapping_row):
+        """The params_json linking a count to this map row in the captured file, or None.
+
+        Only maps loaded with their reference role (ReferenceRows) have a link.
+        """
+        try:
+            return self._links[id(mapping_row)]
+        except KeyError:
+            pass
+        link = None
+        row = self._row_index.get(id(mapping_row))
+        if row is not None:
+            link = mapping_ref_json(
+                getattr(self.map, "role", None),
+                [mapping_row.get(k, "") for k in self.mapped_legacy_keys],
+                row,
+            )
+        self._links[id(mapping_row)] = link
+        return link
 
     def get_ref_data_tuple(self, key_value):
         normalized_key = normalize_for_compare(key_value)

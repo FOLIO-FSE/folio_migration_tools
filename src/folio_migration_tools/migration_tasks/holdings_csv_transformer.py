@@ -18,7 +18,11 @@ from folio_uuid.folio_namespaces import FOLIONamespaces
 from httpx import HTTPError
 from pydantic import Field
 
-from folio_migration_tools.report_store import capture_reference_file, capture_row
+from folio_migration_tools.report_store import (
+    ReferenceRows,
+    capture_reference_file,
+    capture_row,
+)
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
     TransformationRecordFailedError,
@@ -361,6 +365,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
         logger.info(message, len(ref_dat_map))
         if role and path:
             capture_reference_file(role, path, ref_dat_map)
+            return ReferenceRows(ref_dat_map, role)
         return ref_dat_map
 
     def load_mapped_fields(self):

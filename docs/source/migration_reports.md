@@ -444,6 +444,22 @@ run holds one run. The renderer and the `report` subcommand use the latest one.
 | `record_alias` | The ids of a record with several legacy ids, so that a record can be found by any of them |
 | `reference_file`, `reference_content`, `reference_row` | The mapping and reference data files the task used, as they were when it ran |
 
+#### Linking mapping counts to the mapping file row
+
+In the mapping sections (for example `LocationMapping`, `MaterialTypeMapping`, `StatisticalCodeMapping`, `StatusMapping`), `measure_key` is a display label such as `main - ref -> Main Library`. Each count that came from a row of a captured mapping file also carries a link in `report_stat.params_json`:
+
+```json
+{"mapping_ref": {"key": ["main", "ref"], "role": "permanentLocationId", "row": 3}}
+```
+
+| Name | Meaning |
+|------|---------|
+| `role` | The `reference_file.role` of the mapping file the row came from |
+| `key` | The legacy key values of that row, as strings in the file's column order (the columns that hold the FOLIO value, such as `folio_name` or `folio_id`, are not part of the key). For the item status map and the MARC holdings location map the key is the single `legacy_code` column. A wildcard row has `"*"` values |
+| `row` | The `reference_row.row_index` of the row in that file |
+
+The same label from two mapping files is stored as two rows, one per `role`, and the markdown report and the JSON statistics still show it as a single line with the summed count. `measure_key` and the rendered text are unchanged. The link is not written for counts that no map row produced (unmapped values using the default, values that are not to be mapped), nor when the map was not captured, so those rows have `params_json = '{}'`.
+
 #### Data issues
 
 | Column | Description |
