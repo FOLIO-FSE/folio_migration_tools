@@ -224,3 +224,9 @@ basic_course_map = {
         },
     ]
 }
+
+
+def test_notes_mapper_shares_the_courses_report(mapper: CoursesMapper):
+    # A separate report would be registered with the report database and written to it,
+    # although the task never writes it to the live report
+    assert mapper.notes_mapper.migration_report is mapper.migration_report

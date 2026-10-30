@@ -62,6 +62,7 @@ class CoursesMapper(MappingFileMapperBase):
             library_configuration,
             task_configuration,
         )
+        self.notes_mapper.migration_report = self.migration_report
         self.course_map = course_map
         if terms_map:
             self.terms_map = RefDataMapping(

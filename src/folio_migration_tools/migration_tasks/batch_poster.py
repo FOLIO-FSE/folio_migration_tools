@@ -936,12 +936,17 @@ class BatchPoster(MigrationTaskBase):
                 temp_report = copy.deepcopy(self.migration_report)
                 temp_start = self.start_datetime
                 self.task_configuration.rerun_failed_records = False
+                report_store = self.report_store
                 self.__init__(
                     self.task_configuration,
                     self.library_configuration,
                     self.folio_client,
                     use_logging=False,
                 )
+                # __init__ with use_logging=False resets the store; keep the run's database
+                self.report_store = report_store
+                if report_store is not None:
+                    report_store.register_report(temp_report)
                 self.performing_rerun = True
                 self.migration_report = temp_report
                 self.start_datetime = temp_start

@@ -215,6 +215,40 @@ def describe_text(value: Any) -> tuple:
     return str(value), None, 0
 
 
+def _mask_values(value: Any, original: str) -> Any:
+    """Replace the masked value inside the string values of decoded params.
+
+    Keys are left alone, so the structure stays valid and the message stays translatable.
+    """
+    if isinstance(value, str):
+        return value.replace(original, MASK_TOKEN)
+    if isinstance(value, dict):
+        return {k: _mask_values(v, original) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_mask_values(v, original) for v in value]
+    if value is not None and original in str(value):
+        return MASK_TOKEN
+    return value
+
+
+def _mask_message(text: str, params_json: str | None, translated: int, original: str) -> tuple:
+    """Mask a value in a message without touching its translation key or JSON structure.
+
+    A translation key (translated == 1) is never edited. Params are decoded, masked in
+    their values and encoded again. Rendered or plain text (translated != 1) is replaced
+    textually.
+    """
+    if translated != 1 and text:
+        text = text.replace(original, MASK_TOKEN)
+    if params_json:
+        try:
+            decoded = json.loads(params_json)
+        except ValueError:
+            return text, MASK_TOKEN
+        params_json = json.dumps(_mask_values(decoded, original), sort_keys=True, default=str)
+    return text, params_json
+
+
 class ReportStore:
     """Owns the SQLite connection and buffers writes for one task run."""
 
@@ -558,9 +592,7 @@ class ReportStore:
         if self._is_masked_location(location_kind, location_path):
             original = None if legacy_value is None else str(legacy_value)
             if original:
-                text = text.replace(original, MASK_TOKEN) if text else text
-                if params_json:
-                    params_json = params_json.replace(json.dumps(original)[1:-1], MASK_TOKEN)
+                text, params_json = _mask_message(text, params_json, translated, original)
             legacy_value = MASK_TOKEN
         self._issue_buffer.append(
             (

@@ -1449,3 +1449,60 @@ async def test_set_version_delegates_to_get_with_retry():
     batch_poster_task.get_with_retry.assert_called_once()
     assert batch[0]["_version"] == 1
     assert batch[1]["_version"] == 2
+
+
+@pytest.mark.asyncio
+async def test_rerun_keeps_the_report_store(tmp_path):
+    """The rerun re-initialises the task, which must not lose the run's report database."""
+    import copy
+    from datetime import datetime
+    from types import SimpleNamespace
+
+    from folio_migration_tools.migration_report import MigrationReport
+    from folio_migration_tools.report_store import ReportStore, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("poster")
+    set_active_store(store)
+    try:
+        poster = BatchPoster.__new__(BatchPoster)
+        poster.report_store = store
+        poster.num_failures = 1
+        poster.migration_report = MigrationReport()
+        poster.migration_report.add("GeneralStatistics", "Posted")
+        poster.start_datetime = datetime.now()
+        poster.performing_rerun = False
+        poster.library_configuration = None
+        poster.folio_client = None
+        poster.folder_structure = SimpleNamespace(failed_recs_path=tmp_path / "failed.json")
+        poster.task_configuration = SimpleNamespace(
+            rerun_failed_records=True, batch_size=100, files=[]
+        )
+
+        def fake_init(task_config, library_config, folio_client, use_logging=True):
+            # What MigrationTaskBase.__init__ does without logging
+            poster.report_store = None
+            poster.migration_report = copy.copy(MigrationReport())
+
+        async def do_work():
+            poster.migration_report.add("GeneralStatistics", "Posted")
+
+        async def wrap_up():
+            poster.close_report_store()
+
+        poster.__init__ = fake_init
+        poster.do_work = do_work
+        poster.wrap_up = wrap_up
+
+        await BatchPoster.rerun_run(poster)
+
+        assert poster.report_store is store
+        assert store.closed
+    finally:
+        set_active_store(None)
+    import sqlite3
+
+    conn = sqlite3.connect(tmp_path / "r.sqlite")
+    assert conn.execute("SELECT finished FROM run").fetchone()[0]
+    stats = dict(conn.execute("SELECT measure_key, count FROM report_stat"))
+    assert stats == {"Posted": 2}

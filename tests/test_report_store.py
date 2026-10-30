@@ -659,3 +659,46 @@ def test_plain_list_map_has_no_link(tmp_path):
     rows = [{"mt": "book", "folio_name": "Book"}, {"mt": "*", "folio_name": "Book"}]
     db, md, js, live = _link_run(tmp_path, {"": (rows, [{"mt": "book"}])})
     assert _stat_rows(db) == [("book -> Book", "{}", 1)]
+
+
+@pytest.mark.parametrize("secret", ["e", ":", ",", '"', "{", "field"])
+def test_masking_keeps_key_and_params_valid(tmp_path, secret):
+    from folio_migration_tools.report_store import MASK_TOKEN
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.configure_privacy(True, ["ssn"])
+    store.set_current_record("r1", "p.tsv", 0, "json", lambda: json.dumps({"ssn": secret}))
+    message = i18n_t("Unmapped value %{value}", field="ssn", value=f"a{secret}b")
+    store.add_issue("DATA ISSUE", "r1", message, secret, "column", "ssn")
+    store.flush()
+    text, params_json, translated = store.conn.execute(
+        "SELECT message_key, params_json, translated FROM data_issue"
+    ).fetchone()
+    assert text == "Unmapped value %{value}"
+    assert translated == 1
+    params = json.loads(params_json)
+    assert set(params) == {"field", "value"}
+    assert params["value"] == f"a{MASK_TOKEN}b"
+    assert params["field"] == "ssn"
+    store.close()
+
+
+def test_masking_composed_message_keeps_parts_valid(tmp_path):
+    from folio_migration_tools.report_store import MASK_TOKEN
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.configure_privacy(True, ["ssn"])
+    store.set_current_record("r1", "p.tsv", 0, "json", lambda: json.dumps({"ssn": "x"}))
+    message = i18n_t("Failed") + ': "secret"'
+    store.add_issue("DATA ISSUE", "r1", message, "secret", "column", "ssn")
+    store.flush()
+    text, params_json = store.conn.execute(
+        "SELECT message_key, params_json FROM data_issue"
+    ).fetchone()
+    assert "secret" not in text and "secret" not in params_json
+    parts = json.loads(params_json)["parts"]
+    assert parts[0]["key"] == "Failed"
+    assert MASK_TOKEN in parts[1]["text"]
+    store.close()
