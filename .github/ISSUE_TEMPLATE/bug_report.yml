@@ -35,7 +35,7 @@ body:
         - ManualFeeFinesTransformer
         - BatchPoster / InventoryBatchPoster
         - UserImporter
-        - MARC import
+        - MARC Import
         - Not task-specific / CLI / configuration
     validations:
       required: true
