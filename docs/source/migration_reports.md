@@ -383,7 +383,7 @@ task wrote, because the file name includes the locale.
 | `--base_folder_path` | The base folder of the migration project, if not set in the configuration. Also read from `FOLIO_MIGRATION_TOOLS_BASE_FOLDER_PATH` |
 | `--run` | The run to use: the timestamp in the database file name, or `latest` |
 | `--db` | Use this report database instead of looking up the task's |
-| `--locale` | Comma-separated locales. Defaults to the configured report language. With several locales, `--output`, `--issues-tsv` or `--json-output` is required and the locale is added to each file name |
+| `--locale` | Comma-separated locales. Defaults to the report language set in the environment, or else the locale the run was made in. With several locales, `--output`, `--issues-tsv` or `--json-output` is required and the locale is added to each file name |
 | `--output` | Write the markdown report to this file, or to the console if `-`, instead of the reports folder |
 | `--issues-tsv` | Also write the data issues as TSV |
 | `--json-output` | Also write the statistics as JSON |

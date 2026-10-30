@@ -341,3 +341,23 @@ def test_cli_defaults_to_the_locale_of_the_run(tmp_path, monkeypatch):
 
     db = _stored_report(tmp_path, lambda r: r.add("Trivia", "x"))
     assert run_locale(db) in ("en", "fr", None)
+
+
+def test_two_registered_reports_render_like_the_live_reports(tmp_path):
+    db = tmp_path / "two.sqlite"
+    store = ReportStore(db)
+    store.start_run("test", started=STARTED.isoformat())
+    set_active_store(store)
+    first, second = MigrationReport(), MigrationReport()
+    first.add("Trivia", "a", 1)
+    second.add("Trivia", "b", 2)
+    second.add("GeneralStatistics", i18n_t("Records processed"), 4)
+    out = io.StringIO()
+    first.write_migration_report("T", out, STARTED)
+    second.write_migration_report("T", out, STARTED)
+    store.finalize(datetime.now(timezone.utc).isoformat())
+    set_active_store(None)
+    text = render_markdown(db, locale="en")
+    assert "a | 1" in text
+    assert "b | 2" in text
+    assert "Records processed | 4" in text

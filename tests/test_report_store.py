@@ -762,3 +762,25 @@ def test_record_alias_is_unique(tmp_path):
     with pytest.raises(sqlite3.IntegrityError):
         store.conn.execute("INSERT INTO record_alias VALUES (?, 'a')", (pk,))
     store.close()
+
+
+@pytest.mark.parametrize(
+    "source,fmt", [("users.csv", "csv"), ("items.tsv", "tsv"), ("orders.json", "json")]
+)
+def test_capture_row_format_follows_the_source_file(tmp_path, source, fmt):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        capture_row(0, source, {"a": "1"})
+        store.add_current_ids(["L9"])
+        store.add_issue("DATA ISSUE", "L9", "m", "v")
+        store.flush()
+        assert store.conn.execute("SELECT format, source_file FROM legacy_record").fetchall() == [
+            (fmt, source)
+        ]
+    finally:
+        set_active_store(None)
+        store.close()

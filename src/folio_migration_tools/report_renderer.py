@@ -50,6 +50,7 @@ def connect_readonly(db_path: Path) -> sqlite3.Connection:
     if not path.is_file():
         raise FileNotFoundError(f"Report database not found: {path}")
     conn = None
+    version = None
     for mode in ("mode=ro", "immutable=1"):
         conn = sqlite3.connect(f"file:{path}?{mode}", uri=True)
         try:

@@ -628,6 +628,7 @@ class ReportStore:
     ):
         ref = normalize_record_ref(record)
         record_pk = None
+        current_ref = None
         if self._current is not None:
             current_ref = self._current_ref(self._current)
             current_ids = set(current_ref.ids)
@@ -637,7 +638,7 @@ class ReportStore:
                 ref = current_ref
             if set(ref.ids) & current_ids or current_ref.kind == "file_index":
                 record_pk = self._current_record_pk()
-        if len(ref.ids) > 1 and (self._current is None or ref is not current_ref):
+        if len(ref.ids) > 1 and (current_ref is None or ref is not current_ref):
             ref = RecordRef(sorted(ref.ids), ref.kind, ref.raw)
         text, params_json, translated = describe_text(message)
         if self._is_masked_location(location_kind, location_path):
