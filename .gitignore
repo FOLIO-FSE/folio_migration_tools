@@ -134,3 +134,5 @@ pylock.toml
 reference_material/
 .prompts/
 profile*.json
+baseline*.json
+benchmark*.json
