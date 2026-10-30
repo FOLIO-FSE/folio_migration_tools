@@ -195,6 +195,18 @@ def mapping_ref_json(role: str | None, key: list, row: int) -> str | None:
     return json.dumps({MAPPING_REF: ref}, sort_keys=True)
 
 
+PINNED_LOCALE = "@locale"
+
+
+def _stored_params(translated: Any) -> dict:
+    """The params of a TranslatedStr, plus the locale its call pinned, if any."""
+    params = dict(getattr(translated, "params", None) or {})
+    pinned = getattr(translated, "locale", None)
+    if pinned:
+        params[PINNED_LOCALE] = pinned
+    return params
+
+
 def describe_text(value: Any) -> tuple:
     """Return (key_or_text, params_json, translated) for a measure or issue message.
 
@@ -205,11 +217,13 @@ def describe_text(value: Any) -> tuple:
     parts = getattr(value, "parts", None)
     key = getattr(value, "key", None)
     if key:
-        params = getattr(value, "params", None)
+        params = _stored_params(value)
         return key, json.dumps(params, sort_keys=True, default=str) if params else None, 1
     if parts is not None:
         encoded = [
-            {"key": p.key, "params": p.params} if getattr(p, "key", None) else {"text": str(p)}
+            {"key": p.key, "params": _stored_params(p)}
+            if getattr(p, "key", None)
+            else {"text": str(p)}
             for p in parts
         ]
         return str(value), json.dumps({"parts": encoded}, sort_keys=True, default=str), 2
@@ -340,6 +354,9 @@ class ReportStore:
                 if measure == "blurb_id":
                     continue
                 text, params_json, translated = describe_text(measure)
+                if not translated and measure in (None, ""):
+                    # A blank key reads as EMPTY in the live report
+                    params_json = json.dumps({"falsy": True})
                 linked = None if translated else section_links.get(measure)
                 if linked and sum(linked.values()) <= count:
                     for link_params, linked_count in linked.items():

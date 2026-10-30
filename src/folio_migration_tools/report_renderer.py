@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.i18n_cache import i18n_t
 from folio_migration_tools.migration_report import render_report_markdown
-from folio_migration_tools.report_store import MAPPING_REF
+from folio_migration_tools.report_store import MAPPING_REF, PINNED_LOCALE, SCHEMA_VERSION
 
 
 @contextmanager
@@ -36,11 +36,41 @@ def locale_context(locale: str | None):
 
 
 def connect_readonly(db_path: Path) -> sqlite3.Connection:
-    """Open a report database for reading only."""
+    """Open a report database for reading only.
+
+    A database in a read-only folder cannot be opened normally, because reading a WAL
+    database needs to write its shared-memory file. It is then opened as immutable, which
+    is safe because a finished run's database is no longer being written to.
+
+    Raises:
+        FileNotFoundError: If there is no such file.
+        ValueError: If the file is not a report database, or one of an unsupported version.
+    """
     path = Path(db_path)
     if not path.is_file():
         raise FileNotFoundError(f"Report database not found: {path}")
-    conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+    conn = None
+    for mode in ("mode=ro", "immutable=1"):
+        conn = sqlite3.connect(f"file:{path}?{mode}", uri=True)
+        try:
+            version = conn.execute("SELECT version FROM schema_info").fetchone()
+            break
+        except sqlite3.OperationalError as ex:
+            conn.close()
+            if mode == "mode=ro":
+                continue  # may only be a folder that cannot take the WAL files: retry
+            raise ValueError(f"{path} is not a report database ({ex})") from ex
+        except sqlite3.DatabaseError as ex:
+            conn.close()
+            raise ValueError(f"{path} is not a report database ({ex})") from ex
+    if conn is None or version is None or version[0] != SCHEMA_VERSION:
+        if conn is not None:
+            conn.close()
+        found = version[0] if version else "none"
+        raise ValueError(
+            f"{path} has report database schema version {found}, but this version of the"
+            f" tool reads version {SCHEMA_VERSION}"
+        )
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -49,13 +79,24 @@ def render_text(translated: int, key: str, params_json: str | None) -> str:
     """Turn a stored measure or message back into text in the active locale."""
     params = json.loads(params_json) if params_json else {}
     if translated == 1:
-        return i18n_t(key, **params)
+        return _translate(key, params)
     if translated == 2:
         return "".join(
-            i18n_t(part["key"], **(part.get("params") or {})) if "key" in part else part["text"]
+            _translate(part["key"], part.get("params") or {}) if "key" in part else part["text"]
             for part in params.get("parts", [])
         )
+    if params.get("falsy"):
+        return ""  # a blank key, shown as EMPTY like the live report does
     return key
+
+
+def _translate(key: str, params: dict) -> str:
+    """Translate a key, in the locale its original call pinned if it pinned one."""
+    params = dict(params)
+    pinned = params.pop(PINNED_LOCALE, None)
+    if pinned:
+        return i18n_t(key, locale=pinned, **params)
+    return i18n_t(key, **params)
 
 
 def report_title(row: sqlite3.Row, title: str | None) -> str:
@@ -77,7 +118,7 @@ def load_sections(conn: sqlite3.Connection, run_id: int) -> list:
     ):
         label = render_text(r["translated"], r["measure_key"], r["params_json"])
         measures = sections.setdefault(r["section_id"], {})
-        # Measures that read the same in this locale are one line, as in the live report
+        # Measures that read the same in this locale are one line, so 1 and "1" merge
         measures[label] = measures.get(label, 0) + r["count"]
     return [(section_id, list(measures.items())) for section_id, measures in sections.items()]
 
@@ -271,6 +312,16 @@ def render_report_json(
             if folio or legacy:
                 data["mapping"] = {"folio": folio, "legacy": legacy}
         return json.dumps(data, indent=2, ensure_ascii=False)
+    finally:
+        conn.close()
+
+
+def run_locale(db_path: Path) -> str | None:
+    """The locale the latest run was made in, if it recorded one."""
+    conn = connect_readonly(db_path)
+    try:
+        row = conn.execute("SELECT locale_at_run FROM run ORDER BY run_id DESC LIMIT 1").fetchone()
+        return (row[0] or None) if row else None
     finally:
         conn.close()
 

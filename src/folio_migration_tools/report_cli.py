@@ -9,6 +9,7 @@ iteration's reports folder, optionally in other locales or limited to some secti
 import argparse
 import json
 import re
+import sqlite3
 import sys
 from os import environ
 from pathlib import Path
@@ -23,6 +24,7 @@ from folio_migration_tools.report_renderer import (
     render_issues_tsv,
     render_markdown,
     render_report_json,
+    run_locale,
     split_csv,
 )
 
@@ -74,7 +76,8 @@ def build_parser() -> argparse.ArgumentParser:
         type=split_csv,
         default=[],
         help="Locale(s) to render in, comma separated. One file is written per locale"
-        " when --output is given. Defaults to the configured report language.",
+        " when --output is given. Defaults to the report language in the environment,"
+        " or else the locale the run was made in.",
     )
     parser.add_argument("--sections", type=split_csv, help="Only include these section ids")
     parser.add_argument("--exclude-sections", type=split_csv, help="Leave out these section ids")
@@ -289,7 +292,9 @@ def main(argv: list[str] | None = None) -> int:
             for section_id, measures, total in list_sections(db, (args.locale or [None])[0]):
                 print(f"{section_id}\t{measures} measures\t{total} total")
             return 0
-        locales = args.locale or [None]
+        locales = args.locale or [
+            None if environ.get("FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE") else run_locale(db)
+        ]
         several = len(locales) > 1
         to_stdout = str(args.output) == "-"
         if several and to_stdout:
@@ -324,7 +329,7 @@ def main(argv: list[str] | None = None) -> int:
                     render_report_json(db, locale, filters, args.json_localized),
                     encoding="utf-8",
                 )
-    except (FileNotFoundError, ValueError) as ex:
+    except (ValueError, OSError, sqlite3.Error) as ex:
         print(ex, file=sys.stderr)
         return 1
     return 0

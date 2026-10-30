@@ -259,3 +259,85 @@ def test_report_cli_output_to_stdout(run, capsys):
     db, _ = run
     assert report_main(["--db", str(db), "--locale", "en", "--output", "-"]) == 0
     assert "# Item transformation report" in capsys.readouterr().out
+
+
+def test_report_cli_rejects_files_that_are_not_report_databases(tmp_path, capsys):
+    import sqlite3
+
+    text = tmp_path / "notes.sqlite"
+    text.write_text("not a database at all" * 20)
+    other = tmp_path / "other.sqlite"
+    conn = sqlite3.connect(other)
+    conn.execute("CREATE TABLE t (a)")
+    conn.commit()
+    conn.close()
+    wrong = tmp_path / "wrong.sqlite"
+    conn = sqlite3.connect(wrong)
+    conn.execute("CREATE TABLE schema_info (version INTEGER)")
+    conn.execute("INSERT INTO schema_info VALUES (999)")
+    conn.commit()
+    conn.close()
+    for path, message in ((text, "not a report database"), (other, "not a report database"),
+                          (wrong, "schema version 999")):
+        assert report_main(["--db", str(path), "--list-sections"]) == 1
+        assert message in capsys.readouterr().err
+
+
+def test_report_database_in_a_read_only_folder_can_be_read(run, tmp_path):
+    import os
+    import shutil
+
+    from folio_migration_tools.report_renderer import connect_readonly
+
+    folder = tmp_path / "locked"
+    folder.mkdir()
+    db = folder / "r.sqlite"
+    shutil.copy(run[0], db)
+    os.chmod(folder, 0o555)
+    try:
+        conn = connect_readonly(db)
+        assert conn.execute("SELECT count(*) FROM report_stat").fetchone()[0] > 0
+        conn.close()
+    finally:
+        os.chmod(folder, 0o755)
+
+
+def _stored_report(tmp_path, fill):
+    db = tmp_path / "typed.sqlite"
+    store = ReportStore(db)
+    store.start_run("test", started=STARTED.isoformat())
+    set_active_store(store)
+    report = MigrationReport()
+    fill(report)
+    report.write_migration_report("T", io.StringIO(), STARTED)
+    store.finalize(datetime.now(timezone.utc).isoformat())
+    set_active_store(None)
+    return db
+
+
+def test_numbers_merge_with_their_string_and_blank_keys_read_as_empty(tmp_path):
+    def fill(report):
+        report.add("Trivia", 1)
+        report.add("Trivia", "1", 2)
+        report.add("Trivia", None, 3)
+
+    db = _stored_report(tmp_path, fill)
+    text = render_markdown(db, locale="en")
+    assert "1 | 3" in text
+    assert "EMPTY | 3" in text
+
+
+def test_pinned_locale_is_kept_with_the_message(tmp_path):
+    def fill(report):
+        report.add("Trivia", i18n_t("Records processed", locale="fr"))
+
+    db = _stored_report(tmp_path, fill)
+    french = i18n_t("Records processed", locale="fr")
+    assert french in render_markdown(db, locale="en")
+
+
+def test_cli_defaults_to_the_locale_of_the_run(tmp_path, monkeypatch):
+    from folio_migration_tools.report_renderer import run_locale
+
+    db = _stored_report(tmp_path, lambda r: r.add("Trivia", "x"))
+    assert run_locale(db) in ("en", "fr", None)

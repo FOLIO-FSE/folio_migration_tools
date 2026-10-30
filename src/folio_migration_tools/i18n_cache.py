@@ -36,11 +36,13 @@ class TranslatedStr(str):
 
     key: str
     params: dict
+    locale: str | None
 
-    def __new__(cls, text: str, key: str, params: dict):
+    def __new__(cls, text: str, key: str, params: dict, locale: str | None = None):
         obj = super().__new__(cls, text)
         obj.key = key
         obj.params = params
+        obj.locale = locale  # set only when the call pinned a locale
         return obj
 
     @property
@@ -50,7 +52,7 @@ class TranslatedStr(str):
 
     def __reduce__(self):
         """Support copy and pickle, since __new__ needs the key and params."""
-        return (type(self), (str(self), self.key, self.params))
+        return (type(self), (str(self), self.key, self.params, self.locale))
 
     def __copy__(self):
         """Immutable, so a copy is the object itself."""
@@ -133,8 +135,8 @@ class ComposedStr(str):
 
 
 @lru_cache(maxsize=2048)
-def _cached_t(key: str, locale: str) -> TranslatedStr:
-    return TranslatedStr(i18n.t(key, locale=locale), key, {})
+def _cached_t(key: str, locale: str, pinned: bool = False) -> TranslatedStr:
+    return TranslatedStr(i18n.t(key, locale=locale), key, {}, locale if pinned else None)
 
 
 def i18n_t(key: str, **kwargs) -> str:
@@ -163,12 +165,13 @@ def i18n_t(key: str, **kwargs) -> str:
         If translation files or load paths change at runtime, call
         clear_i18n_cache() to invalidate the cache.
     """
-    locale = kwargs.pop("locale", None) or i18n.get("locale")
+    pinned = kwargs.pop("locale", None)
+    locale = pinned or i18n.get("locale")
     if kwargs:
         # Parameter values can have hundreds of thousands of distinct permutations,
         # which would evict the static entries, so parameterized calls bypass the cache.
-        return TranslatedStr(i18n.t(key, locale=locale, **kwargs), key, dict(kwargs))
-    return _cached_t(key, locale)
+        return TranslatedStr(i18n.t(key, locale=locale, **kwargs), key, dict(kwargs), pinned)
+    return _cached_t(key, locale, bool(pinned))
 
 
 def clear_i18n_cache() -> None:
