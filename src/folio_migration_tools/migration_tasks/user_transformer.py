@@ -218,7 +218,7 @@ class UserTransformer(MigrationTaskBase):
                     for num_users, legacy_user in enumerate(
                         self.mapper.get_users(object_file, file_format), start=1
                     ):
-                        capture_row(num_users, source_path, legacy_user)
+                        capture_row(num_users - 1, source_path, legacy_user)
                         try:
                             if num_users == 1:
                                 logger.info("First Legacy  user")

@@ -702,3 +702,63 @@ def test_masking_composed_message_keeps_parts_valid(tmp_path):
     assert parts[0]["key"] == "Failed"
     assert MASK_TOKEN in parts[1]["text"]
     store.close()
+
+
+def _records(store):
+    return store.conn.execute(
+        "SELECT record_id, record_id_kind, format FROM legacy_record ORDER BY record_pk"
+    ).fetchall()
+
+
+def test_row_without_legacy_id_is_a_row_number_not_an_id(tmp_path):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        capture_row(7, "users.csv", {"a": "1"})
+        store.add_issue("DATA ISSUE", "7", "m", "v")
+        store.add_issue("DATA ISSUE", "", "m", "v")
+        store.flush()
+        assert _records(store) == [("row 7", "row_number", "csv")]
+        assert store.conn.execute("SELECT count(*) FROM record_alias").fetchone() == (0,)
+        kinds = {r[0] for r in store.conn.execute("SELECT record_id_kind FROM data_issue")}
+        assert kinds == {"row_number"}
+    finally:
+        set_active_store(None)
+        store.close()
+
+
+def test_legacy_id_added_after_an_issue_is_recorded(tmp_path):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        capture_row(2, "items.tsv", {"a": "1"})
+        store.add_issue("DATA ISSUE", "2", "before", "v")
+        store.add_current_ids(["L1", "L2"])
+        store.add_current_ids(["L1"])
+        store.add_issue("DATA ISSUE", "L2", "after", "v")
+        store.flush()
+        assert _records(store) == [("L1", "legacy_id", "tsv")]
+        aliases = {r[0] for r in store.conn.execute("SELECT legacy_id FROM record_alias")}
+        assert aliases == {"L1", "L2"}
+        pks = {r[0] for r in store.conn.execute("SELECT record_pk FROM data_issue")}
+        assert len(pks) == 1 and None not in pks
+    finally:
+        set_active_store(None)
+        store.close()
+
+
+def test_record_alias_is_unique(tmp_path):
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.set_current_record(["a", "b"], "f.mrc", 1, "marc", lambda: b"x")
+    store.add_issue("warning", ["a", "b"], "m", "v")
+    pk = store.conn.execute("SELECT record_pk FROM legacy_record").fetchone()[0]
+    with pytest.raises(sqlite3.IntegrityError):
+        store.conn.execute("INSERT INTO record_alias VALUES (?, 'a')", (pk,))
+    store.close()

@@ -15,7 +15,7 @@ import zlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +91,8 @@ CREATE TABLE legacy_record (
 );
 CREATE TABLE record_alias (
     record_pk INTEGER NOT NULL REFERENCES legacy_record(record_pk),
-    legacy_id TEXT NOT NULL
+    legacy_id TEXT NOT NULL,
+    UNIQUE (record_pk, legacy_id)
 );
 CREATE TABLE data_issue (
     id INTEGER PRIMARY KEY,
@@ -484,8 +485,13 @@ class ReportStore:
         format: str = "",
         payload_getter: Callable[[], Any] | None = None,
         kind: str | None = None,
+        synthetic_ids: Iterable[str] = (),
     ):
         """Mark the record being processed. Nothing is written until an issue is logged.
+
+        synthetic_ids are positions standing in for an id (a row number). They match
+        issues logged by position but are never recorded as the record's legacy id, or as
+        an alias, and rank after any real id found later.
 
         payload_getter is called lazily, once, when the first issue for this record
         is added, so clean records cost only this pointer assignment.
@@ -499,6 +505,7 @@ class ReportStore:
             "format": format,
             "getter": payload_getter,
             "pk": None,
+            "synthetic": set(synthetic_ids),
         }
 
     def add_current_ids(self, ids: Any):
@@ -507,9 +514,30 @@ class ReportStore:
             return
         ref = self._current_ref(self._current)
         extra = [i for i in normalize_record_ref(ids).ids if i not in ref.ids]
-        if extra and self._current["pk"] is None:
-            ref.ids.extend(extra)
-            ref.kind = "legacy_id"
+        if not extra:
+            return
+        cur = self._current
+        ref.ids = self._ordered_ids(ref.ids + extra, cur["synthetic"])
+        ref.kind = "legacy_id"
+        if cur["pk"] is not None:
+            # The record was written when an earlier issue was logged: add the new ids to it
+            real = [i for i in ref.ids if i not in cur["synthetic"]]
+            self.conn.execute(
+                "UPDATE legacy_record SET record_id = ?, record_id_kind = ? WHERE record_pk = ?",
+                (real[0], ref.kind, cur["pk"]),
+            )
+            if len(real) > 1:
+                self.conn.executemany(
+                    "INSERT OR IGNORE INTO record_alias (record_pk, legacy_id) VALUES (?, ?)",
+                    [(cur["pk"], i) for i in real],
+                )
+
+    @staticmethod
+    def _ordered_ids(ids: list, synthetic: set) -> list:
+        """Real ids first (sorted), then the synthetic ones, with a "row N" label leading."""
+        real = sorted(i for i in ids if i not in synthetic)
+        fake = sorted((i for i in ids if i in synthetic), key=lambda i: (i.isdigit(), i))
+        return real + fake
 
     @staticmethod
     def _current_ref(cur: dict) -> RecordRef:
@@ -518,6 +546,9 @@ class ReportStore:
             ref = normalize_record_ref(cur["raw_id"])
             if cur["kind"] and ref.ids:
                 ref.kind = cur["kind"]
+            ref.ids = ReportStore._ordered_ids(ref.ids, cur["synthetic"])
+            if ref.ids and not cur["kind"] and all(i in cur["synthetic"] for i in ref.ids):
+                ref.kind = "row_number"
             cur["ref"] = ref
         return cur["ref"]
 
@@ -539,7 +570,8 @@ class ReportStore:
                     "Fields masked; refer to the original data file at "
                     f"{cur['source_file']}, index {cur['source_index']}"
                 )
-            ids = sorted(self._current_ref(cur).ids)
+            ids = self._current_ref(cur).ids
+            real = [i for i in ids if i not in cur["synthetic"]]
             row = self.conn.execute(
                 "INSERT INTO legacy_record (run_id, record_id, record_id_kind, source_file,"
                 " source_index, format, payload, payload_hash, masked, mask_note)"
@@ -560,10 +592,10 @@ class ReportStore:
                 ),
             ).fetchone()
             cur["pk"] = row[0]
-            if len(ids) > 1:
+            if len(real) > 1:
                 self.conn.executemany(
-                    "INSERT INTO record_alias (record_pk, legacy_id) VALUES (?, ?)",
-                    [(cur["pk"], i) for i in ids],
+                    "INSERT OR IGNORE INTO record_alias (record_pk, legacy_id) VALUES (?, ?)",
+                    [(cur["pk"], i) for i in real],
                 )
         return cur["pk"]
 
@@ -582,11 +614,13 @@ class ReportStore:
         if self._current is not None:
             current_ref = self._current_ref(self._current)
             current_ids = set(current_ref.ids)
-            if not ref.ids:
+            synthetic = self._current["synthetic"]
+            if not ref.ids or set(ref.ids) <= synthetic:
+                # Only a position was given: use the record's best id instead
                 ref = current_ref
             if set(ref.ids) & current_ids or current_ref.kind == "file_index":
                 record_pk = self._current_record_pk()
-        if len(ref.ids) > 1:
+        if len(ref.ids) > 1 and (self._current is None or ref is not current_ref):
             ref = RecordRef(sorted(ref.ids), ref.kind, ref.raw)
         text, params_json, translated = describe_text(message)
         if self._is_masked_location(location_kind, location_path):
@@ -770,13 +804,17 @@ def capture_row(index: int, source: Any, record: Any, kind: str | None = None):
     store = get_active_store()
     if store is None:
         return
+    name = getattr(source, "name", None) or str(source)
+    suffix = str(name).rsplit(".", 1)[-1].lower()
+    labels = [f"row {index}", str(index)]
     store.set_current_record(
-        [str(index), f"row {index}"],
-        getattr(source, "name", None) or str(source),
+        labels,
+        name,
         index,
-        "json",
+        suffix if suffix in ("tsv", "csv") else "json",
         lambda: json.dumps(record, default=str),
         kind=kind,
+        synthetic_ids=labels,
     )
 
 

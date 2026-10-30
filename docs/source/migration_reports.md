@@ -441,7 +441,7 @@ run holds one run. The renderer and the `report` subcommand use the latest one.
 | `mapping_stat` | The mapped FOLIO fields (`side = 'folio'`) and legacy fields (`side = 'legacy'`) with how many records had and mapped each |
 | `data_issue` | One row per data issue, described below |
 | `legacy_record` | The legacy record behind one or more issues, stored once however many issues it has |
-| `record_alias` | The ids of a record with several legacy ids, so that a record can be found by any of them |
+| `record_alias` | The legacy ids of a record with several, so that a record can be found by any of them (unique per record and id; row positions are never stored as aliases) |
 | `reference_file`, `reference_content`, `reference_row` | The mapping and reference data files the task used, as they were when it ran |
 
 #### Linking mapping counts to the mapping file row
@@ -467,7 +467,7 @@ The same label from two mapping files is stored as two rows, one per `role`, and
 | `issue_type` | The category, such as `FIELD MAPPING FAILED` |
 | `message_key`, `params_json`, `translated` | The message as a translation key and parameters. When `translated` is 0, `message_key` holds the literal text |
 | `legacy_value` | The offending value |
-| `record_id`, `record_id_kind` | The normalized id of the record, and what it is: `legacy_id`, `row_number`, `file_index` or `none`. Barcodes passed by circulation tasks are stored as `legacy_id` |
+| `record_id`, `record_id_kind` | The normalized id of the record, and what it is: `legacy_id`, `row_number`, `file_index` or `none`. A row with no legacy id is stored as `row N` (`row_number`) and gets its legacy id once the mapper finds it. Barcodes passed by circulation tasks are stored as `legacy_id` |
 | `record_id_raw` | The value as the task logged it, kept when it differs from `record_id` |
 | `record_pk` | The `legacy_record` the issue belongs to, when one was captured |
 | `location_kind`, `location_path` | Where in the record the problem is, if the task knows |
