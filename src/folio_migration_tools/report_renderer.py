@@ -11,7 +11,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import humps
 import i18n
@@ -59,6 +59,12 @@ def connect_readonly(db_path: Path) -> sqlite3.Connection:
         except sqlite3.OperationalError as ex:
             conn.close()
             if mode == "mode=ro":
+                wal = path.with_name(path.name + "-wal")
+                if wal.is_file() and wal.stat().st_size > 0:
+                    raise ValueError(
+                        f"{path} has unflushed changes ({wal.name}) and its folder is read-only."
+                        " Copy the database and its -wal and -shm files to a writable folder."
+                    ) from ex
                 continue  # may only be a folder that cannot take the WAL files: retry
             raise ValueError(f"{path} is not a report database ({ex})") from ex
         except sqlite3.DatabaseError as ex:
@@ -238,9 +244,25 @@ def render_markdown(
 
 def _measure_json(row: sqlite3.Row) -> dict:
     params = json.loads(row["params_json"]) if row["params_json"] else {}
-    params.pop(MAPPING_REF, None)  # a link to a mapping file row, for the database only
     kind = {0: "literal", 1: "key", 2: "composed"}[row["translated"]]
-    return {"kind": kind, "key": row["measure_key"], "params": params, "count": row["count"]}
+    key = row["measure_key"]
+    if kind == "literal" and params.get("falsy"):
+        key = ""  # a blank measure
+    # Storage details: a link to a mapping file row, a blank flag and pinned locales
+    params = _strip_storage_params(params)
+    return {"kind": kind, "key": key, "params": params, "count": row["count"]}
+
+
+def _strip_storage_params(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            k: _strip_storage_params(v)
+            for k, v in value.items()
+            if k not in (MAPPING_REF, PINNED_LOCALE, "falsy")
+        }
+    if isinstance(value, list):
+        return [_strip_storage_params(v) for v in value]
+    return value
 
 
 def render_report_json(

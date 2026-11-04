@@ -288,13 +288,16 @@ def main(argv: list[str] | None = None) -> int:
             parser.set_defaults(**load_config(args.config))
             args = parser.parse_args(argv)
         db = resolve_db(args)
+        default_locale = (
+            None if environ.get("FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE") else run_locale(db)
+        )
         if args.list_sections:
-            for section_id, measures, total in list_sections(db, (args.locale or [None])[0]):
+            for section_id, measures, total in list_sections(
+                db, (args.locale or [default_locale])[0]
+            ):
                 print(f"{section_id}\t{measures} measures\t{total} total")
             return 0
-        locales = args.locale or [
-            None if environ.get("FOLIO_MIGRATION_TOOLS_REPORT_LANGUAGE") else run_locale(db)
-        ]
+        locales = args.locale or [default_locale]
         several = len(locales) > 1
         to_stdout = str(args.output) == "-"
         if several and to_stdout:

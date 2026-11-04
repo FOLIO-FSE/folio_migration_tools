@@ -143,7 +143,7 @@ class ManualFeeFinesTransformer(MigrationTaskBase):
             start = time.time()
 
             for idx, record in enumerate(self.mapper.get_objects(records_file, full_path)):
-                capture_row(idx, full_path, record)
+                capture_row(idx, full_path, record, labels=[f"Row {idx + 1}"])
                 try:
                     if idx == 0:
                         logger.info("First legacy record:")

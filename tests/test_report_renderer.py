@@ -12,6 +12,7 @@ from folio_migration_tools.migration_report import MigrationReport
 from folio_migration_tools.report_cli import main as report_main
 from folio_migration_tools.report_renderer import (
     ReportFilters,
+    connect_readonly,
     list_sections,
     render_issues_tsv,
     render_markdown,
@@ -361,3 +362,33 @@ def test_two_registered_reports_render_like_the_live_reports(tmp_path):
     assert "a | 1" in text
     assert "b | 2" in text
     assert "Records processed | 4" in text
+
+
+def test_json_output_has_no_storage_markers(tmp_path):
+    def fill(report):
+        report.add("Trivia", None, 1)
+        report.add("Trivia", i18n_t("Records processed", locale="en"), 2)
+
+    db = _stored_report(tmp_path, fill)
+    out = render_report_json(db)
+    assert "@locale" not in out and "falsy" not in out
+    measures = json.loads(out)["sections"]["Trivia"]
+    assert {"kind": "literal", "key": "", "params": {}, "count": 1} in measures
+
+
+def test_unflushed_wal_in_a_read_only_folder_is_refused(tmp_path):
+    import os
+    import shutil
+
+    db = _stored_report(tmp_path, lambda r: r.add("Trivia", "x"))
+    folder = tmp_path / "ro"
+    folder.mkdir()
+    target = folder / db.name
+    shutil.copy(db, target)
+    (folder / (db.name + "-wal")).write_bytes(b"x" * 64)
+    os.chmod(folder, 0o555)
+    try:
+        with pytest.raises(ValueError, match="unflushed"):
+            connect_readonly(target)
+    finally:
+        os.chmod(folder, 0o755)

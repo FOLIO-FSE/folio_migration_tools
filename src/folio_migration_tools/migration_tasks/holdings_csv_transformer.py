@@ -490,7 +490,7 @@ class HoldingsCsvTransformer(MigrationTaskBase):
             start = time.time()
             records_processed = 0
             for idx, legacy_record in enumerate(self.mapper.get_objects(records_file, full_path)):
-                capture_row(idx, full_path, legacy_record)
+                capture_row(idx, full_path, legacy_record, labels=[f"row # {idx}"])
                 records_processed = idx + 1
                 try:
                     self.mapper.verify_legacy_record(legacy_record, idx)

@@ -784,3 +784,59 @@ def test_capture_row_format_follows_the_source_file(tmp_path, source, fmt):
     finally:
         set_active_store(None)
         store.close()
+
+
+def test_masking_a_value_that_appears_in_a_key_leaves_the_key_alone(tmp_path):
+    from folio_migration_tools.report_store import MASK_TOKEN
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.configure_privacy(True, ["ssn"])
+    store.set_current_record("r1", "p.tsv", 0, "json", lambda: json.dumps({"ssn": "x"}))
+    message = i18n_t("Unmapped value", locale="en") + ": e"
+    store.add_issue("DATA ISSUE", "r1", message, "e", "column", "ssn")
+    store.flush()
+    (params_json,) = store.conn.execute("SELECT params_json FROM data_issue").fetchone()
+    part = json.loads(params_json)["parts"][0]
+    assert part["key"] == "Unmapped value"
+    assert part["params"] == {"@locale": "en"}
+    store.close()
+
+
+@pytest.mark.parametrize(
+    "task_label", ["1", "row # 0", "Row 1"], ids=["users", "holdings-csv", "fee-fines"]
+)
+def test_issue_under_a_tasks_own_row_label_links_to_its_record(tmp_path, task_label):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        capture_row(0, "f.tsv", {"a": "1"}, labels=[task_label])
+        store.add_issue("RECORD FAILED", task_label, "no legacy id", "")
+        store.flush()
+        assert store.conn.execute("SELECT record_pk FROM data_issue").fetchone()[0] is not None
+    finally:
+        set_active_store(None)
+        store.close()
+
+
+def test_legacy_id_equal_to_the_row_index_is_a_legacy_id(tmp_path):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        capture_row(5, "items.tsv", {"a": "1"})
+        store.add_current_ids("5")
+        store.add_issue("DATA ISSUE", "5", "m", "v")
+        store.flush()
+        assert _records(store) == [("5", "legacy_id", "tsv")]
+        assert store.conn.execute("SELECT record_id, record_id_kind FROM data_issue").fetchall() == [
+            ("5", "legacy_id")
+        ]
+    finally:
+        set_active_store(None)
+        store.close()

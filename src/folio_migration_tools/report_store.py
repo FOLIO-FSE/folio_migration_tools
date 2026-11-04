@@ -238,7 +238,9 @@ def _mask_values(value: Any, original: str) -> Any:
     if isinstance(value, str):
         return value.replace(original, MASK_TOKEN)
     if isinstance(value, dict):
-        return {k: _mask_values(v, original) for k, v in value.items()}
+        return {
+            k: v if k == PINNED_LOCALE else _mask_values(v, original) for k, v in value.items()
+        }
     if isinstance(value, (list, tuple)):
         return [_mask_values(v, original) for v in value]
     if value is not None and original in str(value):
@@ -260,7 +262,19 @@ def _mask_message(text: str, params_json: str | None, translated: int, original:
             decoded = json.loads(params_json)
         except ValueError:
             return text, MASK_TOKEN
-        params_json = json.dumps(_mask_values(decoded, original), sort_keys=True, default=str)
+        if translated == 2 and isinstance(decoded, dict) and "parts" in decoded:
+            # Mask only the text and param values of each part, never its key
+            decoded = {
+                "parts": [
+                    {"key": p["key"], "params": _mask_values(p.get("params") or {}, original)}
+                    if "key" in p
+                    else {"text": p["text"].replace(original, MASK_TOKEN)}
+                    for p in decoded["parts"]
+                ]
+            }
+        else:
+            decoded = _mask_values(decoded, original)
+        params_json = json.dumps(decoded, sort_keys=True, default=str)
     return text, params_json
 
 
@@ -530,10 +544,14 @@ class ReportStore:
         if self._current is None:
             return
         ref = self._current_ref(self._current)
-        extra = [i for i in normalize_record_ref(ids).ids if i not in ref.ids]
-        if not extra:
-            return
         cur = self._current
+        given = normalize_record_ref(ids).ids
+        # These are real ids, even when one happens to equal the row's position
+        promoted = cur["synthetic"].intersection(given)
+        cur["synthetic"] -= promoted
+        extra = [i for i in given if i not in ref.ids]
+        if not extra and not promoted:
+            return
         ref.ids = self._ordered_ids(ref.ids + extra, cur["synthetic"])
         ref.kind = "legacy_id"
         if cur["pk"] is not None:
@@ -813,7 +831,7 @@ def column_location(column: str) -> tuple:
     return "column", column
 
 
-def capture_row(index: int, source: Any, record: Any, kind: str | None = None):
+def capture_row(index: int, source: Any, record: Any, kind: str | None = None, labels: Any = ()):
     """Set the current record for a delimited or JSON row, if a store is active.
 
     The row is addressable by its zero-based index in the file until a legacy id
@@ -824,7 +842,7 @@ def capture_row(index: int, source: Any, record: Any, kind: str | None = None):
         return
     name = getattr(source, "name", None) or str(source)
     suffix = str(name).rsplit(".", 1)[-1].lower()
-    labels = [f"row {index}", str(index)]
+    labels = [f"row {index}", str(index), *(str(label) for label in labels)]
     store.set_current_record(
         labels,
         name,
