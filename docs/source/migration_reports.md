@@ -465,7 +465,7 @@ The same label from two mapping files is stored as two rows, one per `role`, and
 | Column | Description |
 |--------|-------------|
 | `issue_type` | The category, such as `FIELD MAPPING FAILED` |
-| `message_key`, `params_json`, `translated` | The message as a translation key and parameters. When `translated` is 0, `message_key` holds the literal text |
+| `message_key`, `params_json`, `translated` | The message as a translation key and parameters. When `translated` is 0, `message_key` holds the literal text. When it is 2 (a message composed of several keys and text), `message_key` holds only the parts' translation keys joined with ` + `, never record data or translated text, and `params_json` holds the parts |
 | `legacy_value` | The offending value |
 | `record_id`, `record_id_kind` | The normalized id of the record, and what it is: `legacy_id`, `row_number`, `file_index` or `none`. A row with no legacy id is stored as `row N` (`row_number`) and gets its legacy id once the mapper finds it. Barcodes passed by circulation tasks are stored as `legacy_id` |
 | `record_id_raw` | The value as the task logged it, kept when it differs from `record_id` |

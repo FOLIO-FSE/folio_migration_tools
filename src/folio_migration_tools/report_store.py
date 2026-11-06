@@ -210,9 +210,11 @@ def _stored_params(translated: Any) -> dict:
 def describe_text(value: Any) -> tuple:
     """Return (key_or_text, params_json, translated) for a measure or issue message.
 
-    translated is 1 for a TranslatedStr (key + params), 2 for a ComposedStr (the
-    params_json holds its parts, each a translation key or literal text), and 0
-    for plain text, which is stored as is.
+    translated is 1 for a TranslatedStr (key + params), 2 for a ComposedStr and 0 for
+    plain text, which is stored as is. For a ComposedStr the params_json holds its parts,
+    each a translation key or literal text, and the first value is only the translation
+    keys of the parts joined with " + ". It holds no record data and no translated
+    text, so it is locale-neutral, needs no masking and still groups like messages.
     """
     parts = getattr(value, "parts", None)
     key = getattr(value, "key", None)
@@ -226,7 +228,8 @@ def describe_text(value: Any) -> tuple:
             else {"text": str(p)}
             for p in parts
         ]
-        return str(value), json.dumps({"parts": encoded}, sort_keys=True, default=str), 2
+        keys = " + ".join(str(p["key"]) for p in encoded if "key" in p)
+        return keys, json.dumps({"parts": encoded}, sort_keys=True, default=str), 2
     return str(value), None, 0
 
 
@@ -253,7 +256,7 @@ def _mask_message(text: str, params_json: str | None, translated: int, original:
 
     A translation key (translated == 1) is never edited. Params are decoded, masked in
     their values and encoded again. Plain text (translated == 0) is replaced textually. The
-    text of a composed message is rebuilt from its masked parts.
+    stored key of a composed message holds only translation keys, so it is not edited.
     """
     if translated == 0 and text:
         text = text.replace(original, MASK_TOKEN)
@@ -261,7 +264,7 @@ def _mask_message(text: str, params_json: str | None, translated: int, original:
         try:
             decoded = json.loads(params_json)
         except ValueError:
-            return text.replace(original, MASK_TOKEN), MASK_TOKEN
+            return (text.replace(original, MASK_TOKEN) if translated == 0 else text), MASK_TOKEN
         if translated == 2 and isinstance(decoded, dict) and "parts" in decoded:
             # Mask only the text and param values of each part, never its key
             decoded = {
@@ -272,8 +275,6 @@ def _mask_message(text: str, params_json: str | None, translated: int, original:
                     for p in decoded["parts"]
                 ]
             }
-            # The stored text is rebuilt from the parts: keys as they are, text masked
-            text = "".join(p.get("key") or p["text"] for p in decoded["parts"])
         else:
             decoded = _mask_values(decoded, original)
         params_json = json.dumps(decoded, sort_keys=True, default=str)

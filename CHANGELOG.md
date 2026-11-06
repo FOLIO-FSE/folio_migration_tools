@@ -12,6 +12,7 @@
 * Fix: Mapping an array of objects that sits inside a nested object of an array element, such as `compositePoLines[n].vendorDetail.referenceNumbers[m].*`, no longer fails with `'list' object has no attribute 'setdefault'`. The array is now written relative to the element being built (#1085).
 * The data issues log shows normalized record ids: a record with one legacy id shows that id instead of a list representation such as `['b1234']`. Check any script that parses the old form.
 * `folio-migration-tools report` reads a report database in a read-only folder, rejects files that are not report databases or have another schema version, and defaults to the locale the run was made in.
+* In the report database, the key stored for a composed message is the translation keys of its parts joined with ` + `, with no literal or translated text.
 * The MFHD transformation report now has its own title, "MFHD records transformation report".
 
 See [Report Database](docs/source/migration_reports.md#report-database).

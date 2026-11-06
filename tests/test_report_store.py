@@ -119,7 +119,7 @@ def test_composed_text_round_trip(tmp_path):
     store.finish_run("now")
     stat = store.conn.execute(
         "SELECT translated, params_json, count FROM report_stat WHERE measure_key = ?",
-        (str(composed),),
+        ("Unmapped code",),
     ).fetchone()
     assert stat[0] == 2 and stat[2] == 3
     parts = json.loads(stat[1])["parts"]
@@ -625,7 +625,7 @@ def test_link_key_with_spaces_and_wildcard_row(tmp_path):
         "mapping_ref": {"key": ["Rare Book"], "role": "materialTypeId", "row": 0}
     }
     # A value that falls back to the "*" row is reported as unmapped: no map row produced it
-    unmapped = [p for k, p in stats.items() if "zzz" in k]
+    unmapped = [p for p in stats.values() if "zzz" in json.dumps(p)]
     assert unmapped and all("mapping_ref" not in p for p in unmapped)
     assert _label_lines(md) == _label_lines(live)
 
@@ -859,7 +859,9 @@ def test_users_row_is_recorded_under_the_tasks_own_label(tmp_path):
         store.close()
 
 
-def test_masked_composed_message_text_keeps_its_keys(tmp_path):
+def test_composed_message_is_stored_as_its_keys_only(tmp_path):
+    from folio_migration_tools.report_store import MASK_TOKEN
+
     store = ReportStore(tmp_path / "r.sqlite")
     store.start_run("t")
     store.configure_privacy(True, ["ssn"])
@@ -867,5 +869,6 @@ def test_masked_composed_message_text_keeps_its_keys(tmp_path):
     store.add_issue("DATA ISSUE", "r1", i18n_t("Unmapped value") + ": e", "e", "column", "ssn")
     store.flush()
     (text,) = store.conn.execute("SELECT message_key FROM data_issue").fetchone()
-    assert text == "Unmapped value: ***MASKED***"
+    assert text == "Unmapped value"
+    assert MASK_TOKEN not in text
     store.close()
