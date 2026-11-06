@@ -110,7 +110,7 @@ CREATE TABLE data_issue (
     location_path TEXT,
     ts TEXT
 );
-CREATE INDEX ix_data_issue_msg ON data_issue (run_id, message_key);
+CREATE INDEX ix_data_issue_msg ON data_issue (run_id, message_key, params_json);
 CREATE INDEX ix_data_issue_type ON data_issue (run_id, issue_type);
 CREATE INDEX ix_legacy_record_file ON legacy_record (run_id, source_file);
 CREATE INDEX ix_data_issue_record ON data_issue (record_pk);
