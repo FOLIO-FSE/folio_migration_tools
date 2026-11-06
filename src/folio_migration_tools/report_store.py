@@ -15,7 +15,7 @@ import zlib
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, Sequence
 
 logger = logging.getLogger(__name__)
 
@@ -252,16 +252,16 @@ def _mask_message(text: str, params_json: str | None, translated: int, original:
     """Mask a value in a message without touching its translation key or JSON structure.
 
     A translation key (translated == 1) is never edited. Params are decoded, masked in
-    their values and encoded again. Rendered or plain text (translated != 1) is replaced
-    textually.
+    their values and encoded again. Plain text (translated == 0) is replaced textually. The
+    text of a composed message is rebuilt from its masked parts.
     """
-    if translated != 1 and text:
+    if translated == 0 and text:
         text = text.replace(original, MASK_TOKEN)
     if params_json:
         try:
             decoded = json.loads(params_json)
         except ValueError:
-            return text, MASK_TOKEN
+            return text.replace(original, MASK_TOKEN), MASK_TOKEN
         if translated == 2 and isinstance(decoded, dict) and "parts" in decoded:
             # Mask only the text and param values of each part, never its key
             decoded = {
@@ -272,6 +272,8 @@ def _mask_message(text: str, params_json: str | None, translated: int, original:
                     for p in decoded["parts"]
                 ]
             }
+            # The stored text is rebuilt from the parts: keys as they are, text masked
+            text = "".join(p.get("key") or p["text"] for p in decoded["parts"])
         else:
             decoded = _mask_values(decoded, original)
         params_json = json.dumps(decoded, sort_keys=True, default=str)
@@ -537,6 +539,7 @@ class ReportStore:
             "getter": payload_getter,
             "pk": None,
             "synthetic": set(synthetic_ids),
+            "order": list(dict.fromkeys(synthetic_ids)),
         }
 
     def add_current_ids(self, ids: Any):
@@ -552,7 +555,7 @@ class ReportStore:
         extra = [i for i in given if i not in ref.ids]
         if not extra and not promoted:
             return
-        ref.ids = self._ordered_ids(ref.ids + extra, cur["synthetic"])
+        ref.ids = self._ordered_ids(ref.ids + extra, cur["synthetic"], cur["order"])
         ref.kind = "legacy_id"
         if cur["pk"] is not None:
             # The record was written when an earlier issue was logged: add the new ids to it
@@ -568,10 +571,14 @@ class ReportStore:
                 )
 
     @staticmethod
-    def _ordered_ids(ids: list, synthetic: set) -> list:
+    def _ordered_ids(ids: list, synthetic: set, order: Sequence[str] = ()) -> list:
         """Real ids first (sorted), then the synthetic ones, with a "row N" label leading."""
         real = sorted(i for i in ids if i not in synthetic)
-        fake = sorted((i for i in ids if i in synthetic), key=lambda i: (i.isdigit(), i))
+        # Synthetic ids keep the order they were given in, so a task's own label can lead
+        fake = sorted(
+            (i for i in ids if i in synthetic),
+            key=lambda i: (order.index(i) if i in order else len(order), i.isdigit(), i),
+        )
         return real + fake
 
     @staticmethod
@@ -581,7 +588,7 @@ class ReportStore:
             ref = normalize_record_ref(cur["raw_id"])
             if cur["kind"] and ref.ids:
                 ref.kind = cur["kind"]
-            ref.ids = ReportStore._ordered_ids(ref.ids, cur["synthetic"])
+            ref.ids = ReportStore._ordered_ids(ref.ids, cur["synthetic"], cur["order"])
             if ref.ids and not cur["kind"] and all(i in cur["synthetic"] for i in ref.ids):
                 ref.kind = "row_number"
             cur["ref"] = ref
@@ -842,7 +849,7 @@ def capture_row(index: int, source: Any, record: Any, kind: str | None = None, l
         return
     name = getattr(source, "name", None) or str(source)
     suffix = str(name).rsplit(".", 1)[-1].lower()
-    labels = [f"row {index}", str(index), *(str(label) for label in labels)]
+    labels = [*(str(label) for label in labels), f"row {index}", str(index)]
     store.set_current_record(
         labels,
         name,

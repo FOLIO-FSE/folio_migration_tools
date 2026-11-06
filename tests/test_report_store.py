@@ -840,3 +840,32 @@ def test_legacy_id_equal_to_the_row_index_is_a_legacy_id(tmp_path):
     finally:
         set_active_store(None)
         store.close()
+
+
+def test_users_row_is_recorded_under_the_tasks_own_label(tmp_path):
+    from folio_migration_tools.report_store import capture_row, set_active_store
+
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    set_active_store(store)
+    try:
+        capture_row(0, "u.tsv", {"a": "1"}, labels=["1"])
+        store.add_issue("RECORD FAILED", "1", "no legacy id", "")
+        store.flush()
+        assert store.conn.execute("SELECT record_id FROM data_issue").fetchall() == [("1",)]
+        assert store.conn.execute("SELECT record_id FROM legacy_record").fetchall() == [("1",)]
+    finally:
+        set_active_store(None)
+        store.close()
+
+
+def test_masked_composed_message_text_keeps_its_keys(tmp_path):
+    store = ReportStore(tmp_path / "r.sqlite")
+    store.start_run("t")
+    store.configure_privacy(True, ["ssn"])
+    store.set_current_record("r1", "p.tsv", 0, "json", lambda: json.dumps({"ssn": "x"}))
+    store.add_issue("DATA ISSUE", "r1", i18n_t("Unmapped value") + ": e", "e", "column", "ssn")
+    store.flush()
+    (text,) = store.conn.execute("SELECT message_key FROM data_issue").fetchone()
+    assert text == "Unmapped value: ***MASKED***"
+    store.close()
