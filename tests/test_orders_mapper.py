@@ -1,3 +1,4 @@
+import json
 import logging
 from copy import deepcopy
 
@@ -166,49 +167,49 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "description": "",
             },
             {
-                "folio_field": "notes[0].domain",
+                "folio_field": "compositePoLines[0].notes[0].domain",
                 "legacy_field": "Not mapped",
                 "value": "orders",
                 "description": "",
             },
             {
-                "folio_field": "notes[0].typeId",
+                "folio_field": "compositePoLines[0].notes[0].typeId",
                 "legacy_field": "",
                 "value": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5",
                 "description": "",
             },
             {
-                "folio_field": "notes[0].title",
+                "folio_field": "compositePoLines[0].notes[0].title",
                 "legacy_field": "",
                 "value": "A migrated note",
                 "description": "",
             },
             {
-                "folio_field": "notes[0].content",
+                "folio_field": "compositePoLines[0].notes[0].content",
                 "legacy_field": "note1",
                 "value": "",
                 "description": "",
             },
             {
-                "folio_field": "notes[1].domain",
+                "folio_field": "compositePoLines[0].notes[1].domain",
                 "legacy_field": "Not mapped",
                 "value": "orders",
                 "description": "",
             },
             {
-                "folio_field": "notes[1].typeId",
+                "folio_field": "compositePoLines[0].notes[1].typeId",
                 "legacy_field": "",
                 "value": "f5bba0d2-7732-4687-8311-a2cb0eaa12e5",
                 "description": "",
             },
             {
-                "folio_field": "notes[1].title",
+                "folio_field": "compositePoLines[0].notes[1].title",
                 "legacy_field": "",
                 "value": "A migrated note",
                 "description": "",
             },
             {
-                "folio_field": "notes[1].content",
+                "folio_field": "compositePoLines[0].notes[1].content",
                 "legacy_field": "note2",
                 "value": "",
                 "description": "",
@@ -425,6 +426,8 @@ def test_one_order_one_pol_multiple_notes(mapper):
     mapper.extradata_writer.cache = []
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders, True)
     pol_key = mapper.po_lines_key
+    # PO-level notes are the order's own array of strings, not mod-notes records
+    assert composite_order["notes"] == ["Buy only important stuff."]
     mapper.notes_mapper.map_notes(
         data,
         data["order_number"],
@@ -439,6 +442,40 @@ def test_one_order_one_pol_multiple_notes(mapper):
     assert (
         str(mapper.extradata_writer.cache).count(composite_order[pol_key][0]["id"]) == 2
     )
+
+
+def test_pol_level_notes_are_extracted_and_linked_to_pol(mapper):
+    pol_key = mapper.po_lines_key
+    pol_map = {
+        "data": mapper.record_map["data"]
+        + [
+            {"folio_field": f"{pol_key}[0].notes[0].typeId", "legacy_field": "",
+             "value": "44cf3bf5-6e57-4541-8f8c-63b67c81e581", "description": ""},
+            {"folio_field": f"{pol_key}[0].notes[0].domain", "legacy_field": "Not mapped",
+             "value": "orders", "description": ""},
+            {"folio_field": f"{pol_key}[0].notes[0].title", "legacy_field": "",
+             "value": "POL note", "description": ""},
+            {"folio_field": f"{pol_key}[0].notes[0].content", "legacy_field": "note1",
+             "value": "", "description": ""},
+        ]
+    }
+    from folio_migration_tools.mapping_file_transformation.notes_mapper import NotesMapper
+
+    notes_mapper = NotesMapper(
+        mapper.library_configuration,
+        None,
+        mapper.folio_client,
+        mapper._build_pol_notes_map(pol_map),
+        FOLIONamespaces.note,
+        True,
+    )
+    notes_mapper.migration_report = mapper.migration_report
+    data = {"order_number": "o9", "note1": "POL level note"}
+    notes_mapper.extradata_writer.cache = []
+    notes_mapper.map_notes(data, "o9", "pol-uuid", FOLIONamespaces.orders)
+    cache = str(notes_mapper.extradata_writer.cache)
+    assert "POL level note" in cache
+    assert '"type": "poLine"' in cache and "pol-uuid" in cache
 
 
 def test_multiple_pols_with_one_or_more_notes(mapper):
@@ -996,3 +1033,48 @@ def test_is_valid_po_number():
     assert not CompositeOrderMapper.is_valid_po_number("o_124")
     assert not CompositeOrderMapper.is_valid_po_number("o.124")
     assert not CompositeOrderMapper.is_valid_po_number("o/124")
+
+
+def test_map_order_with_notes_links_notes_to_the_mapped_pol_id(mapper):
+    pol_key = mapper.po_lines_key
+    data = {
+        "row_number": "o125-1",
+        "order_number": "o125",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Once upon a time...",
+        "bibnumber": "1",
+        "copies": "",
+        "location": "",
+        "note1": "First",
+        "note2": "Second",
+        "order_note": "PO level",
+        "acqmethod": "p",
+    }
+    mapper.extradata_writer.cache = []
+    composite_order, _ = mapper.map_order_with_notes(data, "row 0")
+    pol_id = composite_order[pol_key][0]["id"]
+
+    assert composite_order["notes"] == ["PO level"]
+    notes = [
+        json.loads(entry.split("\t", 1)[1])
+        for entry in mapper.extradata_writer.cache
+        if entry.startswith("notes\t")
+    ]
+    assert len(notes) == 2
+    assert all(n["links"] == [{"id": pol_id, "type": "poLine"}] for n in notes)
+    assert composite_order["id"] != pol_id
+
+
+def test_po_level_mod_notes_mapping_halts_the_transformation(mapper):
+    bad_map = deepcopy(mapper.record_map)
+    bad_map["data"].append(
+        {"folio_field": "notes[0].content", "legacy_field": "note1", "value": "",
+         "description": ""}
+    )
+    with pytest.raises(TransformationProcessError) as exc_info:
+        CompositeOrderMapper._validate_no_po_level_mod_notes_mappings(bad_map)
+    assert "notes[0].content" in str(exc_info.value.data_value)
+
+    # The PO's string-array notes and POL-level notes are fine
+    CompositeOrderMapper._validate_no_po_level_mod_notes_mappings(mapper.record_map)

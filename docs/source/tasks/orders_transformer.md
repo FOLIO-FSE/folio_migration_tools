@@ -200,6 +200,73 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `fundsMapFileName` | `folio_code` | Fund code |
 | `locationMapFileName` | `folio_code` | Location code |
 
+## Mapping Notes
+
+FOLIO orders have two different kinds of notes, and they are mapped differently.
+
+| Kind | Where it lives in FOLIO | Mapping file `folio_field` | Result |
+|------|-------------------------|----------------------------|--------|
+| **PO notes** | The order's own `notes` array of plain strings | `notes[0]`, `notes[1]`, ... | Written into the order in `folio_orders_<task_name>.json` |
+| **POL notes** | mod-notes note records linked to a PO line | `compositePoLines[0].notes[0].<property>` | Written to the `.extradata` file, linked to the PO line |
+
+```{important}
+FOLIO's UI displays mod-notes notes for purchase order **lines** only, not for purchase orders. Notes records (with a note type, title and so on) are therefore always linked to a PO line. They cannot be mapped at the PO level.
+```
+
+### PO notes (array of strings)
+
+Map each string with a single `notes[n]` row. There is no sub-property:
+
+```json
+{
+    "folio_field": "notes[0]",
+    "legacy_field": "order_note",
+    "value": "",
+    "description": "PO-level note text"
+}
+```
+
+### POL notes (mod-notes records)
+
+Map each note record with one mapping entry per property, under the PO line. Use index `0` for the PO line (each source row creates one PO line) and increment the note index for each additional note:
+
+```json
+[
+    {
+        "folio_field": "compositePoLines[0].notes[0].typeId",
+        "legacy_field": "",
+        "value": "<note type UUID>",
+        "description": "Note type"
+    },
+    {
+        "folio_field": "compositePoLines[0].notes[0].domain",
+        "legacy_field": "Not mapped",
+        "value": "orders",
+        "description": "Must be orders"
+    },
+    {
+        "folio_field": "compositePoLines[0].notes[0].title",
+        "legacy_field": "",
+        "value": "PO line note",
+        "description": ""
+    },
+    {
+        "folio_field": "compositePoLines[0].notes[0].content",
+        "legacy_field": "NOTE_1",
+        "value": "",
+        "description": "Note text"
+    }
+]
+```
+
+- Each note's link to its PO line is generated automatically (type `poLine`, using the PO line's generated UUID). Do not map `links`.
+- Notes with empty `content` are discarded and counted in the migration report ("Number of discarded notes with no content").
+- POL notes are written to `extradata_<task_name>.extradata`, **not** to the orders file.
+
+```{warning}
+If the mapping file contains a `folio_field` such as `notes[0].content` or `notes[0].typeId` (a notes record property at the PO level), the transformation stops with an error that lists each offending `folio_field`. Change each one to start with the PO line, for example `compositePoLines[0].notes[0].content`, or convert them to PO notes mappings, e.g. `notes[0]`.
+```
+
 ## Order Merging
 
 The transformer intelligently merges rows into composite orders:
@@ -215,6 +282,7 @@ Files are created in `iterations/<iteration>/results/`:
 |------|-------------|
 | `folio_orders_<task_name>.json` | FOLIO Composite Order records (PO + embedded POLs) |
 | `orders_id_map_<task_name>.json` | Legacy ID to FOLIO UUID mapping |
+| `extradata_<task_name>.extradata` | POL notes (mod-notes records linked to PO lines). Only created if POL notes are mapped |
 
 ## Examples
 
@@ -295,6 +363,22 @@ After transformation, post orders using BatchPoster:
     "files": [
         {
             "file_name": "folio_orders_transform_orders.json"
+        }
+    ]
+}
+```
+
+If you mapped POL notes, post the extradata file **after** the orders have been posted, so the PO lines exist when the notes are linked:
+
+```json
+{
+    "name": "post_order_notes",
+    "migrationTaskType": "BatchPoster",
+    "objectType": "Extradata",
+    "batchSize": 1,
+    "files": [
+        {
+            "file_name": "extradata_transform_orders.extradata"
         }
     ]
 }
