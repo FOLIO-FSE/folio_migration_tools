@@ -37,6 +37,9 @@ from folio_migration_tools.utils import normalize_for_compare
 
 logger = logging.getLogger(__name__)
 
+# Notes mapped under a purchase order line, e.g. compositePoLines[0].notes[0].content
+POL_NOTE_PREFIX = re.compile(r"^(?:compositePoLines|poLines)\[\d+\]\.(?=notes\[)")
+
 
 class CompositeOrderMapper(MappingFileMapperBase):
     TENANT_ADDRESSES_QUERY = '?query=(module=="TENANT" and configName=="tenant.addresses")'
@@ -161,15 +164,56 @@ class CompositeOrderMapper(MappingFileMapperBase):
         self._validate_hardcoded_order_address_values()
 
         self.folio_client: FolioClient = folio_client
+        self._validate_no_po_level_mod_notes_mappings(composite_order_map)
         self.notes_mapper: NotesMapper = NotesMapper(
             library_configuration,
             None,
             self.folio_client,
-            composite_order_map,
+            self._build_pol_notes_map(composite_order_map),
             FOLIONamespaces.note,
             True,
         )
         self.notes_mapper.migration_report = self.migration_report
+
+    @staticmethod
+    def _build_pol_notes_map(composite_order_map: dict) -> dict:
+        """Build the mapping config for the NotesMapper from the order mapping.
+
+        Only POL-level notes (<pol key>[n].notes[m].x) are mod-notes records. The PO's own
+        top-level "notes" is an array of strings handled by this mapper, so it is excluded.
+        Each legacy row yields one POL, so the POL prefix is stripped, leaving notes[m].x.
+        """
+        return {
+            **composite_order_map,
+            "data": [
+                {**p, "folio_field": POL_NOTE_PREFIX.sub("", p["folio_field"])}
+                for p in composite_order_map["data"]
+                if POL_NOTE_PREFIX.match(p["folio_field"])
+            ],
+        }
+
+    @staticmethod
+    def _validate_no_po_level_mod_notes_mappings(composite_order_map: dict) -> None:
+        """Halt if mod-notes note fields are mapped at the PO level.
+
+        The PO's own top-level "notes" is an array of strings (map it as notes[n]). Notes
+        records (typeId, domain, title, content, ...) can only be linked to POLs, and must be
+        mapped under the POL, e.g. compositePoLines[0].notes[0].content.
+        """
+        offending = [
+            entry["folio_field"]
+            for entry in composite_order_map.get("data", [])
+            if re.match(r"notes\[\d+\]\.", entry.get("folio_field", ""))
+        ]
+        if offending:
+            raise TransformationProcessError(
+                "",
+                "Notes records cannot be mapped at the PO level: the PO's top-level 'notes' "
+                "is an array of strings (map it as notes[n] with no sub-property). To create "
+                "mod-notes notes, map them under the PO line, for example "
+                "compositePoLines[0].notes[0].content. Offending folio_field entries",
+                ", ".join(offending),
+            )
 
     @staticmethod
     def _ensure_custom_fields_object_schema(
@@ -260,7 +304,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         ):
             return str(uuid.uuid4())
 
-        elif re.compile(r"notes\[\d+\]\.").match(folio_prop_name):
+        elif re.compile(rf"{re.escape(self.po_lines_key)}\[\d+\]\.notes\[\d+\]\.").match(
+            folio_prop_name
+        ):
             return ""
 
         if folio_prop_name.endswith(".locationId"):
@@ -683,6 +729,27 @@ class CompositeOrderMapper(MappingFileMapperBase):
         except Exception as ee:
             logger.exception(ee)
             return {}
+
+    def map_order_with_notes(self, legacy_order: dict, index_or_id: str):
+        """Map one legacy order row to a composite order and write its POL notes.
+
+        This is the entry point for processing a full order row. Use it instead of
+        do_map whenever the POL notes extradata is needed; do_map alone maps the composite
+        order only and silently produces no notes.
+
+        Returns:
+            tuple: (composite order, legacy id)
+        """
+        folio_rec, legacy_id = self.do_map(legacy_order, index_or_id, FOLIONamespaces.orders, True)
+        self.perform_additional_mapping(legacy_id, folio_rec)
+        self.report_folio_mapping(folio_rec, self.composite_order_schema)
+        self.notes_mapper.map_notes(
+            legacy_order,
+            legacy_id,
+            folio_rec[self.po_lines_key][0]["id"],
+            FOLIONamespaces.orders,
+        )
+        return folio_rec, legacy_id
 
     def perform_additional_mapping(self, index_or_id, composite_order):
         self.validate_po_number(index_or_id, composite_order.get("poNumber"))

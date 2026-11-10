@@ -263,20 +263,10 @@ class OrdersTransformer(MigrationTaskBase):
                         logger.info("First legacy record:")
                         logger.info(json.dumps(record, indent=4))
 
-                    folio_rec, legacy_id = self.mapper.do_map(
-                        record, f"row {idx}", FOLIONamespaces.orders, True
-                    )
-                    self.mapper.perform_additional_mapping(legacy_id, folio_rec)
+                    folio_rec, legacy_id = self.mapper.map_order_with_notes(record, f"row {idx}")
 
                     self.mapper.migration_report.add_general_statistics(
                         i18n_t("TOTAL Purchase Order Lines created")
-                    )
-                    self.mapper.report_folio_mapping(folio_rec, self.mapper.composite_order_schema)
-                    self.mapper.notes_mapper.map_notes(
-                        record,
-                        legacy_id,
-                        folio_rec["id"],
-                        FOLIONamespaces.orders,
                     )
 
                     self.merge_into_orders_with_embedded_pols(folio_rec)
@@ -329,6 +319,7 @@ class OrdersTransformer(MigrationTaskBase):
 
     async def wrap_up(self):
         logger.info("Done. Wrapping up...")
+        self.extradata_writer.flush()
         with open(self.folder_structure.migration_reports_file, "w") as migration_report_file:
             logger.info(
                 "Writing migration- and mapping report to %s",
