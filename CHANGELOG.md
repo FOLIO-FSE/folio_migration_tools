@@ -1,4 +1,17 @@
 # Changelog
+## v1.13.2 (10/11/2026)
+
+#### Other Changes
+* Fix: Write POL notes extradata for orders and link notes to the PO line by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1072
+
+```{warning}
+**Orders notes fix (#1072):** Notes mapped under the PO line (`compositePoLines[n].notes[m].x`) are now written to the orders extradata file and linked to the PO line with type `poLine`, where they were previously ignored or linked to the PO with type `orders`. The orders transformation now also writes its `.extradata` file in a normal run. Mapping mod-notes properties at the PO level (for example `notes[0].content`) now halts with an error; map them under the PO line instead. Re-run any orders transformations that mapped notes.
+```
+
+**Full Changelog**: https://github.com/FOLIO-FSE/folio_migration_tools/compare/v1.13.1...v1.13.2
+
+---
+
 ## v1.13.1 (15/10/2026)
 
 #### Other Changes
