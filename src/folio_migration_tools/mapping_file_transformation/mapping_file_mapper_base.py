@@ -747,7 +747,7 @@ class MappingFileMapperBase(MapperBase):
             # When mapping nested object fields under an array item (for example,
             # "poLines[0].cost.currency") into a temporary item object, keep only
             # the local path segment ("cost.currency").
-            return path.split("].", 1)[1] if "]." in path else path
+            return path.rsplit("].", 1)[1] if "]." in path else path
 
         temp_object: dict = {}
         for child_property_name, child_property in schema_property["properties"].items():
@@ -766,6 +766,11 @@ class MappingFileMapperBase(MapperBase):
                 and child_property.get("items", {}).get("type", "") == "object"
                 and child_property.get("items", {}).get("properties", "")
             ):
+                # Inside an array element, folio_object is that element's temporary object,
+                # so the array must be written at its path relative to the element.
+                local_array_path = _normalize_local_object_path(
+                    f"{schema_property_name}.{child_property_name}"
+                )
                 static_only_props = self.map_objects_array_props(
                     legacy_object,
                     f"{schema_property_name}.{child_property_name}",
@@ -773,10 +778,11 @@ class MappingFileMapperBase(MapperBase):
                     folio_object,
                     index_or_id,
                     [],
+                    target_path=local_array_path,
                 )
                 self.validate_object_items_in_array(
                     folio_object,
-                    f"{schema_property_name}.{child_property_name}",
+                    local_array_path,
                     child_property,
                     index_or_id,
                     static_only_props,
@@ -823,6 +829,7 @@ class MappingFileMapperBase(MapperBase):
         folio_object: dict,
         index_or_id,
         required: list[str],
+        target_path: str | None = None,
     ):
         resulting_array = []
         static_props = set()
@@ -948,7 +955,7 @@ class MappingFileMapperBase(MapperBase):
                 resulting_array.append(temp_object)
 
         if any(resulting_array):
-            set_deep2(folio_object, prop_name, resulting_array)
+            set_deep2(folio_object, target_path or prop_name, resulting_array)
 
         return static_only_props
 
