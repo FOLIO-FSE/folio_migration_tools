@@ -838,112 +838,97 @@ class MappingFileMapperBase(MapperBase):
         static_only_props = static_props - legacy_props
         i = 0
         while True:
-            keys_to_map = {
-                k.rsplit(".", 1)[0] for k in self.folio_keys if k.startswith(f"{prop_name}[{i}")
-            }
-            if not any(keys_to_map):
+            if not any(k.startswith(f"{prop_name}[{i}") for k in self.folio_keys):
                 break
             temp_object: dict = {}
             multi_field_props: List[str] = []
             boolean_props: List[str] = []
-            for _ in keys_to_map:
-                temp_object = {}
-                multi_field_props = []
-                boolean_props = []
-                for sub_prop_name, sub_prop in (
-                    (k, p)
-                    for k, p in sub_properties.items()
-                    if not p.get("folio:isVirtual", False)
-                ):
-                    prop_path = f"{prop_name}[{i}].{sub_prop_name}"
-                    if prop_path in self.folio_keys:
-                        # We have reached the end of the prop path?
-                        if self.is_boolean_schema_property(sub_prop):
-                            boolean_props.append(sub_prop_name)
-                            res = self.get_boolean_prop(
-                                legacy_object,
-                                prop_path,
-                                index_or_id,
-                                sub_properties[sub_prop_name].get("default", ""),
-                                delimited=True,
-                            )
-                        else:
-                            res = self.get_prop(
-                                legacy_object,
-                                prop_path,
-                                index_or_id,
-                                sub_properties[sub_prop_name].get("default", ""),
-                            )
-                        self.report_legacy_mapping(
-                            self.legacy_basic_property(prop_path), True, True
-                        )
-
-                        if (
-                            isinstance(res, str)
-                            and self.library_configuration.multi_field_delimiter in res
-                        ):
-                            for delim_value in res.split(
-                                self.library_configuration.multi_field_delimiter
-                            ):
-                                if delim_value not in empty_vals:
-                                    self.validate_enums(
-                                        delim_value,
-                                        sub_prop,
-                                        sub_prop_name,
-                                        index_or_id,
-                                        required,
-                                    )
-                            multi_field_props.append(sub_prop_name)
-                        else:
-                            self.validate_enums(
-                                res, sub_prop, sub_prop_name, index_or_id, required
-                            )
-
-                        if res or isinstance(res, bool):
-                            temp_object[sub_prop_name] = res
-
-                    elif (
-                        sub_prop_name in sub_properties
-                        and sub_properties[sub_prop_name].get("type", "") == "array"
-                        and sub_properties[sub_prop_name]["items"].get("type", "") == "object"
-                    ):
-                        self.map_objects_array_props(
+            for sub_prop_name, sub_prop in (
+                (k, p) for k, p in sub_properties.items() if not p.get("folio:isVirtual", False)
+            ):
+                prop_path = f"{prop_name}[{i}].{sub_prop_name}"
+                if prop_path in self.folio_keys:
+                    # We have reached the end of the prop path?
+                    if self.is_boolean_schema_property(sub_prop):
+                        boolean_props.append(sub_prop_name)
+                        res = self.get_boolean_prop(
                             legacy_object,
                             prop_path,
-                            sub_properties[sub_prop_name]["items"]["properties"],
-                            folio_object,
                             index_or_id,
-                            [],
+                            sub_properties[sub_prop_name].get("default", ""),
+                            delimited=True,
                         )
-                    elif (
-                        sub_prop_name in sub_properties
-                        and sub_properties[sub_prop_name].get("type", "") == "array"
-                        and sub_properties[sub_prop_name]["items"].get("type", "")
-                        in ["string", "number", "integer"]
-                    ):
-                        # We have not reached the end of the prop path
-                        for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
-                            res = self.get_prop(
-                                legacy_object,
-                                array_path,
-                                index_or_id,
-                                sub_properties[sub_prop_name].get("default", ""),
-                            )
-                            self.validate_enums(
-                                res, sub_prop, sub_prop_name, index_or_id, required
-                            )
-                            if res or isinstance(res, bool):
-                                self.add_values_to_string_array(
-                                    sub_prop_name,
-                                    temp_object,
-                                    res,
-                                    self.library_configuration.multi_field_delimiter,
-                                )
+                    else:
+                        res = self.get_prop(
+                            legacy_object,
+                            prop_path,
+                            index_or_id,
+                            sub_properties[sub_prop_name].get("default", ""),
+                        )
+                    self.report_legacy_mapping(self.legacy_basic_property(prop_path), True, True)
 
-                    elif sub_prop.get("type", "") == "object" and "properties" in sub_prop:
-                        self.map_object_props(
-                            legacy_object, prop_path, sub_prop, temp_object, index_or_id, 0
+                    if (
+                        isinstance(res, str)
+                        and self.library_configuration.multi_field_delimiter in res
+                    ):
+                        for delim_value in res.split(
+                            self.library_configuration.multi_field_delimiter
+                        ):
+                            if delim_value not in empty_vals:
+                                self.validate_enums(
+                                    delim_value,
+                                    sub_prop,
+                                    sub_prop_name,
+                                    index_or_id,
+                                    required,
+                                )
+                        multi_field_props.append(sub_prop_name)
+                    else:
+                        self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
+
+                    if res or isinstance(res, bool):
+                        temp_object[sub_prop_name] = res
+
+                elif (
+                    sub_prop_name in sub_properties
+                    and sub_properties[sub_prop_name].get("type", "") == "array"
+                    and sub_properties[sub_prop_name]["items"].get("type", "") == "object"
+                ):
+                    self.map_objects_array_props(
+                        legacy_object,
+                        prop_path,
+                        sub_properties[sub_prop_name]["items"]["properties"],
+                        folio_object,
+                        index_or_id,
+                        [],
+                    )
+                elif (
+                    sub_prop_name in sub_properties
+                    and sub_properties[sub_prop_name].get("type", "") == "array"
+                    and sub_properties[sub_prop_name]["items"].get("type", "")
+                    in ["string", "number", "integer"]
+                ):
+                    # We have not reached the end of the prop path
+                    for array_path in [p for p in self.folio_keys if p.startswith(prop_path)]:
+                        res = self.get_prop(
+                            legacy_object,
+                            array_path,
+                            index_or_id,
+                            sub_properties[sub_prop_name].get("default", ""),
                         )
+                        self.validate_enums(res, sub_prop, sub_prop_name, index_or_id, required)
+                        if res or isinstance(res, bool):
+                            self.add_values_to_string_array(
+                                sub_prop_name,
+                                temp_object,
+                                res,
+                                self.library_configuration.multi_field_delimiter,
+                            )
+
+                elif sub_prop.get("type", "") == "object" and "properties" in sub_prop:
+                    self.map_object_props(
+                        legacy_object, prop_path, sub_prop, temp_object, index_or_id, 0
+                    )
             i = i + 1
 
             if any(multi_field_props):

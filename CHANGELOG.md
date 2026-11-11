@@ -1,4 +1,9 @@
 # Changelog
+## Unreleased
+
+#### Other Changes
+* Fix: Count each mapped legacy field once per array element in the "Mapped Legacy fields" report. Fields mapped inside arrays of objects (for example `compositePoLines[n]` in orders) were counted once per sub-path of the array element, which produced percentages well over 100% (#1077). The mapped output is unchanged; only the report counts, and the repeated mapping work, are affected.
+
 ## v1.14.0 (11/11/2026)
 
 #### Other Changes
