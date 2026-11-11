@@ -3,7 +3,7 @@
 
 #### Other Changes
 * Fix: Count each mapped legacy field once per array element in the "Mapped Legacy fields" report. Fields mapped inside arrays of objects (for example `compositePoLines[n]` in orders) were counted once per sub-path of the array element, which produced percentages well over 100% (#1077). The mapped output is unchanged; only the report counts, and the repeated mapping work, are affected.
-* Fix: Mapping an array of objects that sits inside a nested object of an array element, such as `compositePoLines[n].vendorDetail.referenceNumbers[m].*`, no longer fails with `'list' object has no attribute 'setdefault'`. The array is now written relative to the element being built.
+* Fix: Mapping an array of objects that sits inside a nested object of an array element, such as `compositePoLines[n].vendorDetail.referenceNumbers[m].*`, no longer fails with `'list' object has no attribute 'setdefault'`. The array is now written relative to the element being built (#1085).
 
 ## v1.14.0 (11/11/2026)
 
