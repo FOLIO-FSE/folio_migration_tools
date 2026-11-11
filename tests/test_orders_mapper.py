@@ -246,13 +246,15 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         "",
     )
 
+from folio_migration_tools.mapping_file_transformation.acq_schema_resolver import (  # noqa: E402
+    resolve_acq_schema,
+)
+
 
 # Tests
 @pytest.mark.slow
 def test_fetch_acq_schemas_from_github_happy_path():
-    composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
-    )
+    composite_order_schema = resolve_acq_schema("mod-orders", "composite_purchase_order")
 
     assert composite_order_schema["$schema"]
     assert composite_order_schema["properties"]["orderType"]["enum"] == ["One-Time", "Ongoing"]
@@ -290,9 +292,8 @@ def test_fetch_acq_schemas_from_github_happy_path():
 @pytest.mark.slow
 def test_fetch_acq_schemas_for_specific_release():
     # Ramsons-era release should use compositePoLines
-    old_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-orders", "mod-orders",
-        "composite_purchase_order", "v12.9.14",
+    old_schema = resolve_acq_schema(
+        "mod-orders", "composite_purchase_order", "v12.9.14",
     )
     assert old_schema["$schema"]
     assert "compositePoLines" in old_schema["properties"]
@@ -305,9 +306,8 @@ def test_fetch_acq_schemas_for_specific_release():
     assert "currency" in old_pol_props["cost"]["properties"]
 
     # Trillium release should use poLines
-    new_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-orders", "mod-orders",
-        "composite_purchase_order", "v13.1.0",
+    new_schema = resolve_acq_schema(
+        "mod-orders", "composite_purchase_order", "v13.1.0",
     )
     assert new_schema["$schema"]
     assert "poLines" in new_schema["properties"]
@@ -318,6 +318,23 @@ def test_fetch_acq_schemas_for_specific_release():
     assert "cost" in new_pol_props
     assert "properties" in new_pol_props["cost"], "cost $ref was not resolved"
     assert "currency" in new_pol_props["cost"]["properties"]
+
+    # Typeless $ref properties must be resolved, not discarded (referenceNumbers regression)
+    ref_numbers = new_pol_props["vendorDetail"]["properties"]["referenceNumbers"]
+    assert ref_numbers["type"] == "array"
+    assert "refNumber" in ref_numbers["items"]["properties"]
+
+
+@pytest.mark.slow
+def test_acq_schema_resolution_is_deterministic():
+    results = {
+        json.dumps(
+            resolve_acq_schema("mod-orders", "composite_purchase_order", "v13.1.0"),
+            sort_keys=True,
+        )
+        for _ in range(3)
+    }
+    assert len(results) == 1
 
 
 def test_parse_record_mapping_file(mapper):

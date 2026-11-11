@@ -7,18 +7,13 @@ acquisition units, fund distributions, and vendor references.
 
 import json
 import logging
-import os
 import re
-import sys
-import urllib.parse
 import uuid
 from typing import Any
 
-import httpx
 import i18n
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
-from httpx import HTTPError
 
 from folio_migration_tools.custom_exceptions import (
     TransformationProcessError,
@@ -26,6 +21,9 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.helper import Helper
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.acq_schema_resolver import (
+    resolve_acq_schema,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -88,8 +86,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
         except Exception:
             logger.info("Could not determine mod-orders version, falling back to latest release")
 
-        self.composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
-            "folio-org", "mod-orders", "mod-orders", "composite_purchase_order", release_tag
+        self.composite_order_schema = resolve_acq_schema(
+            "mod-orders", "composite_purchase_order", release_tag
         )
 
         # Detect PO lines property name from schema (compositePoLines or poLines)
@@ -289,11 +287,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         self._inject_custom_fields_properties(po_lines_schema, pol_custom_fields)
 
-    def get_prop(self, legacy_order, folio_prop_name: str, index_or_id, schema_default_value):
+    def get_prop(self, legacy_object, folio_prop_name: str, index_or_id, schema_default_value):
         if folio_prop_name.endswith(".acquisitionMethod"):
             return self.get_mapped_ref_data_value(
                 self.acquisitions_methods_mapping,
-                legacy_order,
+                legacy_object,
                 folio_prop_name,
                 index_or_id,
                 False,
@@ -312,7 +310,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if folio_prop_name.endswith(".locationId"):
             return self.get_mapped_ref_data_value(
                 self.location_mapping,
-                legacy_order,
+                legacy_object,
                 folio_prop_name,
                 index_or_id,
                 False,
@@ -321,7 +319,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         if folio_prop_name.endswith(".fundId"):
             return self.get_mapped_ref_data_value(
                 self.funds_mapping,
-                legacy_order,
+                legacy_object,
                 folio_prop_name,
                 index_or_id,
                 False,
@@ -329,7 +327,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         if folio_prop_name in ("billTo", "shipTo"):
             raw = super().get_prop(
-                legacy_order,
+                legacy_object,
                 folio_prop_name,
                 index_or_id,
                 schema_default_value,
@@ -337,7 +335,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return self._resolve_order_address_id(raw, folio_prop_name, index_or_id)
 
         mapped_value = super().get_prop(
-            legacy_order, folio_prop_name, index_or_id, schema_default_value
+            legacy_object, folio_prop_name, index_or_id, schema_default_value
         )
 
         return mapped_value
@@ -475,260 +473,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     ]
                 ),
             )
-
-    @staticmethod
-    def get_latest_acq_schemas_from_github(owner, repo, module, object, release_tag=None):
-        """Fetch acquisition object schema from GitHub with referenced schemas.
-
-        Args:
-            owner (str): GitHub repository owner.
-            repo (str): GitHub repository name.
-            module (str): Module name within the repository.
-            object (str): Object name whose schema is to be fetched.
-            release_tag (str, optional): Specific release tag to fetch. If None,
-                fetches the latest release.
-
-        Returns:
-            Dict: _description_
-        """
-        try:
-            # Authenticate when calling GitHub, using an API key stored in .env
-            github_headers = {
-                "content-type": "application/json",
-                "User-Agent": "FOLIO Migration Tools (https://github.com/FOLIO-FSE/folio_migration_tools/)",  # noqa: E501
-            }
-
-            if os.environ.get("GITHUB_TOKEN"):
-                logger.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
-                github_headers["authorization"] = f"token {os.environ.get('GITHUB_TOKEN')}"
-
-            # Start talkign to GitHub...
-            github_path = "https://raw.githubusercontent.com"
-            submodules = CompositeOrderMapper.get_submodules_of_release(
-                owner, repo, github_headers, release_tag
-            )
-
-            # Get the sha's of submodules acq-models and raml_utils
-            acq_models_sha = next(
-                (item["sha"] for item in submodules if item["path"] == "acq-models")
-            )
-
-            # # TODO Maybe - fetch raml_utils schemas if deemed necessary
-            # raml_utils_sha = next((item["sha"] for item in submodules
-            # if item["path"] == "raml-utils"))
-
-            acq_models_path = (
-                f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas/"
-            )
-
-            req = httpx.get(
-                f"{acq_models_path}/{object}.json",
-                headers=github_headers,
-                follow_redirects=True,
-                timeout=None,
-            )
-            req.raise_for_status()
-
-            object_schema = json.loads(req.text)
-
-            return CompositeOrderMapper.build_extended_object(
-                object_schema, acq_models_path, github_headers
-            )
-        except httpx.HTTPError as http_error:
-            logger.critical(f"Halting! \t{http_error}")
-            sys.exit(2)
-
-        except json.decoder.JSONDecodeError as json_error:
-            logger.critical(json_error)
-            sys.exit(2)
-
-    @staticmethod
-    def get_submodules_of_release(owner, repo, github_headers, release_tag=None):
-        """Get submodules associated with a specific or latest release of a repository.
-
-        Args:
-            owner (str): GitHub repository owner.
-            repo (str): GitHub repository name.
-            github_headers (dict): Headers to use for GitHub API requests.
-            release_tag (str, optional): Specific release tag. If None, fetches latest.
-
-        Returns:
-            list: List of submodules associated with the release.
-        """
-        github_path = "https://api.github.com/repos"
-
-        if not release_tag:
-            # Get metadata for the latest release
-            latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
-            req = httpx.get(
-                f"{latest_release_path}",
-                headers=github_headers,
-                follow_redirects=True,
-                timeout=None,
-            )
-            req.raise_for_status()
-            latest_release = json.loads(req.text)
-            release_tag = latest_release["tag_name"]
-
-        logger.info(f"Using schemas from {repo} release: {release_tag}")
-
-        # Get the tree for the latest release
-        tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
-        req = httpx.get(tree_path, headers=github_headers, follow_redirects=True, timeout=None)
-        req.raise_for_status()
-        release_tree = json.loads(req.text)
-
-        # Loop through the tree to get the sha of the folder with path "ramls"
-        ramls_sha = next((item["sha"] for item in release_tree["tree"] if item["path"] == "ramls"))
-
-        # Get the tree for the ramls folder
-        ramls_path = f"{github_path}/{owner}/{repo}/git/trees/{ramls_sha}"
-        req = httpx.get(ramls_path, headers=github_headers, follow_redirects=True, timeout=None)
-        req.raise_for_status()
-        ramls_tree = json.loads(req.text)
-
-        # Loop through the tree to get the sha of submodules
-        submodules = [item for item in ramls_tree["tree"] if item["mode"] == "160000"]
-
-        return submodules
-
-    @staticmethod
-    def build_extended_object(object_schema, submodule_path, github_headers):
-        """Extend an object schema with full schemas of subordinate objects.
-
-        Args:
-            object_schema (dict): The schema of the object to be extended.
-            submodule_path (str): The path to the submodule containing schemas.
-            github_headers (dict): Headers to use for GitHub API requests.
-
-        Returns:
-            dict: The extended object schema.
-        """
-        supported_types = [
-            "string",
-            "boolean",
-            "number",
-            "integer",
-            "text",
-            "object",
-            "array",
-        ]
-
-        try:
-            if (
-                "properties" not in object_schema
-                and "$ref" in object_schema
-                and object_schema["type"] == "object"
-            ):
-                object_schema["properties"] = CompositeOrderMapper.inject_schema_by_ref(
-                    submodule_path, github_headers, object_schema
-                ).get(
-                    "properties", {}
-                )  # TODO: Investigate new CustomFields schema and figure out how to actually handle it # noqa: E501
-
-            for property_name_level1, property_level1 in object_schema.get(
-                "properties", {}
-            ).items():
-                # Report and discard unhandled properties
-                if property_level1.get("type") not in supported_types:
-                    logger.info(f"Property not yet supported: {property_name_level1}")
-                    property_level1["type"] = "Deprecated"
-
-                # Handle object properties
-                elif property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    logger.info("Fecthing referenced schema for object %s", property_name_level1)
-                    actual_path = urllib.parse.urljoin(
-                        f"{submodule_path}", object_schema.get("$ref", "")
-                    )
-                    logger.debug("Actual path for fetching object schema: %s", actual_path)
-
-                    p1 = CompositeOrderMapper.inject_schema_by_ref(
-                        actual_path, github_headers, property_level1
-                    )
-
-                    p2 = CompositeOrderMapper.build_extended_object(
-                        p1, actual_path, github_headers
-                    )
-                    object_schema["properties"][property_name_level1] = p2
-
-                # Handle arrays of items properties
-                elif property_level1.get("type") == "array" and property_level1.get("items").get(
-                    "$ref"
-                ):
-                    logger.info(
-                        "Fetching referenced schema for array object %s", property_name_level1
-                    )
-                    actual_path = urllib.parse.urljoin(
-                        f"{submodule_path}", object_schema.get("$ref", "")
-                    )
-                    logger.debug("Actual path for fetching array items schema: %s", actual_path)
-
-                    p1 = CompositeOrderMapper.inject_items_schema_by_ref(
-                        actual_path, github_headers, property_level1
-                    )
-                    p2 = CompositeOrderMapper.build_extended_object(
-                        p1, actual_path, github_headers
-                    )
-                    property_level1["items"] = p2
-                elif property_level1.get("type") == "string" and property_level1.get("$ref"):
-                    logger.info("Fetching referenced schema for object %s", property_name_level1)
-                    actual_path = urllib.parse.urljoin(
-                        f"{submodule_path}", object_schema.get("$ref", "")
-                    )
-                    logger.debug("Actual path for fetching string schema: %s", actual_path)
-                    p1 = CompositeOrderMapper.inject_schema_by_ref(
-                        actual_path, github_headers, property_level1
-                    )
-                    object_schema["properties"][property_name_level1] = p1
-
-            return object_schema
-
-        except HTTPError as he:
-            logger.exception(he)
-
-    @staticmethod
-    def inject_schema_by_ref(submodule_path, github_headers, property: dict):
-        base_raml = "https://raw.githubusercontent.com/folio-org/raml/master/"
-        try:
-            u1 = urllib.parse.urlparse(submodule_path)
-            schema_url = urllib.parse.urljoin(u1.geturl(), property["$ref"])
-            if schema_url.endswith("tags.schema"):
-                schema_url = f"{base_raml}schemas/tags.schema"
-            if schema_url.endswith("metadata.schema"):
-                schema_url = f"{base_raml}schemas/metadata.schema"
-
-            req = httpx.get(
-                schema_url, headers=github_headers, follow_redirects=True, timeout=None
-            )
-            req.raise_for_status()
-            logger.debug(
-                "Fetched schema from submodule %s for property %s",
-                submodule_path,
-                property.get("description", ""),
-            )
-            return dict(property, **json.loads(req.text))
-        except Exception as ee:
-            logger.exception(ee)
-            return {}
-
-    @staticmethod
-    def inject_items_schema_by_ref(submodule_path, github_headers, property: dict):
-        try:
-            u1 = urllib.parse.urlparse(submodule_path)
-            schema_url = urllib.parse.urljoin(u1.geturl(), property["items"]["$ref"])
-            req = httpx.get(
-                schema_url, headers=github_headers, follow_redirects=True, timeout=None
-            )
-            req.raise_for_status()
-            logger.debug(
-                "Fetched schema from submodule %s for property %s",
-                submodule_path,
-                property.get("description", ""),
-            )
-            return dict(property["items"], **json.loads(req.text))
-        except Exception as ee:
-            logger.exception(ee)
-            return {}
 
     def map_order_with_notes(self, legacy_order: dict, index_or_id: str):
         """Map one legacy order row to a composite order and write its POL notes.

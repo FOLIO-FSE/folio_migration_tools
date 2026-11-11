@@ -24,9 +24,7 @@ LOGGER.propagate = True
 
 @pytest.mark.slow
 def test_fetch_org_schemas_from_github_happy_path():
-    organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
-    )
+    organization_schema = OrganizationMapper.get_organization_schema()
 
     assert organization_schema["$schema"]
 
@@ -34,10 +32,7 @@ def test_fetch_org_schemas_from_github_happy_path():
 @pytest.mark.slow
 def test_fetch_org_schemas_for_specific_release():
     # Ramsons-era release
-    old_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-organizations-storage", "mod-orgs",
-        "organization", "v4.8.2",
-    )
+    old_schema = OrganizationMapper.get_organization_schema("v4.8.2")
     assert old_schema["$schema"]
     assert "name" in old_schema["properties"]
     # Verify $ref resolution for contacts and interfaces
@@ -51,10 +46,7 @@ def test_fetch_org_schemas_for_specific_release():
     assert "name" in old_schema["properties"]["interfaces"]["items"]["properties"]
 
     # Trillium release
-    new_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-organizations-storage", "mod-orgs",
-        "organization", "v5.0.0",
-    )
+    new_schema = OrganizationMapper.get_organization_schema("v5.0.0")
     assert new_schema["$schema"]
     assert "name" in new_schema["properties"]
 

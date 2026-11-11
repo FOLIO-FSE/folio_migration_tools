@@ -5,17 +5,17 @@ to FOLIO Organization records. Handles embedded interfaces, contacts, categories
 and extradata object creation.
 """
 
-import json
 import logging
 import os
 import re
-import sys
 
-import httpx
 from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.library_configuration import LibraryConfiguration
+from folio_migration_tools.mapping_file_transformation.acq_schema_resolver import (
+    resolve_acq_schema,
+)
 from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base import (
     MappingFileMapperBase,
 )
@@ -67,13 +67,7 @@ class OrganizationMapper(MappingFileMapperBase):
 
         if os.environ.get("GITHUB_TOKEN"):
             logger.info("Using GITHUB_TOKEN environment variable for GitHub API Access")
-        organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-            "folio-org",
-            "mod-organizations-storage",
-            "mod-orgs",
-            "organization",
-            release_tag,
-        )
+        organization_schema = OrganizationMapper.get_organization_schema(release_tag)
 
         super().__init__(
             folio_client,
@@ -205,247 +199,36 @@ class OrganizationMapper(MappingFileMapperBase):
             self.organization_types_map = None
 
     @staticmethod
-    def get_latest_acq_schemas_from_github(owner, repo, module, object, release_tag=None):
-        """Fetch acquisition object schema from GitHub with referenced schemas.
+    def get_organization_schema(release_tag=None) -> dict:
+        """Resolve the organization schema with contacts and interfaces expanded.
 
-        Args:
-            owner (str): GitHub repository owner.
-            repo (str): GitHub repository name.
-            module (str): Module name within the repository.
-            object (str): Object name whose schema is to be fetched.
-            release_tag (str, optional): Specific release tag to fetch.
-                If None, fetches the latest release.
-
-        Returns:
-            dict: The extended object schema.
+        In the organization schema, ``contacts`` and ``interfaces`` are arrays of UUIDs. For
+        mapping, they are replaced by the full contact / interface object schemas, and an
+        interface's credential object is nested under ``interfaceCredential``.
         """
-        try:
-            # Authenticate when calling GitHub, using an API key stored in .env
-            github_headers = {
-                "content-type": "application/json",
-                "User-Agent": "FOLIO Migration Tools (https://github.com/FOLIO-FSE/folio_migration_tools/)",  # noqa:E501
-            }
+        resolve = OrganizationMapper.fetch_additional_schema
+        schema = resolve("organization", release_tag)
 
-            if os.environ.get("GITHUB_TOKEN"):
-                github_headers["authorization"] = f"token {os.environ.get('GITHUB_TOKEN')}"
+        schema["properties"]["contacts"] = {
+            "description": "Contacts",
+            "type": "array",
+            "items": resolve("contact", release_tag),
+        }
 
-            # Start talkign to GitHub...
-            github_path = "https://raw.githubusercontent.com"
-            submodules = OrganizationMapper.get_submodules_of_release(
-                owner, repo, github_headers, release_tag
-            )
-
-            # Get the sha's of sunmodules acq-models and raml_utils
-            acq_models_sha = next(
-                (item["sha"] for item in submodules if item["path"] == "acq-models")
-            )
-
-            # # TODO Maybe - fetch raml_utils schemas if deemed necessary
-            # raml_utils_sha = next((item["sha"] for item in submodules
-            # if item["path"] == "raml-utils"))
-
-            acq_models_path = f"{github_path}/{owner}/acq-models/{acq_models_sha}/{module}/schemas"
-
-            req = httpx.get(f"{acq_models_path}/{object}.json", headers=github_headers)
-            req.raise_for_status()
-
-            object_schema = json.loads(req.text)
-
-            # Fetch referenced schemas
-            extended_object_schema = OrganizationMapper.build_extended_object(
-                object_schema, acq_models_path, github_headers, release_tag
-            )
-
-            return extended_object_schema
-
-        except httpx.HTTPError as http_error:
-            logger.critical(f"Halting! \t{http_error}")
-            sys.exit(2)
-
-        except json.decoder.JSONDecodeError as json_error:
-            logger.critical(json_error)
-            sys.exit(2)
-
-    @staticmethod
-    def get_submodules_of_release(owner, repo, github_headers, release_tag=None):
-        """Get submodules associated with a release of a repository.
-
-        Args:
-            owner (str): GitHub repository owner.
-            repo (str): GitHub repository name.
-            github_headers (dict): Headers for GitHub API requests.
-            release_tag (str, optional): Specific release tag.
-                If None, fetches latest.
-
-        Returns:
-            list: List of submodules associated with the release.
-        """
-        github_path = "https://api.github.com/repos"
-
-        if not release_tag:
-            # Get metadata for the latest release
-            latest_release_path = f"{github_path}/{owner}/{repo}/releases/latest"
-            req = httpx.get(
-                f"{latest_release_path}",
-                headers=github_headers,
-                timeout=None,
-            )
-            req.raise_for_status()
-            latest_release = json.loads(req.text)
-            release_tag = latest_release["tag_name"]
-
-        logger.info(f"Using schemas from {repo} release: {release_tag}")
-
-        # Get the tree for the latest release
-        tree_path = f"{github_path}/{owner}/{repo}/git/trees/{release_tag}"
-        req = httpx.get(tree_path, headers=github_headers, timeout=None)
-        req.raise_for_status()
-        release_tree = json.loads(req.text)
-
-        # Loop through the tree to get the sha of the folder with path "ramls"
-        ramls_sha = next((item["sha"] for item in release_tree["tree"] if item["path"] == "ramls"))
-
-        # Get the tree for the ramls folder
-        ramls_path = f"{github_path}/{owner}/{repo}/git/trees/{ramls_sha}"
-        req = httpx.get(ramls_path, headers=github_headers, timeout=None)
-        req.raise_for_status()
-        ramls_tree = json.loads(req.text)
-
-        # Loop through the tree to get the sha of submodules
-        submodules = [item for item in ramls_tree["tree"] if item["mode"] == "160000"]
-
-        return submodules
-
-    @staticmethod
-    def build_extended_object(object_schema, submodule_path, github_headers, release_tag=None):
-        """Extend an object schema with full schemas of subordinate objects.
-
-        Args:
-            object_schema (dict): The base object schema to extend.
-            submodule_path (str): Path to the submodule containing schemas.
-            github_headers (dict): Headers for GitHub API requests.
-            release_tag (str, optional): Specific release tag for
-                additional schema fetches.
-
-        Returns:
-            dict: The extended object schema.
-        """
-        supported_types = ["string", "boolean", "number", "integer", "text", "object", "array"]
-
-        try:
-            for property_name_level1, property_level1 in object_schema["properties"].items():
-                # For now, treat references to UUIDs like strings
-                # It's not great practice, but it's the way FOLIO mostly handles it
-                if "../../common/schemas/uuid.json" in property_level1.get("$ref", ""):
-                    property_level1["type"] = "string"
-
-                # Preliminary implementation of tags
-                # https://github.com/folio-org/raml/blob/master/schemas/tags.schema
-                elif property_name_level1 == "tags":
-                    property_level1["properties"] = {
-                        "tagList": {
-                            "description": "List of tags",
-                            "type": "array",
-                            "items": {"type": "string"},
-                        }
-                    }
-
-                elif property_name_level1 == "contacts":
-                    contact_schema = OrganizationMapper.fetch_additional_schema(
-                        "contact", release_tag
-                    )
-                    OrganizationMapper.resolve_uuid_refs(contact_schema)
-                    property_level1["items"] = contact_schema
-
-                elif property_name_level1 == "interfaces":
-                    interface_schema = OrganizationMapper.fetch_additional_schema(
-                        "interface", release_tag
-                    )
-                    interface_schema["required"] = ["name"]
-
-                    # Temporarily add the credential object as a subproperty
-                    interface_credential_schema = OrganizationMapper.fetch_additional_schema(
-                        "interface_credential", release_tag
-                    )
-                    interface_credential_schema["required"] = (
-                        ["username", "password", "interfaceId"],
-                    )
-
-                    interface_schema["properties"]["interfaceCredential"] = (
-                        interface_credential_schema
-                    )
-
-                    OrganizationMapper.resolve_uuid_refs(interface_schema)
-                    property_level1["items"] = interface_schema
-
-                elif (
-                    property_level1.get("type") == "array"
-                    and property_level1.get("items").get("$ref")
-                    == "../../common/schemas/uuid.json"
-                ):
-                    property_level1["items"]["type"] = "string"
-
-                # Report and discard unhandled properties
-                elif (
-                    property_level1.get("type") not in supported_types
-                    or "../" in property_level1.get("$ref", "")
-                    or "../" in property_level1.get("items", {}).get("$ref", "")
-                ):
-                    logger.info(f"Property not yet supported: {property_name_level1}")
-
-                # Handle object properties
-                elif property_level1.get("type") == "object" and property_level1.get("$ref"):
-                    logger.info("Fecthing referenced schema for object %s", property_name_level1)
-
-                    ref_object = property_level1["$ref"]
-                    schema_url = f"{submodule_path}/{ref_object}"
-
-                    req = httpx.get(schema_url, headers=github_headers, timeout=None)
-                    req.raise_for_status()
-
-                    property_level1 = dict(property_level1, **json.loads(req.text))
-
-                elif property_level1.get("type") == "array" and property_level1.get("items").get(
-                    "$ref"
-                ):
-                    ref_object = property_level1["items"]["$ref"]
-                    schema_url = f"{submodule_path}/{ref_object}"
-
-                    req = httpx.get(schema_url, headers=github_headers, timeout=None)
-                    req.raise_for_status()
-
-                    property_level1["items"] = dict(
-                        property_level1["items"], **json.loads(req.text)
-                    )
-                    OrganizationMapper.resolve_uuid_refs(property_level1["items"])
-
-            return object_schema
-
-        except httpx.HTTPError as he:
-            logger.exception(he)
-
-    @staticmethod
-    def resolve_uuid_refs(schema):
-        """Resolve UUID $ref entries to type 'string' in a schema's properties.
-
-        Args:
-            schema (dict): A JSON schema whose properties may contain UUID $refs.
-        """
-        for prop in schema.get("properties", {}).values():
-            if "../../common/schemas/uuid.json" in prop.get("$ref", ""):
-                prop["type"] = "string"
-            elif prop.get("type") == "array" and "../../common/schemas/uuid.json" in prop.get(
-                "items", {}
-            ).get("$ref", ""):
-                prop["items"]["type"] = "string"
+        interface = resolve("interface", release_tag)
+        interface["required"] = ["name"]
+        credential = resolve("interface_credential", release_tag)
+        credential["required"] = ["username", "password", "interfaceId"]
+        interface["properties"]["interfaceCredential"] = credential
+        schema["properties"]["interfaces"] = {
+            "description": "Interfaces",
+            "type": "array",
+            "items": interface,
+        }
+        return schema
 
     @staticmethod
     def fetch_additional_schema(folio_object, release_tag=None):
-        additional_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-            "folio-org",
-            "mod-organizations-storage",
-            "mod-orgs",
-            folio_object,
-            release_tag,
+        return resolve_acq_schema(
+            "mod-orgs", folio_object, release_tag, repo="mod-organizations-storage"
         )
-        return additional_schema
