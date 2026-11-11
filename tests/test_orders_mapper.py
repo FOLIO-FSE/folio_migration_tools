@@ -463,6 +463,53 @@ def test_legacy_field_counted_once_per_mapping_not_once_per_array_prefix(mapper)
     assert counts["order_number"] == [2, 2]
 
 
+def test_array_of_objects_inside_nested_object_of_pol_is_mapped(mapper):
+    """vendorDetail.referenceNumbers is an array of objects inside an object inside the POL.
+
+    It must be written relative to the PO line being built, not relative to the order.
+    """
+    pol_key = mapper.po_lines_key
+    extra = [
+        (f"{pol_key}[0].vendorDetail.referenceNumbers[0].refNumber", "refnum"),
+        (f"{pol_key}[0].vendorDetail.referenceNumbers[0].refNumberType", "reftype"),
+        (f"{pol_key}[0].vendorDetail.vendorAccount", "acct"),
+    ]
+    saved_data, saved_keys = mapper.record_map["data"], mapper.folio_keys
+    mapper.record_map["data"] = saved_data + [
+        {"folio_field": f, "legacy_field": lf, "value": "", "description": ""} for f, lf in extra
+    ]
+    mapper.folio_keys = MappingFileMapperBase.get_mapped_folio_properties_from_map(
+        mapper.record_map
+    )
+    data = {
+        "order_number": "o126",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Once upon a time...",
+        "bibnumber": "1",
+        "quantity_physical": "1",
+        "price": "125.00",
+        "copies": "2",
+        "location": "order",
+        "acqmethod": "p",
+        "refnum": "R1",
+        "reftype": "Vendor continuation reference number",
+        "acct": "A1",
+    }
+    try:
+        order, _ = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+    finally:
+        mapper.record_map["data"], mapper.folio_keys = saved_data, saved_keys
+
+    assert pol_key not in order[pol_key][0]
+    assert order[pol_key][0]["vendorDetail"] == {
+        "vendorAccount": "A1",
+        "referenceNumbers": [
+            {"refNumber": "R1", "refNumberType": "Vendor continuation reference number"}
+        ],
+    }
+
+
 def test_one_order_one_pol_multiple_notes(mapper):
     data = {
         "row_number": "o124-1",
