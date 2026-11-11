@@ -4,6 +4,7 @@
 #### Other Changes
 * Fix: Resolve acquisitions schemas for the orders and organizations mappers with a shared, deterministic resolver by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1074. Properties that are a `$ref` with no declared type (for example `compositePoLines[n].vendorDetail.referenceNumbers`) are now resolved and mapped instead of being skipped.
 * Require `folioclient>=1.1.0` and Python 3.11 or later; add Python 3.15 to the test matrix by @btravisebsco in https://github.com/FOLIO-FSE/folio_migration_tools/pull/1074
+* Fix: Raise the `coverage` dev dependency to `>=7.17.2` so test coverage is measured on Python 3.15 (coverage 6.5 reported 0% and failed the coverage gate)
 
 ```{warning}
 **Python 3.10 is no longer supported.** `folioclient` 1.1.0 requires Python 3.11. The mapper methods `get_latest_acq_schemas_from_github`, `build_extended_object` and `inject_*` were removed from `CompositeOrderMapper` and `OrganizationMapper`; use `resolve_acq_schema` instead.
