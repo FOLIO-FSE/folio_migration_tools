@@ -33,7 +33,7 @@ Report it on the [Github Issue tracker](https://github.com/FOLIO-FSE/folio_migra
 
 The scripts requires a FOLIO tenant with reference data properly set up. The script will throw messages telling what reference data is missing.
 # Installing
-Make sure you are running Python 3.10 or above.
+Make sure you are running Python 3.11 or above.
 ## 1. Using [`uv`](https://docs.astral.sh/uv)
 ### 2.1. Create and activate a [virtual environment](https://docs.astral.sh/uv/pip/environments/)
 ```

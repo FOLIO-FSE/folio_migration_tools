@@ -128,7 +128,7 @@ closes #123 #456 #789
 ```
 
 # Create release
-Publishing is automated. Creating a release on GitHub triggers the `Publish Python Package` workflow, which lints, runs the tests on Python 3.10-3.14, builds the package with `uv build` and publishes it to PyPI with `uv publish`.
+Publishing is automated. Creating a release on GitHub triggers the `Publish Python Package` workflow, which lints, runs the tests on Python 3.11-3.15, builds the package with `uv build` and publishes it to PyPI with `uv publish`.
 
 ## 1. Prepare the release pull request
 Open a pull request against main that contains two changes:

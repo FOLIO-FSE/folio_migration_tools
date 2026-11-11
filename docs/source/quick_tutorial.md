@@ -3,7 +3,7 @@
 This is a quick guide on how to transform and load bib-level MARC records into a FOLIO tenant.
 
 ## Prerequisites
-* Make sure you have **Python 3.10** or higher installed. uv can manage Python versions for you automatically.
+* Make sure you have **Python 3.11** or higher installed. uv can manage Python versions for you automatically.
 * Install [uv](https://docs.astral.sh/uv/) for package management (recommended)
 * You need to have git installed
 * You need access to a FOLIO tenant, with the following properties:

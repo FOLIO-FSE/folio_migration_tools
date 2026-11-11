@@ -1,7 +1,7 @@
 # Installing
 
 ## Python Version Requirements
-Make sure you are running Python 3.10 or above (3.12 recommended). You can check your Python version with:
+Make sure you are running Python 3.11 or above (3.12 recommended). You can check your Python version with:
 
 ```shell
 python -V  # outputs the version of Python
