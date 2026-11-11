@@ -18,8 +18,8 @@ from folio_migration_tools.mapping_file_transformation.courses_mapper import (
 from folio_migration_tools.mapping_file_transformation.manual_fee_fines_mapper import (
     ManualFeeFinesMapper,
 )
-from folio_migration_tools.mapping_file_transformation.order_mapper import (
-    CompositeOrderMapper,
+from folio_migration_tools.mapping_file_transformation.acq_schema_resolver import (
+    resolve_acq_schema,
 )
 from folio_migration_tools.mapping_file_transformation.organization_mapper import (
     OrganizationMapper,
@@ -70,9 +70,7 @@ def inheritors(base_class):
 
 def generate_extended_folio_object_schema(args):
     # Generate an organization schema with other objects baked in
-    organization_schema = OrganizationMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-organizations-storage", "mod-orgs", "organization"
-    )
+    organization_schema = OrganizationMapper.get_organization_schema()
     with open(os.path.join(args.results_path, "compositeOrganizationSchema.json"), "w") as outfile:
         outfile.write(json.dumps(organization_schema, indent=4))
         outfile.write("\n")
@@ -82,9 +80,7 @@ def generate_extended_folio_object_schema(args):
         outfile.write(json.dumps(courses_schema, indent=4))
         outfile.write("\n")
 
-    composite_order_schema = CompositeOrderMapper.get_latest_acq_schemas_from_github(
-        "folio-org", "mod-orders", "mod-orders", "composite_purchase_order"
-    )
+    composite_order_schema = resolve_acq_schema("mod-orders", "composite_purchase_order")
     with open(
         os.path.join(args.results_path, "compositePurchaseOrderLineSchema.json"), "w"
     ) as outfile:
