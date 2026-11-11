@@ -425,6 +425,44 @@ def test_composite_order_with_one_pol_mapping(mapper):
     assert composite_order_with_pol[pol_key][0]["details"]["subscriptionTo"] == "2026-12-31"
 
 
+def test_legacy_field_counted_once_per_mapping_not_once_per_array_prefix(mapper):
+    """A column mapped to one FOLIO field must be reported once per row.
+
+    The PO line array has several distinct sub-paths (cost, locations, notes...). Mapping
+    the array must not repeat once per sub-path, which inflated the report past 100%.
+    """
+    data = {
+        "order_number": "o125",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Once upon a time...",
+        "bibnumber": "1",
+        "quantity_physical": "1",
+        "price": "125.00",
+        "copies": "2",
+        "location": "order",
+        "acqmethod": "p",
+    }
+    saved = mapper.mapped_legacy_fields
+    mapper.mapped_legacy_fields = {}
+    try:
+        order, _ = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+        counts = dict(mapper.mapped_legacy_fields)
+    finally:
+        mapper.mapped_legacy_fields = saved
+
+    pol = order[mapper.po_lines_key][0]
+    assert pol["titleOrPackage"] == "Once upon a time..."
+    assert pol["cost"]["quantityPhysical"] == "1"
+    assert len(order[mapper.po_lines_key]) == 1
+    # Each of these is mapped to exactly one FOLIO field
+    for legacy_field in ["TITLE", "bibnumber", "acqmethod", "copies", "location"]:
+        assert counts[legacy_field] == [1, 1], legacy_field
+    # order_number is reported for poNumber and compositePoLines[0].id (legacyIdentifier is
+    # not reported as a mapped legacy field)
+    assert counts["order_number"] == [2, 2]
+
+
 def test_one_order_one_pol_multiple_notes(mapper):
     data = {
         "row_number": "o124-1",
