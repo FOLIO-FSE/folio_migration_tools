@@ -1,7 +1,7 @@
 # The migration process
 
 In order to perform migrations according to this process, you need the following:
-* Python 3.10 or later
+* Python 3.11 or later
 * An Installation of [FOLIO Migration Tools](https://pypi.org/project/folio-migration-tools/). See the Installing page for information.
 * A repo created from  the template repository [migration_repo_template](https://github.com/FOLIO-FSE/migration_repo_template)
 * A FOLIO tenant running Ramsons or later
