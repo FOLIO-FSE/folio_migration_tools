@@ -12,6 +12,7 @@ Transform tasks read data from source files and convert them into FOLIO-compatib
 | [BibsTransformer](bibs_transformer) | Transform MARC bibliographic records to FOLIO Instances | MARC21 (.mrc) |
 | [HoldingsMarcTransformer](holdings_marc_transformer) | Transform MFHD records to FOLIO Holdings | MARC21 (.mrc) |
 | [HoldingsCsvTransformer](holdings_csv_transformer) | Transform delimited data to FOLIO Holdings | CSV/TSV |
+| [InstanceCsvTransformer](instance_csv_transformer) | Transform delimited data to FOLIO Instances | CSV/TSV |
 | [ItemsTransformer](items_transformer) | Transform delimited data to FOLIO Items | CSV/TSV |
 | [UserTransformer](user_transformer) | Transform delimited data to FOLIO Users | CSV/TSV |
 | [OrganizationTransformer](organization_transformer) | Transform delimited data to FOLIO Organizations | CSV/TSV |
@@ -108,6 +109,7 @@ Note: Task configurations have additional properties beyond `name` and `migratio
 bibs_transformer
 holdings_marc_transformer
 holdings_csv_transformer
+instance_csv_transformer
 items_transformer
 user_transformer
 organization_transformer
