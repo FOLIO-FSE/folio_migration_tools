@@ -48,7 +48,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration,
         composite_order_map: dict,
-        organizations_id_map: dict,
+        organizations_code_map: list | None,
         instance_id_map: dict,
         acquisition_method_map,
         payment_status_map,
@@ -65,7 +65,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
             library_configuration (LibraryConfiguration): Library configuration.
             task_configuration: Task configuration for orders migration.
             composite_order_map (dict): Mapping configuration for order fields.
-            organizations_id_map (dict): Mapping of legacy to FOLIO organizations.
+            organizations_code_map (list | None): Optional rows mapping legacy vendor values
+                to FOLIO organization codes (legacy column plus folio_code). If None, the
+                vendor value is assumed to be a FOLIO organization code.
             instance_id_map (dict): Mapping of legacy to FOLIO instances.
             acquisition_method_map: Mapping of legacy to FOLIO acquisition methods.
             payment_status_map: Mapping of legacy to FOLIO payment statuses.
@@ -129,9 +131,10 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         logger.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
-        self.organizations_id_map = organizations_id_map
-        logger.debug("Organizations ID map: %s", json.dumps(self.organizations_id_map, indent=2))
-        self.folio_organization_cache = {}
+        self.folio_organizations_by_code = self._load_folio_organizations_by_code()
+        self.organizations_code_map = self._build_organizations_code_map(
+            organizations_code_map, self.folio_organizations_by_code
+        )
 
         self.acquisitions_methods_mapping = RefDataMapping(
             self.folio_client,
@@ -557,68 +560,89 @@ class CompositeOrderMapper(MappingFileMapperBase):
         valid_po_number_characters = r"[A-Za-z0-9]"
         return re.sub(valid_po_number_characters, "", po_number) == ""
 
-    def get_matching_record_from_folio(
-        self,
-        index_or_id,
-        cache: dict,
-        path: str,
-        match_property: str,
-        match_value: str,
-        result_type: str,
-    ):
-        if match_value in cache:
-            return cache[match_value]
-        else:
-            query = f'?query=({match_property}=="{match_value}")'
-            if matching_record := next(
-                self.folio_client.folio_get_all(path, result_type, query), None
-            ):
-                cache[match_value] = matching_record
-                return matching_record
+    def _load_folio_organizations_by_code(self) -> dict:
+        """Build normalized FOLIO organization code -> (id, code) from FOLIO, in one pass."""
+        organizations = self.folio_client.folio_get_all(
+            "/organizations-storage/organizations", "organizations", "", 1000
+        )
+        by_code = {
+            normalize_for_compare(org["code"]): (org["id"], org["code"])
+            for org in organizations
+            if org.get("code")
+        }
+        logger.info("Loaded %s organizations from FOLIO", len(by_code))
+        return by_code
 
-    def get_folio_organization_uuid(self, index_or_id, org_code):
-        if self.organizations_id_map:
-            logger.debug(f"Looking up organization code {org_code} in organizations_id_map")
-            matching_org = self.organizations_id_map.get(org_code, None)
-            logger.debug(f"Mapped value for organization code {org_code}: {matching_org}")
-            if matching_org:
+    @staticmethod
+    def _build_organizations_code_map(rows: list | None, folio_orgs_by_code: dict) -> dict | None:
+        """Turn the optional organizations code map into normalized legacy -> FOLIO code.
+
+        The map needs a folio_code column and exactly one legacy column. A * row is allowed
+        in the file (so it can be shared with a future RefDataMapping-based version) but is
+        ignored: a default vendor would silently misattribute orders, so unmapped values
+        fail the record. Every folio_code, including the * row's, must exist in FOLIO.
+        """
+        if not rows:
+            return None
+        legacy_columns = [k for k in rows[0].keys() if k and k.strip() != "folio_code"]
+        if "folio_code" not in rows[0] or len(legacy_columns) != 1:
+            raise TransformationProcessError(
+                "",
+                "The organizations code map needs a folio_code column and exactly one "
+                f"legacy column. Found columns: {', '.join(rows[0].keys())}",
+            )
+        legacy_column = legacy_columns[0]
+        code_map = {}
+        missing = set()
+        for row in rows:
+            folio_code = row["folio_code"]
+            if normalize_for_compare(folio_code) not in folio_orgs_by_code:
+                missing.add(folio_code)
+            if normalize_for_compare(row[legacy_column]) == "*":
+                logger.info("Ignoring the * row in the organizations code map")
+                continue
+            code_map[normalize_for_compare(row[legacy_column])] = folio_code
+        if missing:
+            raise TransformationProcessError(
+                "",
+                "Codes (folio_code) from the organizations code map are not in FOLIO",
+                ", ".join(sorted(missing)),
+            )
+        logger.info("Loaded %s rows from the organizations code map", len(code_map))
+        return code_map
+
+    def get_folio_organization_uuid(self, index_or_id, legacy_value):
+        """Resolve the vendor to a FOLIO organization id.
+
+        With an organizations code map, the legacy value is mapped to a FOLIO code first
+        (the map is then authoritative). Without one, the value is used as the FOLIO code.
+        """
+        folio_code = legacy_value
+        if self.organizations_code_map is not None:
+            folio_code = self.organizations_code_map.get(normalize_for_compare(legacy_value))
+            if folio_code:
                 self.migration_report.add(
                     "PurchaseOrderVendorLinking",
-                    i18n.t("Organizations linked using organizations_id_map"),
+                    i18n.t("Organizations linked using organizations code map"),
                 )
-                return matching_org[1]
-
-        logger.debug(
-            f"Organization code {org_code} not found in organizations_id_map, looking up in FOLIO"
+        if folio_code and (
+            matching_org := self.folio_organizations_by_code.get(normalize_for_compare(folio_code))
+        ):
+            if self.organizations_code_map is None:
+                self.migration_report.add(
+                    "PurchaseOrderVendorLinking",
+                    i18n.t("Organizations linked using FOLIO organization code"),
+                )
+            return matching_org[0]
+        self.migration_report.add(
+            "PurchaseOrderVendorLinking",
+            i18n.t("RECORD FAILED Organization identifier not in code map/FOLIO"),
         )
-        matching_org = self.get_matching_record_from_folio(
+        raise TransformationRecordFailedError(
             index_or_id,
-            self.folio_organization_cache,
-            "/organizations-storage/organizations",
-            "code",
-            org_code,
-            "organizations",
+            "No matching Organization for organization identifier",
+            legacy_value,
         )
-        logger.debug(
-            f"FOLIO lookup result for organization code {org_code}:"
-            f" {json.dumps(matching_org, indent=2)}"
-        )
-        if matching_org:
-            self.migration_report.add(
-                "PurchaseOrderVendorLinking",
-                i18n.t("Organizations not in ID map, linked using FOLIO lookup"),
-            )
-            return matching_org["id"]
-        else:
-            self.migration_report.add(
-                "PurchaseOrderVendorLinking",
-                i18n.t("RECORD FAILED Organization identifier not in ID map/FOLIO"),
-            )
-            raise TransformationRecordFailedError(
-                index_or_id,
-                "No matching Organization for organization identifier",
-                org_code,
-            )
 
     def get_folio_instance_uuid(self, index_or_id, bib_id):
         if matching_instance := self.instance_id_map.get(bib_id):

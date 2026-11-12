@@ -38,7 +38,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 | `name` | string | Yes | The name of this task. |
 | `migrationTaskType` | string | Yes | Must be `"OrdersTransformer"` |
 | `ordersMappingFileName` | string | Yes | JSON mapping file for order and POL fields |
-| `organizationsCodeMapFileName` | string | Yes | TSV file mapping legacy vendor codes to FOLIO organization codes |
+| `organizationsCodeMapFileName` | string | No | TSV file mapping legacy vendor values to FOLIO organization codes. If omitted, the vendor value is looked up as a FOLIO organization code. See [Vendor Linking](#vendor-linking) |
 | `acquisitionMethodMapFileName` | string | Yes | TSV file mapping acquisition methods |
 | `paymentStatusMapFileName` | string | No | TSV file mapping payment statuses |
 | `receiptStatusMapFileName` | string | No | TSV file mapping receipt statuses |
@@ -54,7 +54,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 - **Format**: Tab-separated (TSV) or comma-separated (CSV) with header row
 - **Prerequisites**:
   - Run [BibsTransformer](bibs_transformer) if linking to instances
-  - Run [OrganizationTransformer](organization_transformer) and post organizations if linking to vendors
+  - Post organizations to FOLIO if linking to vendors. Vendors are resolved against the organizations that exist in FOLIO when the task starts, not against an ID map file
 
 ### Order Mapping File
 
@@ -76,7 +76,7 @@ Orders in FOLIO consist of a Purchase Order (header) with embedded Purchase Orde
         {
             "folio_field": "vendor",
             "legacy_field": "VENDOR_CODE",
-            "description": "Mapped to organization UUID via organizationsCodeMapFileName"
+            "description": "Resolved to an organization UUID (see Vendor Linking)"
         },
         {
             "folio_field": "orderType",
@@ -208,10 +208,31 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 
 | Mapping File | FOLIO Column | Maps To |
 |--------------|--------------|---------|
-| `organizationsCodeMapFileName` | `folio_code` | Organization code |
+| `organizationsCodeMapFileName` | `folio_code` | Organization code (optional, one legacy column only, see [Vendor Linking](#vendor-linking)) |
 | `acquisitionMethodMapFileName` | `folio_value` | Acquisition method value |
 | `fundsMapFileName` | `folio_code` | Fund code |
 | `locationMapFileName` | `folio_code` | Location code |
+
+## Vendor Linking
+
+The order's `vendor` is resolved to a FOLIO organization UUID. At startup the task loads every organization from FOLIO (code to UUID), so no `organizations_id_map` file is read and no per-order queries are made. How the legacy value is matched depends on whether you provide `organizationsCodeMapFileName`:
+
+- **No code map:** the mapped `vendor` value is matched directly against FOLIO organization codes. Matching ignores case and whitespace.
+- **With a code map:** the legacy value is first mapped to a FOLIO organization code, then to its UUID. The map is authoritative. A value that is not in the map fails the record, even if it happens to be a valid FOLIO organization code.
+
+The code map is a TSV with exactly one legacy column and a `folio_code` column:
+
+```
+legacy_vendor	folio_code
+GB1	GOBI
+EBS	EBSCO
+```
+
+```{note}
+The code map does not support hybrid mappings. Unlike the other reference data maps, it can have only one legacy column, so a vendor cannot be mapped from a combination of legacy fields. A `*` row is accepted in the file but ignored, because a default vendor would silently attach unmapped orders to the wrong organization. Any order whose vendor is not explicitly mapped fails. Every `folio_code` in the map, including the `*` row's, must exist in FOLIO, or the task halts at startup.
+```
+
+Records whose vendor cannot be resolved fail and are counted under `PurchaseOrderVendorLinking` in the migration report.
 
 ## Mapping Notes
 
