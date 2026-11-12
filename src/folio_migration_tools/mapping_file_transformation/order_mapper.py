@@ -633,10 +633,17 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     "PurchaseOrderVendorLinking",
                     i18n.t("Organizations linked using FOLIO organization code"),
                 )
+            self.migration_report.add(
+                "OrganizationsMapping", f"{legacy_value} -> {matching_org[1]}"
+            )
             return matching_org[0]
         self.migration_report.add(
             "PurchaseOrderVendorLinking",
             i18n.t("RECORD FAILED Organization identifier not in code map/FOLIO"),
+        )
+        self.migration_report.add(
+            "OrganizationsMapping",
+            i18n.t("Unmapped (Record failed)") + f" -- {legacy_value} -> {folio_code or ''}",
         )
         raise TransformationRecordFailedError(
             index_or_id,

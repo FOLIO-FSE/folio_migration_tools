@@ -1254,3 +1254,19 @@ def test_organizations_code_map_requires_one_legacy_column(mapper):
         CompositeOrderMapper._build_organizations_code_map(
             [{"a": "1", "b": "2", "folio_code": "GOBI"}], mapper.folio_organizations_by_code
         )
+
+
+def test_organizations_mapping_is_reported_per_value(mapper):
+    code_map = CompositeOrderMapper._build_organizations_code_map(
+        [{"legacy_vendor": "GB1", "folio_code": "GOBI"}], mapper.folio_organizations_by_code
+    )
+    mapper_with_map = copy.copy(mapper)
+    mapper_with_map.organizations_code_map = code_map
+
+    mapper_with_map.get_folio_organization_uuid("1", "GB1")
+    with pytest.raises(TransformationRecordFailedError):
+        mapper_with_map.get_folio_organization_uuid("1", "unknown")
+
+    report = mapper.migration_report.report["OrganizationsMapping"]
+    assert report["GB1 -> GOBI"] >= 1
+    assert any(k.endswith("-- unknown -> ") for k in report)

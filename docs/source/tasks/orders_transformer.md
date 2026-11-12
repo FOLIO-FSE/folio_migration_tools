@@ -232,7 +232,7 @@ EBS	EBSCO
 The code map does not support hybrid mappings. Unlike the other reference data maps, it can have only one legacy column, so a vendor cannot be mapped from a combination of legacy fields. A `*` row is accepted in the file but ignored, because a default vendor would silently attach unmapped orders to the wrong organization. Any order whose vendor is not explicitly mapped fails. Every `folio_code` in the map, including the `*` row's, must exist in FOLIO, or the task halts at startup.
 ```
 
-Records whose vendor cannot be resolved fail and are counted under `PurchaseOrderVendorLinking` in the migration report.
+Records whose vendor cannot be resolved fail and are counted under `PurchaseOrderVendorLinking` in the migration report. Each vendor value is also reported individually under the "Organization mappings" (`OrganizationsMapping`) section as `legacy value -> FOLIO organization code`, with failed values shown as `Unmapped (Record failed)`.
 
 ## Mapping Notes
 
