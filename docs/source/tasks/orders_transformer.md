@@ -214,6 +214,10 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `locationMapFileName` | `folio_code` | Location code |
 | `fundsExpenseClassMapFileName` | `folio_code` | Expense class code. A `*` row is required in the file but never applied: a value with no explicit match is left empty (reported as "Not to be mapped. (No default)") |
 
+## Product ID Types
+
+`productIdType` (on `details.productIds`) can be mapped as either an identifier type UUID or an identifier type name, such as `ISBN`. Names are matched against the FOLIO identifier types, ignoring case and whitespace, and each resolved name is listed under "Product ID type mappings" in the migration report. A hardcoded `value` is checked when the task starts, and the task halts if it is not a FOLIO identifier type name or UUID. A name from the legacy data that does not match does not fail the record: that product id is dropped and logged as a field mapping error, and the rest of the order line is kept. Product id objects with no `productId` are dropped in the same way.
+
 ## Vendor Linking
 
 The order's `vendor` is resolved to a FOLIO organization UUID. At startup the task loads every organization from FOLIO (code to UUID), so no `organizations_id_map` file is read and no per-order queries are made. How the legacy value is matched depends on whether you provide `organizationsCodeMapFileName`:

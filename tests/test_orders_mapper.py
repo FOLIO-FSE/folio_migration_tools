@@ -1312,3 +1312,64 @@ def test_expense_class_map_is_used_for_expense_class_id(mapper):
         )
         == ""
     )
+
+
+def test_product_id_type_resolves_by_name_or_uuid(mapper):
+    mapper_copy = copy.copy(mapper)
+    mapper_copy._identifier_types_by_name = {"isbn": "8261054f-be78-422d-bd51-4ed9f33c3422"}
+    prop = "compositePoLines[0].details.productIds[0].productIdType"
+    resolve = mapper_copy._resolve_product_id_type
+    assert resolve("ISBN", prop, "1") == "8261054f-be78-422d-bd51-4ed9f33c3422"
+    assert resolve(" isbn ", prop, "1") == "8261054f-be78-422d-bd51-4ed9f33c3422"
+    explicit = "913300b2-03ed-469a-8179-c1092c991227"
+    assert resolve(explicit, prop, "1") == explicit
+    # A bad legacy value does not fail the record
+    assert resolve("Not a type", prop, "1") == ""
+
+
+def test_incomplete_product_ids_are_dropped_but_record_is_kept(mapper):
+    order = {
+        mapper.po_lines_key: [
+            {
+                "details": {
+                    "productIds": [
+                        {"productId": "111", "productIdType": "uuid-1"},
+                        {"productId": "222", "productIdType": ""},
+                        {"productId": "", "productIdType": "uuid-2"},
+                        {"productId": "", "productIdType": ""},
+                    ]
+                }
+            },
+            {"details": {"productIds": [{"productId": "333", "productIdType": ""}]}},
+        ]
+    }
+    mapper._drop_incomplete_product_ids("1", order)
+    assert order[mapper.po_lines_key][0]["details"]["productIds"] == [
+        {"productId": "111", "productIdType": "uuid-1"}
+    ]
+    assert "productIds" not in order[mapper.po_lines_key][1]["details"]
+
+
+def test_hardcoded_product_id_type_is_validated(mapper):
+    mapper_copy = copy.copy(mapper)
+    mapper_copy._identifier_types_by_name = {"isbn": "8261054f-be78-422d-bd51-4ed9f33c3422"}
+
+    def check(value):
+        mapper_copy.record_map = {
+            "data": [
+                {
+                    "folio_field": "compositePoLines[0].details.productIds[0].productIdType",
+                    "legacy_field": "",
+                    "value": value,
+                }
+            ]
+        }
+        mapper_copy._validate_hardcoded_product_id_types()
+
+    check("ISBN")
+    check("8261054f-be78-422d-bd51-4ed9f33c3422")
+    check("")
+    with pytest.raises(TransformationProcessError):
+        check("Nope")
+    with pytest.raises(TransformationProcessError):
+        check("913300b2-03ed-469a-8179-c1092c991227")
