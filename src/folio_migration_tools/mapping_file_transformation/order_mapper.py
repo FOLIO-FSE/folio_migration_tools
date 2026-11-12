@@ -292,8 +292,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 self.acquisitions_methods_mapping,
                 legacy_object,
-                folio_prop_name,
                 index_or_id,
+                folio_prop_name,
                 False,
             )
 
@@ -308,21 +308,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return ""
 
         if folio_prop_name.endswith(".locationId"):
-            return self.get_mapped_ref_data_value(
-                self.location_mapping,
-                legacy_object,
-                folio_prop_name,
-                index_or_id,
-                False,
+            return self._get_delimited_ref_data_value(
+                self.location_mapping, legacy_object, folio_prop_name, index_or_id
             )
 
         if folio_prop_name.endswith(".fundId"):
-            return self.get_mapped_ref_data_value(
-                self.funds_mapping,
-                legacy_object,
-                folio_prop_name,
-                index_or_id,
-                False,
+            return self._get_delimited_ref_data_value(
+                self.funds_mapping, legacy_object, folio_prop_name, index_or_id
             )
 
         if folio_prop_name in ("billTo", "shipTo"):
@@ -339,6 +331,35 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         return mapped_value
+
+    def _get_delimited_ref_data_value(
+        self, ref_data_mapping, legacy_object, folio_prop_name, index_or_id
+    ):
+        """Look up a ref data value, one lookup per multi-field-delimited piece.
+
+        The pieces' FOLIO ids are rejoined with the delimiter so the array mapper
+        can split them into separate objects.
+        """
+        delimiter = self.library_configuration.multi_field_delimiter
+        keys = ref_data_mapping.mapped_legacy_keys
+        if not delimiter or not any(
+            isinstance(legacy_object.get(k), str) and delimiter in legacy_object[k] for k in keys
+        ):
+            return self.get_mapped_ref_data_value(
+                ref_data_mapping, legacy_object, index_or_id, folio_prop_name, False
+            )
+        pieces = {k: str(legacy_object.get(k, "")).split(delimiter) for k in keys}
+        results = []
+        for i in range(max(len(v) for v in pieces.values())):
+            piece_object = dict(legacy_object)
+            for k, values in pieces.items():
+                piece_object[k] = values[i].strip() if i < len(values) else ""
+            results.append(
+                self.get_mapped_ref_data_value(
+                    ref_data_mapping, piece_object, index_or_id, folio_prop_name, False
+                )
+            )
+        return delimiter.join(results)
 
     @staticmethod
     def _extract_address_name(address: dict[str, Any]) -> str:

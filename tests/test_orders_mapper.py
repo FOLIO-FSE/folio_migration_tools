@@ -425,6 +425,31 @@ def test_composite_order_with_one_pol_mapping(mapper):
     assert composite_order_with_pol[pol_key][0]["details"]["subscriptionTo"] == "2026-12-31"
 
 
+def test_delimited_locations_are_mapped_to_separate_location_objects(mapper):
+    data = {
+        "order_number": "o199",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Once upon a time...",
+        "bibnumber": "1",
+        "quantity_physical": "1",
+        "price": "125.00",
+        "copies": "2^-^3",
+        "location": "order^-^elsewhere",
+        "acqmethod": "p",
+        "SUBSCRIPTION FROM": "2026-01-01",
+        "SUBSCRIPTION TO": "2026-12-31",
+    }
+    order, _ = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
+
+    locations = order[mapper.po_lines_key][0]["locations"]
+    assert len(locations) == 2
+    assert locations[0]["locationId"] == "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
+    assert locations[1]["locationId"] != locations[0]["locationId"]
+    assert "^-^" not in locations[1]["locationId"]
+    assert [loc["quantity"] for loc in locations] == ["2", "3"]
+
+
 def test_legacy_field_counted_once_per_mapping_not_once_per_array_prefix(mapper):
     """A column mapped to one FOLIO field must be reported once per row.
 
