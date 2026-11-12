@@ -16,6 +16,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
@@ -36,6 +37,7 @@ from folio_migration_tools.utils import normalize_for_compare
 logger = logging.getLogger(__name__)
 
 # Notes mapped under a purchase order line, e.g. compositePoLines[0].notes[0].content
+PRODUCT_ID_TYPE_FIELD = re.compile(r"productIds\[\d+\]\.productIdType$")
 POL_NOTE_PREFIX = re.compile(r"^(?:compositePoLines|poLines)\[\d+\]\.(?=notes\[)")
 
 
@@ -173,6 +175,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if funds_expense_class_map
             else None
         )
+        self._identifier_types_by_name = self._load_identifier_types_by_name()
+        self._validate_hardcoded_product_id_types()
         self._order_addresses_by_name = self._load_order_addresses_by_name()
         self._validate_hardcoded_order_address_values()
 
@@ -341,6 +345,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 prevent_default=True,
             )
 
+        if folio_prop_name.endswith(".productIdType"):
+            raw = super().get_prop(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            )
+            return self._resolve_product_id_type(str(raw or ""), folio_prop_name, index_or_id)
+
         if folio_prop_name in ("billTo", "shipTo"):
             raw = super().get_prop(
                 legacy_object,
@@ -442,6 +452,105 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self.TENANT_ADDRESSES_QUERY,
             )
         return addresses_by_name
+
+    def _load_identifier_types_by_name(self) -> dict[str, str]:
+        """Build normalized FOLIO identifier type name -> id, for productIdType lookups."""
+        by_name = {
+            normalize_for_compare(t["name"]): t["id"]
+            for t in self.folio_client.folio_get_all(
+                "/identifier-types", "identifierTypes", "", 1000
+            )
+            if t.get("name") and t.get("id")
+        }
+        logger.info("Loaded %s identifier types from FOLIO", len(by_name))
+        return by_name
+
+    def _resolve_product_id_type(self, value: str, folio_prop_name: str, index_or_id: str) -> str:
+        """Accept an identifier type UUID as-is, or resolve a name (case/space-insensitive).
+
+        An unrecognized value does not fail the record. It resolves to an empty type, and
+        the product id it belongs to is dropped in _drop_incomplete_product_ids.
+        """
+        if not value or self.is_uuid(value):
+            return value
+        if resolved := self._identifier_types_by_name.get(normalize_for_compare(value)):
+            self.migration_report.add("ProductIdTypeMapping", f"{value} -> {resolved}")
+            return resolved
+        self.migration_report.add(
+            "ProductIdTypeMapping", i18n.t("Unmapped (Product ID dropped)") + f" -- {value}"
+        )
+        return ""
+
+    def _validate_hardcoded_product_id_types(self) -> None:
+        """Halt if a hardcoded productIdType in the field mapping is not a FOLIO type."""
+        known_ids = set(self._identifier_types_by_name.values())
+        invalid_values: list[str] = []
+        for entry in self.record_map.get("data", []):
+            folio_field = entry.get("folio_field", "")
+            if not PRODUCT_ID_TYPE_FIELD.search(folio_field):
+                continue
+            for value_key in ("value", "fallback_value"):
+                value = entry.get(value_key)
+                value = value.strip() if isinstance(value, str) else value
+                if not value:
+                    continue
+                if self.is_uuid(value):
+                    if value not in known_ids:
+                        invalid_values.append(
+                            f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                            "- UUID not found in FOLIO identifier types"
+                        )
+                elif normalize_for_compare(value) not in self._identifier_types_by_name:
+                    invalid_values.append(
+                        f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                        "- name not found in FOLIO identifier types"
+                    )
+        if invalid_values:
+            raise TransformationProcessError(
+                "",
+                "Invalid productIdType values found in field mapping:",
+                "\n".join(
+                    [
+                        *invalid_values,
+                        "Available identifier types: "
+                        + ", ".join(sorted(self._identifier_types_by_name)),
+                        "Please update your mapping file with valid identifier type "
+                        "names or UUIDs.",
+                    ]
+                ),
+            )
+
+    def _drop_incomplete_product_ids(self, index_or_id: str, composite_order: dict) -> None:
+        """Drop product ids missing a productId or a usable productIdType.
+
+        Each dropped object that had some content is reported as a field mapping error.
+        The remaining product ids, and the record itself, are kept.
+        """
+        for pol in composite_order.get(self.po_lines_key, []):
+            details = pol.get("details")
+            if not isinstance(details, dict) or not details.get("productIds"):
+                continue
+            kept = []
+            for product_id in details["productIds"]:
+                if not isinstance(product_id, dict) or (
+                    product_id.get("productId") and product_id.get("productIdType")
+                ):
+                    kept.append(product_id)
+                elif any(v for v in product_id.values()):
+                    missing = [k for k in ("productId", "productIdType") if not product_id.get(k)]
+                    self.handle_transformation_field_mapping_error(
+                        index_or_id,
+                        TransformationFieldMappingError(
+                            index_or_id,
+                            "Product ID removed: missing productId or productIdType "
+                            "(not a FOLIO identifier type)",
+                            json.dumps({"missing": missing, **product_id}),
+                        ),
+                    )
+            if kept:
+                details["productIds"] = kept
+            else:
+                details.pop("productIds")
 
     def _resolve_order_address_id(self, value: str, folio_prop_name: str, index_or_id: str) -> str:
         if not value:
@@ -562,6 +671,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
         bib_id = composite_order.get(self.po_lines_key, [{}])[0].pop("instanceId", "")
         if matching_instance := self.get_folio_instance_uuid(index_or_id, bib_id):
             composite_order[self.po_lines_key][0]["instanceId"] = matching_instance
+
+        self._drop_incomplete_product_ids(index_or_id, composite_order)
 
         return composite_order
 
