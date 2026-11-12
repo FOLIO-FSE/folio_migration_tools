@@ -46,6 +46,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 | `locationMapFileName` | string | No | TSV file mapping locations |
 | `fundsMapFileName` | string | No | TSV file mapping funds (required if POLs have fund distributions) |
 | `fundsExpenseClassMapFileName` | string | No | TSV file mapping legacy values to expense class codes, used for `expenseClassId`. Values with no explicit match are left empty rather than defaulted |
+| `materialTypeMapFileName` | string | No | TSV file mapping legacy values to FOLIO material type names, applied to `physical.materialType` and `eresource.materialType` on order lines. Works like the items transformer material type map, including the required `*` default row |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -213,6 +214,7 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `fundsMapFileName` | `folio_code` | Fund code |
 | `locationMapFileName` | `folio_code` | Location code |
 | `fundsExpenseClassMapFileName` | `folio_code` | Expense class code. A `*` row is required in the file but never applied: a value with no explicit match is left empty (reported as "Not to be mapped. (No default)") |
+| `materialTypeMapFileName` | `folio_name` | Material type name. A `*` row is required and is used as the default for unmatched values |
 
 ## Product ID Types
 

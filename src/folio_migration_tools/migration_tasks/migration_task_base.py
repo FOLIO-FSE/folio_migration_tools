@@ -420,6 +420,7 @@ class MigrationTaskBase:
             or folio_property_name.startswith("fundsMap")
             or folio_property_name.startswith("fundsExpenseClassMap")
             or folio_property_name.startswith("organizationsMap")
+            or folio_property_name.startswith("materialTypeMap")
             or folio_property_name.endswith(".holdingsNoteTypeId")
             or folio_property_name.endswith(".itemNoteTypeId")
         ) and map_file_path.is_file():

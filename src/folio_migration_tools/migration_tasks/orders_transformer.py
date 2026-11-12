@@ -138,6 +138,17 @@ class OrdersTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
+        material_type_map_file_name: Annotated[
+            str,
+            Field(
+                title="Material Type Map File Name",
+                description=(
+                    "Optional file name for mapping legacy values to FOLIO material types "
+                    "(by name) for physical and e-resource order line material types. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
