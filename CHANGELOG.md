@@ -2,6 +2,7 @@
 ## Unreleased
 
 #### Other Changes
+* Fix: The orders transformer now resolves vendors against organizations loaded from FOLIO at startup (code to UUID) instead of reading the `organizations_id_map` file and falling back to one FOLIO query per distinct vendor. Orders no longer use `organizations_id_map`; use the code map if legacy vendor values differ from FOLIO organization codes. `organizationsCodeMapFileName` is now optional and is actually used: when present, legacy vendor values are mapped to FOLIO organization codes through it (one legacy column plus `folio_code`, hybrid maps are not supported, and a `*` row is ignored so unmapped vendors fail the order); when absent, the vendor value is matched directly to a FOLIO organization code. Matching is case- and whitespace-insensitive.
 * Fix: Count each mapped legacy field once per array element in the "Mapped Legacy fields" report. Fields mapped inside arrays of objects (for example `compositePoLines[n]` in orders) were counted once per sub-path of the array element, which produced percentages well over 100% (#1077). The mapped output is unchanged; only the report counts, and the repeated mapping work, are affected.
 * Fix: Mapping an array of objects that sits inside a nested object of an array element, such as `compositePoLines[n].vendorDetail.referenceNumbers[m].*`, no longer fails with `'list' object has no attribute 'setdefault'`. The array is now written relative to the element being built (#1085).
 

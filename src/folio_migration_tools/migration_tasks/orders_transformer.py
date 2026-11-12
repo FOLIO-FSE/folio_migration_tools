@@ -80,9 +80,13 @@ class OrdersTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Organizations Code Map File Name",
-                description="File name for organizations code mapping.",
+                description=(
+                    "Optional file name for mapping legacy vendor values to FOLIO organization "
+                    "codes (one legacy column plus folio_code). If empty or missing, the vendor "
+                    "value is looked up as a FOLIO organization code. By default is empty string."
+                ),
             ),
-        ]
+        ] = ""
         acquisition_method_map_file_name: Annotated[
             str,
             Field(
@@ -180,7 +184,13 @@ class OrdersTransformer(MigrationTaskBase):
             self.library_configuration,
             self.task_configuration,
             self.orders_map,
-            self.load_id_map(self.folder_structure.organizations_id_map_path, True),
+            self.load_ref_data_mapping_file(  # Optional
+                "organizationsMap",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.organizations_code_map_file_name,
+                self.folio_keys,
+                False,
+            ),
             self.load_instance_id_map(True),
             self.load_ref_data_mapping_file(
                 "acquisitionMethod",

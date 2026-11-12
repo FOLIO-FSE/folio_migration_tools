@@ -1,3 +1,4 @@
+import copy
 import json
 import logging
 from copy import deepcopy
@@ -64,7 +65,6 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         acquisition_method_map_file_name="acquisition_method_map.json",
     )
     instance_id_map = {"1": ["1", "ae1daef2-ddea-4d87-a434-3aa98ed3e687", "1"]}
-    organizations_id_map = {"BAE": ["BAE", "bbf61aa3-05ea-5d15-99c8-e3e547001543", "1"]}
     composite_order_map = {
         "data": [
             {
@@ -235,7 +235,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         lib_config,
         task_config,
         composite_order_map,
-        organizations_id_map,
+        None,
         instance_id_map,
         acg_method_map,
         "",
@@ -693,7 +693,7 @@ def test_composite_order_mapping_with_custom_fields(mapper):
         mapper.library_configuration,
         mapper.task_configuration,
         custom_map,
-        mapper.organizations_id_map,
+        mapper.organizations_code_map,
         mapper.instance_id_map,
         mapper.acquisitions_methods_mapping.map,
         "",
@@ -747,7 +747,7 @@ def test_composite_order_mapping_with_named_billto_shipto_addresses(mapper):
         mapper.library_configuration,
         mapper.task_configuration,
         custom_map,
-        mapper.organizations_id_map,
+        mapper.organizations_code_map,
         mapper.instance_id_map,
         mapper.acquisitions_methods_mapping.map,
         "",
@@ -801,7 +801,7 @@ def test_composite_order_mapping_with_normalized_named_addresses(mapper):
         mapper.library_configuration,
         mapper.task_configuration,
         custom_map,
-        mapper.organizations_id_map,
+        mapper.organizations_code_map,
         mapper.instance_id_map,
         mapper.acquisitions_methods_mapping.map,
         "",
@@ -847,7 +847,7 @@ def test_composite_order_mapping_with_unknown_billto_address_fails(mapper):
         mapper.library_configuration,
         mapper.task_configuration,
         custom_map,
-        mapper.organizations_id_map,
+        mapper.organizations_code_map,
         mapper.instance_id_map,
         mapper.acquisitions_methods_mapping.map,
         "",
@@ -891,7 +891,7 @@ def test_order_address_prevalidation_rejects_unknown_hardcoded_uuid(mapper):
             mapper.library_configuration,
             mapper.task_configuration,
             custom_map,
-            mapper.organizations_id_map,
+            mapper.organizations_code_map,
             mapper.instance_id_map,
             mapper.acquisitions_methods_mapping.map,
             "",
@@ -923,7 +923,7 @@ def test_order_address_prevalidation_accepts_known_hardcoded_uuid(mapper):
         mapper.library_configuration,
         mapper.task_configuration,
         custom_map,
-        mapper.organizations_id_map,
+        mapper.organizations_code_map,
         mapper.instance_id_map,
         mapper.acquisitions_methods_mapping.map,
         "",
@@ -966,7 +966,7 @@ def test_order_address_prevalidation_accepts_normalized_hardcoded_name(mapper):
         mapper.library_configuration,
         mapper.task_configuration,
         custom_map,
-        mapper.organizations_id_map,
+        mapper.organizations_code_map,
         mapper.instance_id_map,
         mapper.acquisitions_methods_mapping.map,
         "",
@@ -1021,16 +1021,16 @@ def test_perform_additional_mapping_get_org_from_folio(mapper):
     }
 
     folio_po = mapper.perform_additional_mapping("1", folio_po)
-    assert folio_po["vendor"] == "some id"
+    assert folio_po["vendor"] == "fc54327d-fd60-4f6a-ba37-a4375511b91b"
 
 
-def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
+def test_perform_additional_mapping_org_and_instance_uuids_from_folio_and_id_map(mapper):
     pol_key = mapper.po_lines_key
     folio_po = {
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
         "poNumber": "o124",
         "orderType": "One-Time",
-        "vendor": "BAE",
+        "vendor": "GOBI",
         pol_key: [
             {
                 "locations": [
@@ -1052,7 +1052,7 @@ def test_perform_additional_mapping_org_and_instance_uuids_from_id_maps(mapper):
     }
 
     folio_po = mapper.perform_additional_mapping("1", folio_po)
-    assert folio_po["vendor"] == "bbf61aa3-05ea-5d15-99c8-e3e547001543"
+    assert folio_po["vendor"] == "837d04b6-d81c-4c49-9efd-2f62515999b3"
     assert folio_po[pol_key][0]["instanceId"] == "ae1daef2-ddea-4d87-a434-3aa98ed3e687"
 
 
@@ -1127,7 +1127,7 @@ def test_perform_additional_mapping_instance_uuid_no_match(mapper):
         "id": "b90e41f3-8987-58fd-99be-b91068509aa0",
         "poNumber": "o124",
         "orderType": "One-Time",
-        "vendor": "BAE",
+        "vendor": "GOBI",
         pol_key: [
             {
                 "locations": [
@@ -1205,3 +1205,52 @@ def test_po_level_mod_notes_mapping_halts_the_transformation(mapper):
 
     # The PO's string-array notes and POL-level notes are fine
     CompositeOrderMapper._validate_no_po_level_mod_notes_mappings(mapper.record_map)
+
+
+def test_organizations_code_map_maps_legacy_value_to_folio_code(mapper):
+    code_map = CompositeOrderMapper._build_organizations_code_map(
+        [{"legacy_vendor": "GB1", "folio_code": "GOBI"}], mapper.folio_organizations_by_code
+    )
+    mapper_with_map = copy.copy(mapper)
+    mapper_with_map.organizations_code_map = code_map
+
+    assert (
+        mapper_with_map.get_folio_organization_uuid("1", " gb1 ")
+        == "837d04b6-d81c-4c49-9efd-2f62515999b3"
+    )
+    # The map is authoritative: a value that is a FOLIO code but not in the map fails
+    with pytest.raises(TransformationRecordFailedError):
+        mapper_with_map.get_folio_organization_uuid("1", "EBSCO")
+
+
+def test_organizations_code_map_star_row_is_ignored(mapper):
+    code_map = CompositeOrderMapper._build_organizations_code_map(
+        [
+            {"legacy_vendor": "GB1", "folio_code": "GOBI"},
+            {"legacy_vendor": "*", "folio_code": "EBSCO"},
+        ],
+        mapper.folio_organizations_by_code,
+    )
+    mapper_with_map = copy.copy(mapper)
+    mapper_with_map.organizations_code_map = code_map
+
+    assert (
+        mapper_with_map.get_folio_organization_uuid("1", "GB1")
+        == "837d04b6-d81c-4c49-9efd-2f62515999b3"
+    )
+    with pytest.raises(TransformationRecordFailedError):
+        mapper_with_map.get_folio_organization_uuid("1", "unknown")
+
+
+def test_organizations_code_map_rejects_unknown_folio_code(mapper):
+    with pytest.raises(TransformationProcessError):
+        CompositeOrderMapper._build_organizations_code_map(
+            [{"legacy_vendor": "GB1", "folio_code": "NOPE"}], mapper.folio_organizations_by_code
+        )
+
+
+def test_organizations_code_map_requires_one_legacy_column(mapper):
+    with pytest.raises(TransformationProcessError):
+        CompositeOrderMapper._build_organizations_code_map(
+            [{"a": "1", "b": "2", "folio_code": "GOBI"}], mapper.folio_organizations_by_code
+        )
