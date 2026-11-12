@@ -45,7 +45,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 | `workflowStatusMapFileName` | string | No | TSV file mapping workflow statuses |
 | `locationMapFileName` | string | No | TSV file mapping locations |
 | `fundsMapFileName` | string | No | TSV file mapping funds (required if POLs have fund distributions) |
-| `fundsExpenseClassMapFileName` | string | No | TSV file mapping expense classes |
+| `fundsExpenseClassMapFileName` | string | No | TSV file mapping legacy values to expense class codes, used for `expenseClassId`. Values with no explicit match are left empty rather than defaulted |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -212,6 +212,7 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `acquisitionMethodMapFileName` | `folio_value` | Acquisition method value |
 | `fundsMapFileName` | `folio_code` | Fund code |
 | `locationMapFileName` | `folio_code` | Location code |
+| `fundsExpenseClassMapFileName` | `folio_code` | Expense class code. A `*` row is required in the file but never applied: a value with no explicit match is left empty (reported as "Not to be mapped. (No default)") |
 
 ## Vendor Linking
 

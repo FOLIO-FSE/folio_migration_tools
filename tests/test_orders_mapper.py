@@ -21,6 +21,9 @@ from folio_migration_tools.mapping_file_transformation.mapping_file_mapper_base 
 from folio_migration_tools.mapping_file_transformation.order_mapper import (
     CompositeOrderMapper,
 )
+from folio_migration_tools.mapping_file_transformation.ref_data_mapping import (
+    RefDataMapping,
+)
 from folio_migration_tools.migration_tasks.orders_transformer import OrdersTransformer
 from .test_infrastructure import mocked_classes
 
@@ -1270,3 +1273,42 @@ def test_organizations_mapping_is_reported_per_value(mapper):
     report = mapper.migration_report.report["OrganizationsMapping"]
     assert report["GB1 -> GOBI"] >= 1
     assert any(k.endswith("-- unknown -> ") for k in report)
+
+
+def test_expense_class_map_is_used_for_expense_class_id(mapper):
+    class StubClient:
+        def folio_get_all(self, *args, **kwargs):
+            return [{"id": "ec-1", "code": "Elec", "name": "Electronic"}]
+
+    expense_mapping = RefDataMapping(
+        StubClient(),
+        "/finance/expense-classes",
+        "expenseClasses",
+        [
+            {"legacy_ec": "E", "folio_code": "Elec"},
+            {"legacy_ec": "*", "folio_code": "Elec"},
+        ],
+        "code",
+        "ExpenseClassMapping",
+    )
+    mapper_with_map = copy.copy(mapper)
+    mapper_with_map.expense_class_mapping = expense_mapping
+
+    result = mapper_with_map.get_prop(
+        {"legacy_ec": "E"},
+        "compositePoLines[0].fundDistribution[0].expenseClassId",
+        "1",
+        "",
+    )
+    assert result == "ec-1"
+    assert "E -> Elec" in mapper.migration_report.report["ExpenseClassMapping"]
+    # An unmatched value is left unmapped rather than defaulted to the * row
+    assert (
+        mapper_with_map.get_prop(
+            {"legacy_ec": "unknown"},
+            "compositePoLines[0].fundDistribution[0].expenseClassId",
+            "1",
+            "",
+        )
+        == ""
+    )

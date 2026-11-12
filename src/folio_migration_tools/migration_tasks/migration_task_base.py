@@ -418,6 +418,7 @@ class MigrationTaskBase:
             or folio_property_name.startswith("statisticalCodeIds")
             or folio_property_name.startswith("locationMap")
             or folio_property_name.startswith("fundsMap")
+            or folio_property_name.startswith("fundsExpenseClassMap")
             or folio_property_name.startswith("organizationsMap")
             or folio_property_name.endswith(".holdingsNoteTypeId")
             or folio_property_name.endswith(".itemNoteTypeId")
