@@ -59,6 +59,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         location_map,
         funds_map,
         funds_expense_class_map=None,
+        material_type_map=None,
     ):
         """Initialize CompositeOrderMapper for purchase order transformations.
 
@@ -78,6 +79,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             location_map: Mapping of legacy to FOLIO locations.
             funds_map: Mapping of legacy to FOLIO funds.
             funds_expense_class_map: Mapping for fund expense classes.
+            material_type_map: Optional mapping of legacy values to FOLIO material types
+                (by name), used for physical and e-resource material types on order lines.
         """
         # Get order schema, using module version from FOLIO environment if available
         release_tag = None
@@ -173,6 +176,18 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 "ExpenseClassMapping",
             )
             if funds_expense_class_map
+            else None
+        )
+        self.material_type_mapping = (
+            RefDataMapping(
+                self.folio_client,
+                "/material-types",
+                "mtypes",
+                material_type_map,
+                "name",
+                "MaterialTypeMapping",
+            )
+            if material_type_map
             else None
         )
         self._identifier_types_by_name = self._load_identifier_types_by_name()
@@ -343,6 +358,17 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 folio_prop_name,
                 index_or_id,
                 prevent_default=True,
+            )
+
+        if folio_prop_name.endswith((".physical.materialType", ".eresource.materialType")) and (
+            self.material_type_mapping
+        ):
+            return self.get_mapped_ref_data_value(
+                self.material_type_mapping,
+                legacy_object,
+                index_or_id,
+                folio_prop_name,
+                False,
             )
 
         if folio_prop_name.endswith(".productIdType"):

@@ -1314,6 +1314,60 @@ def test_expense_class_map_is_used_for_expense_class_id(mapper):
     )
 
 
+def test_material_type_map_is_used_for_pol_material_types(mapper):
+    class StubClient:
+        def folio_get_all(self, *args, **kwargs):
+            return [{"id": "mt-1", "name": "book"}, {"id": "mt-2", "name": "electronic resource"}]
+
+    material_mapping = RefDataMapping(
+        StubClient(),
+        "/material-types",
+        "mtypes",
+        [
+            {"legacy_mt": "B", "folio_name": "book"},
+            {"legacy_mt": "E", "folio_name": "electronic resource"},
+            {"legacy_mt": "*", "folio_name": "book"},
+        ],
+        "name",
+        "MaterialTypeMapping",
+    )
+    mapper_with_map = copy.copy(mapper)
+    mapper_with_map.material_type_mapping = material_mapping
+
+    physical = "compositePoLines[0].physical.materialType"
+    eresource = "compositePoLines[0].eresource.materialType"
+    assert mapper_with_map.get_prop({"legacy_mt": "B"}, physical, "1", "") == "mt-1"
+    assert mapper_with_map.get_prop({"legacy_mt": "E"}, eresource, "1", "") == "mt-2"
+    assert "B -> book" in mapper.migration_report.report["MaterialTypeMapping"]
+
+
+def test_material_type_passes_through_without_map(mapper):
+    mapper_copy = copy.copy(mapper)
+    mapper_copy.material_type_mapping = None
+    uuid_value = "5b2e0e6e-0000-4000-8000-000000000001"
+    mapper_copy.record_map = {
+        "data": [
+            {
+                "folio_field": "compositePoLines[0].physical.materialType",
+                "legacy_field": "legacy_mt",
+                "value": "",
+                "description": "",
+            }
+        ]
+    }
+    mapper_copy.mapped_from_legacy_data = {
+        "compositePoLines[0].physical.materialType": ["legacy_mt"]
+    }
+
+    result = mapper_copy.get_prop(
+        {"legacy_mt": uuid_value},
+        "compositePoLines[0].physical.materialType",
+        "1",
+        "",
+    )
+    assert result == uuid_value
+
+
 def test_product_id_type_resolves_by_name_or_uuid(mapper):
     mapper_copy = copy.copy(mapper)
     mapper_copy._identifier_types_by_name = {"isbn": "8261054f-be78-422d-bd51-4ed9f33c3422"}
