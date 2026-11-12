@@ -161,6 +161,18 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "code",
             "FundsMapping",
         )
+        self.expense_class_mapping = (
+            RefDataMapping(
+                self.folio_client,
+                "/finance/expense-classes",
+                "expenseClasses",
+                funds_expense_class_map,
+                "code",
+                "ExpenseClassMapping",
+            )
+            if funds_expense_class_map
+            else None
+        )
         self._order_addresses_by_name = self._load_order_addresses_by_name()
         self._validate_hardcoded_order_address_values()
 
@@ -320,6 +332,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self.funds_mapping, legacy_object, folio_prop_name, index_or_id
             )
 
+        if folio_prop_name.endswith(".expenseClassId") and self.expense_class_mapping:
+            return self._get_delimited_ref_data_value(
+                self.expense_class_mapping,
+                legacy_object,
+                folio_prop_name,
+                index_or_id,
+                prevent_default=True,
+            )
+
         if folio_prop_name in ("billTo", "shipTo"):
             raw = super().get_prop(
                 legacy_object,
@@ -336,7 +357,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
         return mapped_value
 
     def _get_delimited_ref_data_value(
-        self, ref_data_mapping, legacy_object, folio_prop_name, index_or_id
+        self,
+        ref_data_mapping,
+        legacy_object,
+        folio_prop_name,
+        index_or_id,
+        prevent_default=False,
     ):
         """Look up a ref data value, one lookup per multi-field-delimited piece.
 
@@ -349,7 +375,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             isinstance(legacy_object.get(k), str) and delimiter in legacy_object[k] for k in keys
         ):
             return self.get_mapped_ref_data_value(
-                ref_data_mapping, legacy_object, index_or_id, folio_prop_name, False
+                ref_data_mapping, legacy_object, index_or_id, folio_prop_name, prevent_default
             )
         pieces = {k: str(legacy_object.get(k, "")).split(delimiter) for k in keys}
         results = []
@@ -359,7 +385,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 piece_object[k] = values[i].strip() if i < len(values) else ""
             results.append(
                 self.get_mapped_ref_data_value(
-                    ref_data_mapping, piece_object, index_or_id, folio_prop_name, False
+                    ref_data_mapping, piece_object, index_or_id, folio_prop_name, prevent_default
                 )
             )
         return delimiter.join(results)

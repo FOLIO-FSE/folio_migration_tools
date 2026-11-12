@@ -402,6 +402,8 @@
   "blurbs.FieldMappingErrors.title": "Field mapping errors",
   "blurbs.FolioDefaultValuesAdded.description": "The below FOLIO default values were added to records that had no mapped value in the source data.",
   "blurbs.FolioDefaultValuesAdded.title": "FOLIO default values added",
+  "blurbs.ExpenseClassMapping.description": "Reference data for expense class mapping",
+  "blurbs.ExpenseClassMapping.title": "Expense class mappings",
   "blurbs.FundsMapping.description": "Reference data for funds mapping",
   "blurbs.FundsMapping.title": "Fund mappings",
   "blurbs.GeneralStatistics.description": "A list of general counters to outline the transformation as a whole.",

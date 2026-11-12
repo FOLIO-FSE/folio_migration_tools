@@ -402,6 +402,8 @@
   "blurbs.FieldMappingErrors.title": "Erreurs de correspondance des champs",
   "blurbs.FolioDefaultValuesAdded.description": "Les valeurs par défaut FOLIO ci-dessous ont été ajoutées aux notices qui n'avaient pas de valeur mappée dans les données source.",
   "blurbs.FolioDefaultValuesAdded.title": "Valeurs par défaut FOLIO ajoutées",
+  "blurbs.ExpenseClassMapping.description": "Données de référence pour la correspondance des classes de dépenses",
+  "blurbs.ExpenseClassMapping.title": "Correspondances des classes de dépenses",
   "blurbs.FundsMapping.description": "Données de référence pour la correspondance des fonds budgétaires",
   "blurbs.FundsMapping.title": "Correspondance des fonds budgétaires",
   "blurbs.GeneralStatistics.description": "Une liste de compteurs généraux pour décrire la transformation dans son ensemble.",
