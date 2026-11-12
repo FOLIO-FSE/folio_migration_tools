@@ -125,6 +125,7 @@
   "Holdings transformation report": "Holdings transformation report",
   "Hour and minute not specified for due date": "Hour and minute not specified for due date",
   "Instance Format not mapped from field since 338$2 is missing": "Instance Format not mapped from field since 338$2 is missing",
+  "Instance transformation report": "Instance transformation report",
   "InstanceFormat not mapped since 338$2 (Source) is set to %{source}": "InstanceFormat not mapped since 338$2 (Source) is set to %{source}",
   "Instances HRID starting number": "Instances HRID starting number",
   "Instances linked using instances_id_map": "Instances linked using instances_id_map",

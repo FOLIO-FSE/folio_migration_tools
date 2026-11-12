@@ -125,6 +125,7 @@
   "Holdings transformation report": "Rapport de transformation des fonds",
   "Hour and minute not specified for due date": "Heure et minute non précisées pour la date d'échéance",
   "Instance Format not mapped from field since 338$2 is missing": "Format d'instance non mappé depuis le champ car 338$2 est absent",
+  "Instance transformation report": "Rapport de transformation des instances",
   "InstanceFormat not mapped since 338$2 (Source) is set to %{source}": "Format d'instance non mappé car 338$2 (Source) vaut %{source}",
   "Instances HRID starting number": "Numéro de départ HRID des instances",
   "Instances linked using instances_id_map": "Instances liées via instances_id_map",
