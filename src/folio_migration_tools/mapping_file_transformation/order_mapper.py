@@ -37,6 +37,7 @@ from folio_migration_tools.utils import normalize_for_compare
 logger = logging.getLogger(__name__)
 
 # Notes mapped under a purchase order line, e.g. compositePoLines[0].notes[0].content
+MATERIAL_TYPE_FIELD = re.compile(r"\.(?:physical|eresource)\.materialType$")
 PRODUCT_ID_TYPE_FIELD = re.compile(r"productIds\[\d+\]\.productIdType$")
 POL_NOTE_PREFIX = re.compile(r"^(?:compositePoLines|poLines)\[\d+\]\.(?=notes\[)")
 
@@ -190,6 +191,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if material_type_map
             else None
         )
+        self._material_types_by_name = self._load_material_types_by_name()
+        self._validate_hardcoded_material_types()
         self._identifier_types_by_name = self._load_identifier_types_by_name()
         self._validate_hardcoded_product_id_types()
         self._order_addresses_by_name = self._load_order_addresses_by_name()
@@ -360,16 +363,24 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 prevent_default=True,
             )
 
-        if folio_prop_name.endswith((".physical.materialType", ".eresource.materialType")) and (
-            self.material_type_mapping
-        ):
-            return self.get_mapped_ref_data_value(
-                self.material_type_mapping,
-                legacy_object,
-                index_or_id,
-                folio_prop_name,
-                False,
+        if MATERIAL_TYPE_FIELD.search(folio_prop_name):
+            raw = str(
+                super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
+                or ""
             )
+            # Hardcoded values are FOLIO names or UUIDs (validated at startup), not legacy
+            # values, so they are never run through the map.
+            if self.material_type_mapping and not self._is_hardcoded_value(
+                folio_prop_name, legacy_object, raw
+            ):
+                return self.get_mapped_ref_data_value(
+                    self.material_type_mapping,
+                    legacy_object,
+                    index_or_id,
+                    folio_prop_name,
+                    False,
+                )
+            return self._resolve_material_type(raw, index_or_id)
 
         if folio_prop_name.endswith(".productIdType"):
             raw = super().get_prop(
@@ -478,6 +489,100 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self.TENANT_ADDRESSES_QUERY,
             )
         return addresses_by_name
+
+    def _load_material_types_by_name(self) -> dict[str, str]:
+        """Build normalized FOLIO material type name -> id, for lookups without a map file."""
+        by_name = {
+            normalize_for_compare(t["name"]): t["id"]
+            for t in self.folio_client.folio_get_all("/material-types", "mtypes", "", 1000)
+            if t.get("name") and t.get("id")
+        }
+        logger.info("Loaded %s material types from FOLIO", len(by_name))
+        return by_name
+
+    def _is_hardcoded_value(self, folio_prop_name: str, legacy_object: dict, value: str) -> bool:
+        """True if the resolved value is a literal from the field mapping, not legacy data.
+
+        A non-empty value always takes precedence and legacy fields are never read. A
+        fallback_value is only used when the legacy fields are empty.
+        """
+        if not value:
+            return False
+        for entry in MappingFileMapperBase.get_map_entries_by_folio_prop_name(
+            folio_prop_name, self.record_map["data"]
+        ):
+            if entry.get("value"):
+                return True
+            fallback = entry.get("fallback_value")
+            if (
+                isinstance(fallback, str)
+                and fallback.strip() == value.strip()
+                and not any(
+                    legacy_object.get(entry.get(key) or "")
+                    for key in ("legacy_field", "fallback_legacy_field")
+                )
+            ):
+                return True
+        return False
+
+    def _resolve_material_type(self, value: str, index_or_id: str) -> str:
+        """Accept a UUID as-is or resolve a FOLIO material type name.
+
+        Used without a material type map, and for hardcoded values even with one.
+
+        A name that is not a FOLIO material type fails the record.
+        """
+        if not value or self.is_uuid(value):
+            return value
+        if resolved := self._material_types_by_name.get(normalize_for_compare(value)):
+            self.migration_report.add("MaterialTypeMapping", f"{value} -> {resolved}")
+            return resolved
+        self.migration_report.add(
+            "MaterialTypeMapping", i18n.t("Unmapped (Record failed)") + f" -- {value}"
+        )
+        raise TransformationRecordFailedError(
+            index_or_id,
+            "Material type name not found in FOLIO material types",
+            value,
+        )
+
+    def _validate_hardcoded_material_types(self) -> None:
+        """Halt if a hardcoded material type is not a FOLIO material type name or UUID."""
+        known_ids = set(self._material_types_by_name.values())
+        invalid_values: list[str] = []
+        for entry in self.record_map.get("data", []):
+            folio_field = entry.get("folio_field", "")
+            if not MATERIAL_TYPE_FIELD.search(folio_field):
+                continue
+            for value_key in ("value", "fallback_value"):
+                value = entry.get(value_key)
+                value = value.strip() if isinstance(value, str) else value
+                if not value:
+                    continue
+                if self.is_uuid(value):
+                    if value not in known_ids:
+                        invalid_values.append(
+                            f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                            "- UUID not found in FOLIO material types"
+                        )
+                elif normalize_for_compare(value) not in self._material_types_by_name:
+                    invalid_values.append(
+                        f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                        "- name not found in FOLIO material types"
+                    )
+        if invalid_values:
+            raise TransformationProcessError(
+                "",
+                "Invalid material type values found in field mapping:",
+                "\n".join(
+                    [
+                        *invalid_values,
+                        "Available material types: "
+                        + ", ".join(sorted(self._material_types_by_name)),
+                        "Please update your mapping file with valid material type names or UUIDs.",
+                    ]
+                ),
+            )
 
     def _load_identifier_types_by_name(self) -> dict[str, str]:
         """Build normalized FOLIO identifier type name -> id, for productIdType lookups."""

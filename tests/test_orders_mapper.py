@@ -1367,6 +1367,98 @@ def test_material_type_passes_through_without_map(mapper):
     )
     assert result == uuid_value
 
+    # A name is resolved against FOLIO material types without a map
+    mapper_copy._material_types_by_name = {"book": "mt-1"}
+    name_result = mapper_copy.get_prop(
+        {"legacy_mt": " Book "}, "compositePoLines[0].physical.materialType", "1", ""
+    )
+    assert name_result == "mt-1"
+    assert any(
+        key.endswith("-> mt-1") for key in mapper.migration_report.report["MaterialTypeMapping"]
+    )
+
+    # An unmatched name fails the record and is reported
+    with pytest.raises(TransformationRecordFailedError) as error_info:
+        mapper_copy.get_prop(
+            {"legacy_mt": "nonsense"}, "compositePoLines[0].physical.materialType", "7", ""
+        )
+    assert error_info.value.index_or_id == "7"
+    assert error_info.value.data_value == "nonsense"
+    assert any(
+        "nonsense" in key
+        for key in mapper.migration_report.report["MaterialTypeMapping"]
+    )
+
+
+def test_hardcoded_material_type_is_validated(mapper):
+    mapper_copy = copy.copy(mapper)
+    mapper_copy.material_type_mapping = None
+    mapper_copy._material_types_by_name = {"book": "mt-1"}
+
+    def validate_with(value):
+        mapper_copy.record_map = {
+            "data": [
+                {
+                    "folio_field": "compositePoLines[0].physical.materialType",
+                    "legacy_field": "",
+                    "value": value,
+                    "description": "",
+                }
+            ]
+        }
+        mapper_copy._validate_hardcoded_material_types()
+
+    validate_with("book")
+    validate_with("")
+    with pytest.raises(TransformationProcessError):
+        validate_with("not a type")
+    with pytest.raises(TransformationProcessError):
+        validate_with("5b2e0e6e-0000-4000-8000-000000000009")
+
+    # Hardcoded values are FOLIO values, so they are validated even with a map configured
+    mapper_copy.material_type_mapping = object()
+    with pytest.raises(TransformationProcessError):
+        validate_with("not a type")
+
+
+def test_hardcoded_material_type_bypasses_the_map(mapper):
+    class StubClient:
+        def folio_get_all(self, *args, **kwargs):
+            return [{"id": "mt-1", "name": "book"}, {"id": "mt-2", "name": "serial"}]
+
+    mapper_copy = copy.copy(mapper)
+    mapper_copy.material_type_mapping = RefDataMapping(
+        StubClient(),
+        "/material-types",
+        "mtypes",
+        [{"legacy_mt": "B", "folio_name": "book"}, {"legacy_mt": "*", "folio_name": "book"}],
+        "name",
+        "MaterialTypeMapping",
+    )
+    mapper_copy._material_types_by_name = {"book": "mt-1", "serial": "mt-2"}
+    prop = "compositePoLines[0].physical.materialType"
+    mapper_copy.mapped_from_legacy_data = {prop: ["legacy_mt"]}
+
+    def entry(**kwargs):
+        return {
+            "data": [
+                {"folio_field": prop, "legacy_field": "", "value": "", "description": "", **kwargs}
+            ]
+        }
+
+    # Hardcoded name is resolved directly; the map has no row for it and would default to book
+    mapper_copy.record_map = entry(value="serial")
+    assert mapper_copy.get_prop({}, prop, "1", "") == "mt-2"
+
+    # A legacy value still goes through the map
+    mapper_copy.record_map = entry(legacy_field="legacy_mt")
+    assert mapper_copy.get_prop({"legacy_mt": "B"}, prop, "1", "") == "mt-1"
+
+    # fallback_value is a literal only when the legacy field is empty
+    mapper_copy.record_map = entry(legacy_field="legacy_mt", fallback_value="serial")
+    assert mapper_copy.get_prop({"legacy_mt": ""}, prop, "1", "") == "mt-2"
+    assert mapper_copy.get_prop({"legacy_mt": "B"}, prop, "1", "") == "mt-1"
+
 
 def test_product_id_type_resolves_by_name_or_uuid(mapper):
     mapper_copy = copy.copy(mapper)

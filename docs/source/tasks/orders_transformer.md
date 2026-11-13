@@ -46,7 +46,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 | `locationMapFileName` | string | No | TSV file mapping locations |
 | `fundsMapFileName` | string | No | TSV file mapping funds (required if POLs have fund distributions) |
 | `fundsExpenseClassMapFileName` | string | No | TSV file mapping legacy values to expense class codes, used for `expenseClassId`. Values with no explicit match are left empty rather than defaulted |
-| `materialTypeMapFileName` | string | No | TSV file mapping legacy values to FOLIO material type names, applied to `physical.materialType` and `eresource.materialType` on order lines. Works like the items transformer material type map, including the required `*` default row |
+| `materialTypeMapFileName` | string | No | TSV file mapping legacy values to FOLIO material type names, applied to `physical.materialType` and `eresource.materialType` on order lines. Works like the items transformer material type map, including the required `*` default row. Without it, the value must be a material type UUID or name (see Material Types) |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -215,6 +215,17 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `locationMapFileName` | `folio_code` | Location code |
 | `fundsExpenseClassMapFileName` | `folio_code` | Expense class code. A `*` row is required in the file but never applied: a value with no explicit match is left empty (reported as "Not to be mapped. (No default)") |
 | `materialTypeMapFileName` | `folio_name` | Material type name. A `*` row is required and is used as the default for unmatched values |
+
+## Material Types
+
+`physical.materialType` and `eresource.materialType` on order lines can be mapped with `materialTypeMapFileName`, as in the items transformer.
+
+A value from a legacy field is mapped with the map file when one is configured. Otherwise, and for hardcoded values, it is used as follows:
+
+* A material type UUID is used as-is.
+* Any other value is looked up as a FOLIO material type name (case- and whitespace-insensitive).
+* A name that is not a FOLIO material type fails the record. It is written to the data issues log and reported under "Mapped Material Types".
+* A hardcoded `value` or `fallback_value` for these fields is a FOLIO material type name or UUID. It is checked against FOLIO at startup, and the task stops if it is not valid. It is never run through the map file, even when one is configured.
 
 ## Product ID Types
 
