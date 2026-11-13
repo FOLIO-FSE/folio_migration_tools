@@ -112,6 +112,39 @@ class InstanceCsvTransformer(MigrationTaskBase):
                 description="Optional file name for the contributor type map.",
             ),
         ] = ""
+        identifier_types_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Identifier types map file name",
+                description=(
+                    "Optional file name for an identifier type mapping table. A TSV with "
+                    "legacy_identifier_type and folio_name columns. When absent, values are "
+                    "resolved directly as FOLIO names or UUIDs."
+                ),
+            ),
+        ] = ""
+        contributor_name_types_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Contributor name types map file name",
+                description=(
+                    "Optional file name for a contributor name type mapping table. A TSV with "
+                    "legacy_contributor_name_type and folio_name columns. When absent, values "
+                    "are resolved directly as FOLIO names or UUIDs."
+                ),
+            ),
+        ] = ""
+        instance_note_types_map_file_name: Annotated[
+            Optional[str],
+            Field(
+                title="Instance note types map file name",
+                description=(
+                    "Optional file name for an instance note type mapping table. A TSV with "
+                    "legacy_note_type and folio_name columns. When absent, values are "
+                    "resolved directly as FOLIO names or UUIDs."
+                ),
+            ),
+        ] = ""
         statistical_codes_map_file_name: Annotated[
             Optional[str],
             Field(
@@ -202,6 +235,16 @@ class InstanceCsvTransformer(MigrationTaskBase):
             ),
             self._load_optional_map(
                 "contributors.contributorTypeId", self.task_config.contributor_types_map_file_name
+            ),
+            self._load_optional_map(
+                "identifiers.identifierTypeId", self.task_config.identifier_types_map_file_name
+            ),
+            self._load_optional_map(
+                "contributors.contributorNameTypeId",
+                self.task_config.contributor_name_types_map_file_name,
+            ),
+            self._load_optional_map(
+                "notes.instanceNoteTypeId", self.task_config.instance_note_types_map_file_name
             ),
         )
         logger.info("Init done")
