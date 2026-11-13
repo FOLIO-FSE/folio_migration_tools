@@ -33,11 +33,11 @@ The task writes instances, an instance id map and a migration report. It does no
 | `migrationTaskType` | string | Yes | Must be `"InstanceCsvTransformer"` |
 | `files` | array | Yes | Delimited files in the legacy records folder. Supports `discovery_suppressed`, `staff_suppressed` and `statistical_code`. |
 | `instancesMappingFileName` | string | Yes | JSON mapping file. Must map `legacyIdentifier`, `title` and `instanceTypeId`. |
-| `instanceTypesMapFileName` | string | Yes | TSV map from legacy values to FOLIO instance types (`folio_name` column). |
+| `instanceTypesMapFileName` | string | Yes | TSV map from legacy values to FOLIO instance types (`folio_name` or `folio_code` column; the header decides which FOLIO field is matched). |
 | `natureOfContentMapFileName` | string | No | TSV map for `natureOfContentTermIds`. |
 | `instanceFormatsMapFileName` | string | No | TSV map for `instanceFormatIds`. |
 | `modesOfIssuanceMapFileName` | string | No | TSV map for `modeOfIssuanceId`. |
-| `contributorTypesMapFileName` | string | No | TSV map for `contributors[n].contributorTypeId`. |
+| `contributorTypesMapFileName` | string | No | TSV map for `contributors[n].contributorTypeId` (`folio_name` or `folio_code` column). |
 | `identifierTypesMapFileName` | string | No | TSV map with `legacy_identifier_type` and `folio_name` columns for `identifiers[n].identifierTypeId`. |
 | `contributorNameTypesMapFileName` | string | No | TSV map with `legacy_contributor_name_type` and `folio_name` columns for `contributors[n].contributorNameTypeId`. |
 | `instanceNoteTypesMapFileName` | string | No | TSV map with `legacy_note_type` and `folio_name` columns for `notes[n].instanceNoteTypeId`. |
