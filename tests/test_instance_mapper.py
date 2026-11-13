@@ -38,3 +38,13 @@ def test_resolve_note_type_id_uses_legacy_key():
         mapper, "LC", {}, "identifiers.identifierTypeId", "r", type_map, "legacy_k"
     )
     assert mapper.get_mapped_ref_data_value.call_args.args[1] == {"legacy_k": "LC"}
+
+
+def test_folio_key_type_from_map_header():
+    from folio_migration_tools.mapping_file_transformation.instance_mapper import (
+        InstanceMapper,
+    )
+
+    assert InstanceMapper._folio_key_type([{"legacy_code": "a", "folio_code": "x"}]) == "code"
+    assert InstanceMapper._folio_key_type([{"legacy_code": "a", "folio_name": "x"}]) == "name"
+    assert InstanceMapper._folio_key_type(None) == "name"

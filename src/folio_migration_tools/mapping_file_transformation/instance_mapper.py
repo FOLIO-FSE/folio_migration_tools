@@ -86,7 +86,7 @@ class InstanceMapper(MappingFileMapperBase):
             "/instance-types",
             "instanceTypes",
             instance_type_map,
-            "name",
+            self._folio_key_type(instance_type_map),
             "InstanceTypeMapping",
         )
         self.nature_of_content_mapping = self._optional_ref_data_mapping(
@@ -112,6 +112,7 @@ class InstanceMapper(MappingFileMapperBase):
             "contributorTypes",
             contributor_type_map,
             "ContributorTypeMapping",
+            self._folio_key_type(contributor_type_map),
         )
 
         # Types resolved by FOLIO name or UUID, as note types are for holdings and items
@@ -142,12 +143,22 @@ class InstanceMapper(MappingFileMapperBase):
         )
         self._validate_hardcoded_note_type_values(self._instance_note_types, ".instanceNoteTypeId")
 
+    @staticmethod
+    def _folio_key_type(the_map) -> str:
+        """Return "code" if the map's FOLIO-side header is folio_code, else "name"."""
+        first = the_map[0] if the_map else {}
+        if "folio_code" in first and "folio_name" not in first:
+            return "code"
+        return "name"
+
     def _optional_ref_data_mapping(
-        self, path: str, array_name: str, the_map, blurb_id: str
+        self, path: str, array_name: str, the_map, blurb_id: str, key_type: str | None = None
     ) -> RefDataMapping | None:
         if not the_map:
             return None
-        return RefDataMapping(self.folio_client, path, array_name, the_map, "name", blurb_id)
+        return RefDataMapping(
+            self.folio_client, path, array_name, the_map, key_type or "name", blurb_id
+        )
 
     def _name_to_id(self, path: str, array_name: str) -> dict:
         return {
