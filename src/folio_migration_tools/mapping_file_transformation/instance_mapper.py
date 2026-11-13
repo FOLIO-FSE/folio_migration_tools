@@ -48,6 +48,9 @@ class InstanceMapper(MappingFileMapperBase):
         instance_format_map=None,
         mode_of_issuance_map=None,
         contributor_type_map=None,
+        identifier_type_map=None,
+        contributor_name_type_map=None,
+        instance_note_type_map=None,
     ):
         """Initialize InstanceMapper for delimited instance transformations.
 
@@ -62,6 +65,10 @@ class InstanceMapper(MappingFileMapperBase):
             instance_format_map: Mapping of legacy to FOLIO instance formats.
             mode_of_issuance_map: Mapping of legacy to FOLIO modes of issuance.
             contributor_type_map: Mapping of legacy to FOLIO contributor types.
+            identifier_type_map: Optional mapping of legacy to FOLIO identifier types.
+            contributor_name_type_map: Optional mapping of legacy to FOLIO contributor
+                name types.
+            instance_note_type_map: Optional mapping of legacy to FOLIO instance note types.
         """
         instance_schema = folio_client.get_instance_json_schema()
         super().__init__(
@@ -113,6 +120,21 @@ class InstanceMapper(MappingFileMapperBase):
             "/contributor-name-types", "contributorNameTypes"
         )
         self._instance_note_types = self._name_to_id("/instance-note-types", "instanceNoteTypes")
+        self._identifier_type_mapping = self._optional_ref_data_mapping(
+            "/identifier-types", "identifierTypes", identifier_type_map, "IdentifierTypeMapping"
+        )
+        self._contributor_name_type_mapping = self._optional_ref_data_mapping(
+            "/contributor-name-types",
+            "contributorNameTypes",
+            contributor_name_type_map,
+            "ContributorNameTypeMapping",
+        )
+        self._instance_note_type_mapping = self._optional_ref_data_mapping(
+            "/instance-note-types",
+            "instanceNoteTypes",
+            instance_note_type_map,
+            "InstanceNoteTypeMapping",
+        )
         # Fail early if hardcoded values in the mapping file are not valid FOLIO values
         self._validate_hardcoded_note_type_values(self._identifier_types, ".identifierTypeId")
         self._validate_hardcoded_note_type_values(
@@ -199,6 +221,8 @@ class InstanceMapper(MappingFileMapperBase):
                 index_or_id,
                 schema_default_value,
                 self._identifier_types,
+                self._identifier_type_mapping,
+                "legacy_identifier_type",
             )
         if folio_prop_name.endswith(".contributorNameTypeId"):
             return self._resolve_type_prop(
@@ -207,6 +231,8 @@ class InstanceMapper(MappingFileMapperBase):
                 index_or_id,
                 schema_default_value,
                 self._contributor_name_types,
+                self._contributor_name_type_mapping,
+                "legacy_contributor_name_type",
             )
         if folio_prop_name.endswith(".instanceNoteTypeId"):
             return self._resolve_type_prop(
@@ -215,6 +241,8 @@ class InstanceMapper(MappingFileMapperBase):
                 index_or_id,
                 schema_default_value,
                 self._instance_note_types,
+                self._instance_note_type_mapping,
+                "legacy_note_type",
             )
 
         mapped_value = super().get_prop(
@@ -253,6 +281,8 @@ class InstanceMapper(MappingFileMapperBase):
         index_or_id,
         schema_default_value,
         types_by_name: dict,
+        type_mapping: RefDataMapping | None = None,
+        legacy_key: str = "legacy_note_type",
     ):
         raw = super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
         raw = str(raw) if raw else ""

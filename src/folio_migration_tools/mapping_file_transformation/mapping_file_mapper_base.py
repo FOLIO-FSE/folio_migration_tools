@@ -1229,6 +1229,7 @@ class MappingFileMapperBase(MapperBase):
         folio_prop_name: str,
         index_or_id: str,
         note_type_mapping=None,
+        legacy_key: str = "legacy_note_type",
     ) -> str:
         """Resolve a note type value to a UUID.
 
@@ -1236,7 +1237,7 @@ class MappingFileMapperBase(MapperBase):
         1. Empty value → returned as-is.
         2. UUID value → returned unchanged (backward compatible).
         3. If a RefDataMapping is provided (optional TSV file) → translated via
-           that mapping using the synthetic key ``legacy_note_type``, then
+           that mapping using the synthetic key ``legacy_key`` (default ``legacy_note_type``), then
            resolved to a UUID by RefDataMapping's ref-data lookup.
         4. Otherwise → looked up case-insensitively by name in the FOLIO
            note-types cache.
@@ -1251,6 +1252,7 @@ class MappingFileMapperBase(MapperBase):
             note_type_mapping: Optional RefDataMapping (``legacy_note_type`` →
                 ``folio_name`` → UUID). When present, takes priority over the
                 direct name lookup.
+            legacy_key: Column name of the legacy value in the mapping table.
 
         Returns:
             The resolved UUID string.
@@ -1265,7 +1267,7 @@ class MappingFileMapperBase(MapperBase):
         if note_type_mapping:
             return self.get_mapped_ref_data_value(
                 note_type_mapping,
-                {"legacy_note_type": value},
+                {legacy_key: value},
                 index_or_id,
                 folio_prop_name,
             )
