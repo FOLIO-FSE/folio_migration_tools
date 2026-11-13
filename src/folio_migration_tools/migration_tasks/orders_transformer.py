@@ -250,6 +250,13 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folio_keys,
                 False,
             ),
+            self.load_ref_data_mapping_file(  # Optional
+                "materialTypeMap",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.material_type_map_file_name,
+                self.folio_keys,
+                False,
+            ),
         )
 
     def list_source_files(self):
