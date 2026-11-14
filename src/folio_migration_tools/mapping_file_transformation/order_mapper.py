@@ -651,6 +651,78 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 ),
             )
 
+    LOCATION_QUANTITY_FIELDS = ("quantity", "quantityPhysical", "quantityElectronic")
+
+    def _merge_duplicate_locations(self, composite_order: dict) -> None:
+        """Merge the locations of each PO line that share a locationId.
+
+        Each location object counts as one. A merged location keeps the position of the
+        first one, and its quantity fields (the ones set on any merged object) are replaced
+        with the number of objects merged. Locations that occur once, and locations
+        without a locationId, are left as they are.
+        """
+        for pol in composite_order.get(self.po_lines_key, []):
+            locations = pol.get("locations")
+            if not isinstance(locations, list):
+                continue
+            groups: dict = {}
+            merged = []
+            for location in locations:
+                location_id = location.get("locationId") if isinstance(location, dict) else None
+                if not location_id:
+                    merged.append(location)
+                elif location_id in groups:
+                    groups[location_id].append(location)
+                else:
+                    groups[location_id] = [location]
+                    merged.append(location)
+            for group in groups.values():
+                if len(group) < 2:
+                    continue
+                for field in self.LOCATION_QUANTITY_FIELDS:
+                    if any(field in loc for loc in group):
+                        group[0][field] = len(group)
+            pol["locations"] = merged
+
+    @staticmethod
+    def _as_int(value) -> int | None:
+        try:
+            return int(str(value).strip())
+        except (TypeError, ValueError):
+            return None
+
+    def _validate_location_quantities(self, index_or_id: str, composite_order: dict) -> None:
+        """Check that the location quantities add up to the PO line's cost quantities.
+
+        Location quantityPhysical and quantityElectronic are compared with the cost's
+        quantities of the same name, and the location quantity with their total. A
+        quantity that no location sets is not checked. A mismatch fails the record, since FOLIO
+        would not load it.
+        """
+        for pol in composite_order.get(self.po_lines_key, []):
+            locations = pol.get("locations")
+            cost = pol.get("cost")
+            if not locations or not isinstance(cost, dict):
+                continue
+            cost_physical = self._as_int(cost.get("quantityPhysical")) or 0
+            cost_electronic = self._as_int(cost.get("quantityElectronic")) or 0
+            expected = {
+                "quantityPhysical": cost_physical,
+                "quantityElectronic": cost_electronic,
+                "quantity": cost_physical + cost_electronic,
+            }
+            for field, cost_total in expected.items():
+                values = [loc[field] for loc in locations if loc.get(field) not in (None, "")]
+                if not values:
+                    continue
+                total = sum(self._as_int(v) or 0 for v in values)
+                if total != cost_total:
+                    raise TransformationRecordFailedError(
+                        index_or_id,
+                        f"Location {field} total does not match the PO line cost quantities",
+                        json.dumps({"locations": total, "cost": cost_total}),
+                    )
+
     def _drop_incomplete_product_ids(self, index_or_id: str, composite_order: dict) -> None:
         """Drop product ids missing a productId or a usable productIdType.
 
@@ -804,6 +876,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             composite_order[self.po_lines_key][0]["instanceId"] = matching_instance
 
         self._drop_incomplete_product_ids(index_or_id, composite_order)
+        self._merge_duplicate_locations(composite_order)
+        self._validate_location_quantities(index_or_id, composite_order)
 
         return composite_order
 
