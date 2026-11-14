@@ -769,6 +769,7 @@ def test_composite_order_mapping_with_named_billto_shipto_addresses(mapper):
         "bibnumber": "1",
         "acqmethod": "p",
         "location": "order",
+        "quantity_physical": "1",
         "copies": "1",
         "bill_to": "Main Billing Address",
         "ship_to": "Main Shipping Address",
@@ -823,6 +824,7 @@ def test_composite_order_mapping_with_normalized_named_addresses(mapper):
         "bibnumber": "1",
         "acqmethod": "p",
         "location": "order",
+        "quantity_physical": "1",
         "copies": "1",
         "bill_to": "Main  Billing\x1dAddress",
         "ship_to": "Main\tShipping Address",
@@ -1006,7 +1008,7 @@ def test_perform_additional_mapping_get_org_from_folio(mapper):
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "1",
@@ -1037,7 +1039,7 @@ def test_perform_additional_mapping_org_and_instance_uuids_from_folio_and_id_map
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "1",
@@ -1071,7 +1073,7 @@ def test_perform_additional_mapping_invalid_po_number(mapper):
                 "locations": [
                     {
                         "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
-                        "quantity": "2"
+                        "quantity": "1"
                     }
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
@@ -1103,7 +1105,7 @@ def test_perform_additional_mapping_org_uuid_no_match(mapper):
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "1",
@@ -1134,7 +1136,7 @@ def test_perform_additional_mapping_instance_uuid_no_match(mapper):
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "2"}
+                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "myunpublishedbook",
@@ -1519,3 +1521,47 @@ def test_hardcoded_product_id_type_is_validated(mapper):
         check("Nope")
     with pytest.raises(TransformationProcessError):
         check("913300b2-03ed-469a-8179-c1092c991227")
+
+
+def test_locations_with_the_same_id_are_merged_and_counted(mapper):
+    order = {
+        mapper.po_lines_key: [
+            {
+                "locations": [
+                    {"locationId": "a", "quantity": 1, "quantityPhysical": 1},
+                    {"locationId": "b", "quantity": 1},
+                    {"locationId": "a", "quantity": 1, "quantityPhysical": 1},
+                    {"locationId": "a", "quantity": 1, "quantityPhysical": 1},
+                    {"quantity": 1},
+                ]
+            }
+        ]
+    }
+    mapper._merge_duplicate_locations(order)
+    assert order[mapper.po_lines_key][0]["locations"] == [
+        {"locationId": "a", "quantity": 3, "quantityPhysical": 3},
+        {"locationId": "b", "quantity": 1},
+        {"quantity": 1},
+    ]
+
+
+def test_unique_locations_are_left_untouched(mapper):
+    locations = [{"locationId": "a", "quantity": "2"}, {"locationId": "b", "quantity": "3"}]
+    order = {mapper.po_lines_key: [{"locations": [dict(loc) for loc in locations]}]}
+    mapper._merge_duplicate_locations(order)
+    assert order[mapper.po_lines_key][0]["locations"] == locations
+    mapper._merge_duplicate_locations({mapper.po_lines_key: [{}]})
+
+
+def test_location_quantities_are_validated_against_cost(mapper):
+    def order(locations, cost):
+        return {mapper.po_lines_key: [{"locations": locations, "cost": cost}]}
+
+    ok = order(
+        [{"locationId": "a", "quantityPhysical": 2}, {"locationId": "b", "quantityPhysical": 1}],
+        {"quantityPhysical": 3},
+    )
+    bad = order([{"locationId": "a", "quantity": 1}], {"quantityPhysical": 2})
+    mapper._validate_location_quantities("1", ok)
+    with pytest.raises(TransformationRecordFailedError, match="quantity total"):
+        mapper._validate_location_quantities("1", bad)
