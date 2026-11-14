@@ -658,8 +658,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         Each location object counts as one. A merged location keeps the position of the
         first one, and its quantity fields (the ones set on any merged object) are replaced
-        with the number of objects merged. Locations that occur once, and locations
-        without a locationId, are left as they are.
+        with the number of objects merged, which is 1 for a location that occurs once. The
+        mapped quantity value is never summed. Locations without a locationId are left as
+        they are.
         """
         for pol in composite_order.get(self.po_lines_key, []):
             locations = pol.get("locations")
@@ -677,8 +678,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     groups[location_id] = [location]
                     merged.append(location)
             for group in groups.values():
-                if len(group) < 2:
-                    continue
                 for field in self.LOCATION_QUANTITY_FIELDS:
                     if any(field in loc for loc in group):
                         group[0][field] = len(group)
