@@ -1546,11 +1546,18 @@ def test_locations_with_the_same_id_are_merged_and_counted(mapper):
     ]
 
 
-def test_unique_locations_are_left_untouched(mapper):
-    locations = [{"locationId": "a", "quantity": "2"}, {"locationId": "b", "quantity": "3"}]
+def test_unique_locations_are_counted_not_summed(mapper):
+    # One qty column feeds every location object; each object stands for one piece.
+    locations = [
+        {"locationId": "a", "quantityPhysical": "2"},
+        {"locationId": "b", "quantityPhysical": "2"},
+    ]
     order = {mapper.po_lines_key: [{"locations": [dict(loc) for loc in locations]}]}
     mapper._merge_duplicate_locations(order)
-    assert order[mapper.po_lines_key][0]["locations"] == locations
+    assert order[mapper.po_lines_key][0]["locations"] == [
+        {"locationId": "a", "quantityPhysical": 1},
+        {"locationId": "b", "quantityPhysical": 1},
+    ]
     mapper._merge_duplicate_locations({mapper.po_lines_key: [{}]})
 
 
@@ -1576,7 +1583,7 @@ def test_issues_are_logged_with_the_legacy_id_and_the_row(mapper):
         "type": "One-Time",
         "TITLE": "Mismatch",
         "bibnumber": "1",
-        "quantity_physical": "1",
+        "quantity_physical": "2",
         "price": "125.00",
         "copies": "2",
         "location": "order",
