@@ -661,10 +661,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
         with the number of objects merged, which is 1 for a location that occurs once. The
         mapped quantity value is never summed. Locations without a locationId are left as
         they are.
+
+        A PO line with a single location object is left untouched: nothing was delimited,
+        so its mapped quantity is the number of pieces at that location.
         """
         for pol in composite_order.get(self.po_lines_key, []):
-            locations = pol.get("locations")
-            if not isinstance(locations, list):
+            locations = pol.get("locations", [])
+            if len(locations) < 2:
                 continue
             groups: dict = {}
             merged = []

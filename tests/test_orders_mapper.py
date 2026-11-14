@@ -1561,6 +1561,13 @@ def test_unique_locations_are_counted_not_summed(mapper):
     mapper._merge_duplicate_locations({mapper.po_lines_key: [{}]})
 
 
+def test_single_location_keeps_its_mapped_quantity(mapper):
+    locations = [{"locationId": "a", "quantity": "5", "quantityPhysical": "5"}]
+    order = {mapper.po_lines_key: [{"locations": [dict(loc) for loc in locations]}]}
+    mapper._merge_duplicate_locations(order)
+    assert order[mapper.po_lines_key][0]["locations"] == locations
+
+
 def test_location_quantities_are_validated_against_cost(mapper):
     def order(locations, cost):
         return {mapper.po_lines_key: [{"locations": locations, "cost": cost}]}
@@ -1583,7 +1590,7 @@ def test_issues_are_logged_with_the_legacy_id_and_the_row(mapper):
         "type": "One-Time",
         "TITLE": "Mismatch",
         "bibnumber": "1",
-        "quantity_physical": "2",
+        "quantity_physical": "1",
         "price": "125.00",
         "copies": "2",
         "location": "order",
