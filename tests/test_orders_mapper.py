@@ -7,6 +7,7 @@ import pytest
 from folio_uuid.folio_namespaces import FOLIONamespaces
 
 from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
@@ -1565,3 +1566,31 @@ def test_location_quantities_are_validated_against_cost(mapper):
     mapper._validate_location_quantities("1", ok)
     with pytest.raises(TransformationRecordFailedError, match="quantity total"):
         mapper._validate_location_quantities("1", bad)
+
+
+def test_issues_are_logged_with_the_legacy_id_and_the_row(mapper):
+    mapper = copy.copy(mapper)
+    data = {
+        "order_number": "o300",
+        "vendor": "EBSCO",
+        "type": "One-Time",
+        "TITLE": "Mismatch",
+        "bibnumber": "1",
+        "quantity_physical": "1",
+        "price": "125.00",
+        "copies": "2",
+        "location": "order",
+        "acqmethod": "p",
+    }
+    with pytest.raises(TransformationRecordFailedError) as raised:
+        mapper.map_order_with_notes(data, "row 7")
+    assert raised.value.index_or_id == "o300 (row 7)"
+    assert mapper._with_row("o300 (row 7)") == "o300 (row 7)"
+
+
+def test_field_mapping_errors_are_logged_with_the_legacy_id_and_the_row(mapper):
+    mapper = copy.copy(mapper)
+    mapper._current_row = "row 3"
+    error = TransformationFieldMappingError("o301", "Bad value", "x")
+    mapper.handle_transformation_field_mapping_error("o301", error)
+    assert error.index_or_id == "o301 (row 3)"
