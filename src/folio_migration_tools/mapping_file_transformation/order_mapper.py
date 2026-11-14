@@ -846,16 +846,36 @@ class CompositeOrderMapper(MappingFileMapperBase):
         Returns:
             tuple: (composite order, legacy id)
         """
-        folio_rec, legacy_id = self.do_map(legacy_order, index_or_id, FOLIONamespaces.orders, True)
-        self.perform_additional_mapping(legacy_id, folio_rec)
-        self.report_folio_mapping(folio_rec, self.composite_order_schema)
-        self.notes_mapper.map_notes(
-            legacy_order,
-            legacy_id,
-            folio_rec[self.po_lines_key][0]["id"],
-            FOLIONamespaces.orders,
-        )
+        # Several rows can be merged into one order, so the order's legacy id alone does not
+        # say which row an issue came from. Issues are logged with both.
+        self._current_row = index_or_id
+        try:
+            folio_rec, legacy_id = self.do_map(
+                legacy_order, index_or_id, FOLIONamespaces.orders, True
+            )
+            self.perform_additional_mapping(legacy_id, folio_rec)
+            self.report_folio_mapping(folio_rec, self.composite_order_schema)
+            self.notes_mapper.map_notes(
+                legacy_order,
+                legacy_id,
+                folio_rec[self.po_lines_key][0]["id"],
+                FOLIONamespaces.orders,
+            )
+        except TransformationRecordFailedError as error:
+            error.index_or_id = self._with_row(error.index_or_id)
+            raise
         return folio_rec, legacy_id
+
+    def _with_row(self, identifier):
+        """Return the legacy identifier followed by the row it came from, as 'id (row n)'."""
+        row = getattr(self, "_current_row", "")
+        if not row or str(row) in str(identifier):
+            return identifier
+        return f"{identifier} ({row})"
+
+    def handle_transformation_field_mapping_error(self, index_or_id, error):
+        error.index_or_id = self._with_row(error.index_or_id or index_or_id)
+        super().handle_transformation_field_mapping_error(self._with_row(index_or_id), error)
 
     def perform_additional_mapping(self, index_or_id, composite_order):
         self.validate_po_number(index_or_id, composite_order.get("poNumber"))
