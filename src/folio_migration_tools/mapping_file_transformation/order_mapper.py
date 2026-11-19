@@ -9,6 +9,7 @@ import json
 import logging
 import re
 import uuid
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import i18n
@@ -61,6 +62,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
         funds_map,
         funds_expense_class_map=None,
         material_type_map=None,
+        create_inventory_defaults: dict | None = None,
+        po_lines_limit: int | None = None,
     ):
         """Initialize CompositeOrderMapper for purchase order transformations.
 
@@ -81,7 +84,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
             funds_map: Mapping of legacy to FOLIO funds.
             funds_expense_class_map: Mapping for fund expense classes.
             material_type_map: Optional mapping of legacy values to FOLIO material types
+            create_inventory_defaults: Optional tenant defaults for a POL's inventory
+                interaction (keys: physical, other, eresource), used when validating orders
                 (by name), used for physical and e-resource material types on order lines.
+            po_lines_limit: Optional tenant limit on the number of PO lines per order. The
+                limit is not checked when it is None.
         """
         # Get order schema, using module version from FOLIO environment if available
         release_tag = None
@@ -137,6 +144,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         logger.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
+        self.folio_organizations_by_id: dict = {}
         self.folio_organizations_by_code = self._load_folio_organizations_by_code()
         self.organizations_code_map = self._build_organizations_code_map(
             organizations_code_map, self.folio_organizations_by_code
@@ -179,6 +187,10 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if funds_expense_class_map
             else None
         )
+        self.create_inventory_defaults = create_inventory_defaults or {}
+        self.po_lines_limit = po_lines_limit
+        self._fund_info_cache: dict = {}
+        self._reference_names: dict = {}
         self.material_type_mapping = (
             RefDataMapping(
                 self.folio_client,
@@ -370,12 +382,22 @@ class CompositeOrderMapper(MappingFileMapperBase):
             )
             # Hardcoded values are FOLIO names or UUIDs (validated at startup), not legacy
             # values, so they are never run through the map.
+            if not raw:
+                # Material type is only required when inventory creates items, so an empty
+                # value stays empty instead of taking the map's default.
+                return ""
             if self.material_type_mapping and not self._is_hardcoded_value(
                 folio_prop_name, legacy_object, raw
             ):
+                # Look up this field's own value. The physical and electronic material
+                # types can come from different columns, but share one map.
+                lookup_object = legacy_object
+                keys = self.material_type_mapping.mapped_legacy_keys
+                if len(keys) == 1:
+                    lookup_object = {**legacy_object, keys[0]: raw}
                 return self.get_mapped_ref_data_value(
                     self.material_type_mapping,
-                    legacy_object,
+                    lookup_object,
                     index_or_id,
                     folio_prop_name,
                     False,
@@ -386,7 +408,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
             raw = super().get_prop(
                 legacy_object, folio_prop_name, index_or_id, schema_default_value
             )
-            return self._resolve_product_id_type(str(raw or ""), folio_prop_name, index_or_id)
+            raw = str(raw or "")
+            delimiter = self.library_configuration.multi_field_delimiter
+            if delimiter and delimiter in raw:
+                return delimiter.join(
+                    self._resolve_product_id_type(piece.strip(), folio_prop_name, index_or_id)
+                    for piece in raw.split(delimiter)
+                )
+            return self._resolve_product_id_type(raw, folio_prop_name, index_or_id)
 
         if folio_prop_name in ("billTo", "shipTo"):
             raw = super().get_prop(
@@ -424,12 +453,32 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 ref_data_mapping, legacy_object, index_or_id, folio_prop_name, prevent_default
             )
-        pieces = {k: str(legacy_object.get(k, "")).split(delimiter) for k in keys}
+        pieces = {
+            k: [piece.strip() for piece in str(legacy_object.get(k) or "").split(delimiter)]
+            for k in keys
+        }
         results = []
         for i in range(max(len(v) for v in pieces.values())):
             piece_object = dict(legacy_object)
             for k, values in pieces.items():
-                piece_object[k] = values[i].strip() if i < len(values) else ""
+                # A column without the delimiter applies to every piece.
+                if len(values) == 1:
+                    piece_object[k] = values[0]
+                else:
+                    piece_object[k] = values[i] if i < len(values) else ""
+            if not any(piece_object[k] for k in keys):
+                # Keep the piece, empty, so it stays lined up with the other delimited
+                # fields. Looking it up would give it the default value.
+                self.handle_transformation_field_mapping_error(
+                    index_or_id,
+                    TransformationFieldMappingError(
+                        index_or_id,
+                        f"Empty value in delimited {folio_prop_name}. Nothing mapped for it",
+                        str([legacy_object.get(k) for k in keys]),
+                    ),
+                )
+                results.append("")
+                continue
             results.append(
                 self.get_mapped_ref_data_value(
                     ref_data_mapping, piece_object, index_or_id, folio_prop_name, prevent_default
@@ -653,17 +702,54 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     LOCATION_QUANTITY_FIELDS = ("quantity", "quantityPhysical", "quantityElectronic")
 
-    def _merge_duplicate_locations(self, composite_order: dict) -> None:
+    def _delimited_location_quantity_fields(self, legacy_object: dict | None) -> set[str]:
+        """Return the location quantity fields whose legacy value holds one value per location.
+
+        A legacy quantity without the delimiter is a single PO-line total that gets copied
+        onto every location, so it can't be summed and each location counts as one piece.
+        A delimited quantity (e.g. "2<^>3") has one value per location, so those values are
+        used as-is and summed when locations merge.
+        """
+        delimiter = self.library_configuration.multi_field_delimiter
+        if not legacy_object or not delimiter:
+            return set()
+        pattern = re.compile(
+            rf"{re.escape(self.po_lines_key)}\[\d+\]\.locations\[\d+\]\."
+            rf"({'|'.join(self.LOCATION_QUANTITY_FIELDS)})"
+        )
+        fields: set[str] = set()
+        for folio_key in self.folio_keys:
+            if not (match := pattern.fullmatch(folio_key)):
+                continue
+            for entry in self.get_map_entries_by_folio_prop_name(
+                folio_key, self.record_map["data"]
+            ):
+                for key in ("legacy_field", "fallback_legacy_field"):
+                    value = legacy_object.get(entry.get(key) or "")
+                    if isinstance(value, str) and delimiter in value:
+                        fields.add(match.group(1))
+        return fields
+
+    def _merge_duplicate_locations(
+        self,
+        composite_order: dict,
+        delimited_fields: set[str] | frozenset = frozenset(),
+        index_or_id: str = "",
+    ) -> None:
         """Merge the locations of each PO line that share a locationId.
 
-        Each location object counts as one. A merged location keeps the position of the
-        first one, and its quantity fields (the ones set on any merged object) are replaced
-        with the number of objects merged, which is 1 for a location that occurs once. The
-        mapped quantity value is never summed. Locations without a locationId are left as
-        they are.
+        The merged location keeps the position of the first duplicate. Locations without a
+        locationId are left as they are.
 
-        A PO line with a single location object is left untouched: nothing was delimited,
-        so its mapped quantity is the number of pieces at that location.
+        Each quantity field present on any duplicate is recomputed:
+        - Not in delimited_fields: the legacy value is a PO-line total copied onto every
+          location, so it is ignored and the field becomes the number of duplicates merged
+          (1 for a location that occurs once).
+        - In delimited_fields: the legacy value has one quantity per location, so the
+          duplicates' values are summed.
+
+        A PO line with a single location is left untouched: there is nothing to merge, so
+        its mapped quantity is already the number of pieces at that location.
         """
         for pol in composite_order.get(self.po_lines_key, []):
             locations = pol.get("locations", [])
@@ -682,48 +768,550 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     merged.append(location)
             for group in groups.values():
                 for field in self.LOCATION_QUANTITY_FIELDS:
-                    if any(field in loc for loc in group):
+                    if not any(field in loc for loc in group):
+                        continue
+                    if field in delimited_fields:
+                        group[0][field] = sum(
+                            self._as_int(loc.get(field), index_or_id, f"location {field}")
+                            for loc in group
+                        )
+                    else:
                         group[0][field] = len(group)
             pol["locations"] = merged
 
-    @staticmethod
-    def _as_int(value) -> int | None:
-        try:
-            return int(str(value).strip())
-        except (TypeError, ValueError):
-            return None
+    def _copy_quantity_to_format_field(self, composite_order: dict) -> None:
+        """Copy a location's quantity to the field its order format uses.
 
-    def _validate_location_quantities(self, index_or_id: str, composite_order: dict) -> None:
-        """Check that the location quantities add up to the PO line's cost quantities.
-
-        Location quantityPhysical and quantityElectronic are compared with the cost's
-        quantities of the same name, and the location quantity with their total. A
-        quantity that no location sets is not checked. A mismatch fails the record, since FOLIO
-        would not load it.
+        mod-orders only counts quantityPhysical and quantityElectronic, and recomputes
+        quantity from them. A location with only quantity gets quantityPhysical (Physical
+        Resource, Other) or quantityElectronic (Electronic Resource). In a P/E Mix a
+        quantity above 1 becomes one electronic and the remainder physical. A P/E Mix
+        quantity of 1 is ambiguous and is left for validation to report. If one of the two
+        is set explicitly it is kept and the other gets the remainder of quantity.
         """
+        targets = {
+            "Physical Resource": "quantityPhysical",
+            "Other": "quantityPhysical",
+            "Electronic Resource": "quantityElectronic",
+        }
         for pol in composite_order.get(self.po_lines_key, []):
-            locations = pol.get("locations")
-            cost = pol.get("cost")
-            if not locations or not isinstance(cost, dict):
+            order_format = pol.get("orderFormat")
+            target = targets.get(order_format)
+            if not target and order_format != "P/E Mix":
                 continue
-            cost_physical = self._as_int(cost.get("quantityPhysical")) or 0
-            cost_electronic = self._as_int(cost.get("quantityElectronic")) or 0
-            expected = {
-                "quantityPhysical": cost_physical,
-                "quantityElectronic": cost_electronic,
-                "quantity": cost_physical + cost_electronic,
-            }
-            for field, cost_total in expected.items():
-                values = [loc[field] for loc in locations if loc.get(field) not in (None, "")]
-                if not values:
+            for location in pol.get("locations") or []:
+                if not isinstance(location, dict) or location.get("quantity") in (None, ""):
                     continue
-                total = sum(self._as_int(v) or 0 for v in values)
-                if total != cost_total:
-                    raise TransformationRecordFailedError(
-                        index_or_id,
-                        f"Location {field} total does not match the PO line cost quantities",
-                        json.dumps({"locations": total, "cost": cost_total}),
+                physical = location.get("quantityPhysical") not in (None, "")
+                electronic = location.get("quantityElectronic") not in (None, "")
+                if target:
+                    if not (physical or electronic):
+                        location[target] = location["quantity"]
+                    continue
+                if physical and electronic:
+                    continue
+                try:
+                    quantity = self._whole_number(location["quantity"])
+                    given_field = "quantityPhysical" if physical else "quantityElectronic"
+                    given = (
+                        self._whole_number(location[given_field]) if physical or electronic else 0
                     )
+                except (InvalidOperation, ValueError):
+                    continue  # validation reports a quantity that is not a whole number
+                if physical or electronic:
+                    # One side is set explicitly and is respected. The other gets the remainder
+                    if quantity > given:
+                        missing = "quantityElectronic" if physical else "quantityPhysical"
+                        location[missing] = quantity - given
+                elif quantity > 1:
+                    location["quantityElectronic"] = 1
+                    location["quantityPhysical"] = quantity - 1
+
+    @staticmethod
+    def _as_int(value, index_or_id, label: str) -> int:
+        """Convert a quantity to an int. Empty is 0, 1.0 is 1, anything else fails the record."""
+        if value is None or str(value).strip() == "":
+            return 0
+        try:
+            number = Decimal(str(value).strip())
+        except InvalidOperation:
+            number = None
+        if number is None or number != number.to_integral_value():
+            raise TransformationRecordFailedError(
+                index_or_id, f"Quantity is not a whole number ({label})", str(value)
+            )
+        return int(number)
+
+    # Fallback when a POL leaves createInventory empty and the tenant setting is missing or
+    # unreadable: assume no inventory is created, so nothing is validated against it.
+    DEFAULT_CREATE_INVENTORY = {
+        "physical": "None",
+        "other": "None",
+        "eresource": "None",
+    }
+
+    def _effective_create_inventory(self, pol: dict, kind: str) -> str:
+        """The createInventory value mod-orders would use: the POL's, else the tenant default."""
+        section = "eresource" if kind == "eresource" else "physical"
+        value = (pol.get(section) or {}).get("createInventory")
+        defaults = {**self.DEFAULT_CREATE_INVENTORY, **(self.create_inventory_defaults or {})}
+        return value or defaults.get(kind, "")
+
+    # Report heading for each validation rule, picked by a phrase in the problem text. The first
+    # match wins, so more specific phrases come first.
+    VALIDATION_RULE_LABELS = (
+        ("tenant limit", "PO lines above the tenant limit"),
+        ("vendor", "Vendor not active or not a vendor"),
+        ("access provider", "Access provider missing or not active"),
+        ("expense class", "Expense class not in the fund's active budget"),
+        ("restricted to locations", "Fund location restriction"),
+        ("estimated price", "Fund distributions and estimated price"),
+        ("fund distribution", "Fund distributions and estimated price"),
+        ("material type", "Material type missing"),
+        ("quantity", "Quantities and locations"),
+        ("location", "Quantities and locations"),
+        ("price", "Cost prices and discount"),
+        ("additional cost", "Cost prices and discount"),
+        ("discount", "Cost prices and discount"),
+        ("claiming", "Claiming"),
+        ("binder", "Receiving workflow, binder active"),
+        ("receipt not required", "Receiving workflow, binder active"),
+        ("prepayment", "Prepayment term"),
+        ("package", "Package line with an instance"),
+    )
+
+    def _report_validation_problems(self, problems: list[str]) -> None:
+        """Count each failed validation rule in the migration report."""
+        for problem in problems:
+            text = problem.lower()
+            label = next(
+                (label for phrase, label in self.VALIDATION_RULE_LABELS if phrase in text),
+                "Other",
+            )
+            self.migration_report.add("OrderValidationFailures", i18n.t(label))
+
+    def _validate_composite_order(self, index_or_id: str, composite_order: dict) -> None:
+        """Check each PO line against the rules mod-orders enforces when it is POSTed.
+
+        Every rule is checked except the material type rule, which only applies when the
+        order's workflowStatus is Open, because FOLIO only requires a material type when an
+        order opens. Problems from all PO lines are collected, prefixed with the POL number,
+        and raised together as one failed record so the order is not sent to FOLIO.
+
+        The rules are listed in the appendix on mod-orders validation in the docs.
+        """
+        is_open = str(composite_order.get("workflowStatus") or "").lower() == "open"
+        problems: list[str] = []
+        pols = composite_order.get(self.po_lines_key, [])
+        if self.po_lines_limit is not None and len(pols) > self.po_lines_limit:
+            problems.append(
+                f"the order has {len(pols)} PO lines, above the tenant limit of "
+                f"{self.po_lines_limit}"
+            )
+        if is_open:
+            problems.extend(self._vendor_problems(composite_order.get("vendor")))
+        for number, pol in enumerate(pols, start=1):
+            label = f"POL {number}: "
+            problems.extend(label + p for p in self._pol_problems(index_or_id, pol, is_open))
+        if problems:
+            self._report_validation_problems(problems)
+            raise TransformationRecordFailedError(
+                index_or_id,
+                "Order would be rejected by FOLIO: " + "; ".join(problems),
+                json.dumps(problems),
+            )
+
+    @staticmethod
+    def _ensure_ongoing_info(composite_order: dict) -> None:
+        """Make the ongoing object agree with the order type.
+
+        mod-orders rejects an Ongoing order without an ongoing object and a One-Time order
+        with one. An Ongoing order with none mapped gets a minimal one (the schema defaults).
+        A One-Time order loses any ongoing object that the field mapping created.
+        """
+        order_type = str(composite_order.get("orderType") or "").lower()
+        if order_type == "ongoing" and not composite_order.get("ongoing"):
+            composite_order["ongoing"] = {"isSubscription": False, "manualRenewal": False}
+        elif order_type == "one-time":
+            composite_order.pop("ongoing", None)
+
+    def _pol_problems(self, index_or_id: str, pol: dict, is_open: bool) -> list[str]:
+        problems: list[str] = []
+        cost = pol.get("cost")
+        if not isinstance(cost, dict):
+            cost = {}
+        locations = [loc for loc in pol.get("locations") or [] if isinstance(loc, dict)]
+        order_format = pol.get("orderFormat")
+        cost_physical = self._as_int(cost.get("quantityPhysical"), index_or_id, "cost physical")
+        cost_electronic = self._as_int(
+            cost.get("quantityElectronic"), index_or_id, "cost electronic"
+        )
+
+        if pol.get("isPackage") and pol.get("instanceId"):
+            problems.append("a package line cannot have an instance")
+
+        interval = self._as_int(pol.get("claimingInterval"), index_or_id, "claiming interval")
+        if self._is_true(pol.get("claimingActive")) and interval <= 0:
+            problems.append("a claiming interval above 0 is required when claiming is active")
+
+        problems.extend(self._fund_reference_problems(pol, locations, is_open))
+        if is_open:
+            problems.extend(self._access_provider_problems(pol))
+
+        if not (locations or cost_physical or cost_electronic):
+            return problems  # mod-orders skips the remaining checks for a line with no quantities
+
+        problems.extend(
+            self._format_quantity_problems(order_format, cost_physical, cost_electronic)
+        )
+        problems.extend(self._location_problems(index_or_id, pol, locations, cost))
+        problems.extend(self._cost_price_problems(order_format, cost))
+
+        # FOLIO's default for checkinItems is false (Synchronized), so an unmapped value is false
+        independent = self._is_true(pol.get("checkinItems"))
+        if (
+            str(pol.get("receiptStatus") or "").lower() == "receipt not required"
+            and not independent
+        ):
+            problems.append("receipt not required needs the Independent receiving workflow")
+        if (pol.get("details") or {}).get("isBinderyActive"):
+            if order_format not in ("Physical Resource", "P/E Mix"):
+                problems.append("binder active requires Physical Resource or P/E Mix")
+            if self._effective_create_inventory(pol, "physical") != "Instance, Holding, Item":
+                problems.append("binder active requires inventory interaction that creates items")
+            if not independent:
+                problems.append("binder active requires the Independent receiving workflow")
+
+        problems.extend(self._prepayment_term_problems(pol))
+        if is_open:
+            problems.extend(self._material_type_problems(pol, order_format))
+            problems.extend(self._fund_distribution_problems(pol))
+        return problems
+
+    @staticmethod
+    def _named(name: str | None, uuid: str) -> str:
+        """Return 'name (uuid)', or just the uuid when the name is not known."""
+        return f"{name} ({uuid})" if name else str(uuid)
+
+    def _reference_name(self, path: str, collection: str, uuid: str) -> str | None:
+        """Look up a FOLIO reference record's name (cached, None if it cannot be read)."""
+        if path not in self._reference_names:
+            try:
+                records = self.folio_client.folio_get_all(path, collection, "", 1000)
+                self._reference_names[path] = {r["id"]: r.get("name") for r in records}
+            except Exception as exception:
+                logger.warning("Could not read %s for names in messages (%s)", path, exception)
+                self._reference_names[path] = {}
+        return self._reference_names[path].get(uuid)
+
+    def _location_label(self, location_id: str) -> str:
+        return self._named(
+            self._reference_name("/locations", "locations", location_id), location_id
+        )
+
+    def _vendor_problems(self, vendor_id: str | None) -> list[str]:
+        """An Open order's vendor must be an active organization that is flagged as a vendor.
+
+        Skipped when there is no vendor or the organizations were not loaded.
+        """
+        if not vendor_id:
+            return []
+        org = self.folio_organizations_by_id.get(vendor_id)
+        if not org:
+            return []
+        problems = []
+        label = self._named(org["name"], vendor_id)
+        if org["status"] != "Active":
+            problems.append(f"the vendor organization {label} is not Active")
+        if not org["isVendor"]:
+            problems.append(f"the organization {label} is not flagged as a vendor")
+        return problems
+
+    def _access_provider_problems(self, pol: dict) -> list[str]:
+        """An Open order's access provider must exist and be an active organization."""
+        provider = (pol.get("eresource") or {}).get("accessProvider")
+        if not provider or not self.folio_organizations_by_id:
+            return []
+        org = self.folio_organizations_by_id.get(provider)
+        if not org:
+            return [f"the access provider {provider} is not an organization in FOLIO"]
+        if org["status"] != "Active":
+            return [f"the access provider {self._named(org['name'], provider)} is not Active"]
+        return []
+
+    def _fund_info(self, fund_id: str) -> dict | None:
+        """Read a fund's location restrictions and the expense classes of its Active budgets.
+
+        The result is cached by fund id. It is None when FOLIO cannot be read, in which case
+        the checks that need it are skipped. The dict has "restrict_by_locations", "locations"
+        (a set of location ids) and "expense_classes" (expense class id to status).
+        """
+        if fund_id not in self._fund_info_cache:
+            try:
+                fund = self.folio_client.folio_get(f"/finance/funds/{fund_id}")
+                fund = fund.get("fund", fund)
+                budgets = self.folio_client.folio_get(
+                    "/finance/budgets",
+                    "budgets",
+                    query=f'fundId=="{fund_id}" and budgetStatus=="Active"',
+                )
+                self._fund_info_cache[fund_id] = {
+                    "code": fund.get("code"),
+                    "restrict_by_locations": bool(fund.get("restrictByLocations")),
+                    "locations": {
+                        loc.get("locationId")
+                        for loc in fund.get("locations") or []
+                        if loc.get("locationId")
+                    },
+                    "expense_classes": {
+                        ec["expenseClassId"]: ec.get("status")
+                        for budget in budgets
+                        for ec in budget.get("statusExpenseClasses") or []
+                    },
+                }
+            except Exception as exception:
+                logger.warning(
+                    "Could not read fund %s (%s). Its expense classes and location "
+                    "restrictions are not checked.",
+                    fund_id,
+                    exception,
+                )
+                self._fund_info_cache[fund_id] = None
+        return self._fund_info_cache[fund_id]
+
+    def _fund_reference_problems(self, pol: dict, locations: list, is_open: bool) -> list[str]:
+        """Check expense classes and location restrictions against the funds in FOLIO.
+
+        An expense class must be in an Active budget of the fund, and be active there when
+        the order is Open. When the order is Open and the line has locations, a fund
+        restricted by locations needs at least one of its locations among the line's
+        locations. A line with a holdingId location is not checked, because the holding's
+        location is not known here.
+        """
+        problems: list[str] = []
+        distributions = [d for d in pol.get("fundDistribution") or [] if isinstance(d, dict)]
+        has_holding = any(loc.get("holdingId") for loc in locations)
+        line_locations = {loc.get("locationId") for loc in locations if loc.get("locationId")}
+        for distribution in distributions:
+            fund_id = distribution.get("fundId")
+            info = self._fund_info(fund_id) if fund_id else None
+            if not info:
+                continue
+            fund = distribution.get("code") or info.get("code") or fund_id
+            expense_class = distribution.get("expenseClassId")
+            if expense_class:
+                class_label = self._named(
+                    self._reference_name(
+                        "/finance/expense-classes", "expenseClasses", expense_class
+                    ),
+                    expense_class,
+                )
+                status = info["expense_classes"].get(expense_class, "missing")
+                if status == "missing":
+                    problems.append(
+                        f"expense class {class_label} is not in an Active budget of fund {fund}"
+                    )
+                elif is_open and str(status).lower() == "inactive":
+                    problems.append(f"expense class {class_label} is inactive for fund {fund}")
+            if (
+                is_open
+                and locations
+                and not has_holding
+                and info["restrict_by_locations"]
+                and info["locations"]
+                and not info["locations"] & line_locations
+            ):
+                allowed = ", ".join(self._location_label(i) for i in sorted(info["locations"]))
+                problems.append(
+                    f"fund {fund} is restricted to locations that are not among the line's "
+                    f"locations ({allowed})"
+                )
+        return problems
+
+    @staticmethod
+    def _whole_number(value) -> int:
+        """Convert a mapped quantity (a string, int or float) to an int, dropping decimals.
+
+        The value goes through str() so that a float such as 2.0 is read exactly.
+        """
+        return int(Decimal(str(value)))
+
+    @staticmethod
+    def _is_true(value) -> bool:
+        return value is True or str(value).strip().lower() == "true"
+
+    @staticmethod
+    def _prepayment_term_problems(pol: dict) -> list[str]:
+        """A multi-year line needs one fiscal year distribution per year of its prepayment term."""
+        terms = pol.get("paymentTerms")
+        if not CompositeOrderMapper._is_true(pol.get("multiYearPayment")) or not isinstance(
+            terms, dict
+        ):
+            return []
+        try:
+            term = int(terms.get("prepaymentTerm") or 0)
+        except (TypeError, ValueError):
+            return []
+        distributions = [d for d in terms.get("fiscalYearDistributions") or [] if d is not None]
+        if term > 0 and len(distributions) != term:
+            return [
+                f"prepayment term {term} does not match the number of fiscal year "
+                f"distributions ({len(distributions)})"
+            ]
+        return []
+
+    @staticmethod
+    def _format_quantity_problems(order_format, cost_physical: int, cost_electronic: int):
+        """Cost quantity rules by order format."""
+        problems: list[str] = []
+        if order_format in ("Physical Resource", "Other"):
+            if cost_physical == 0:
+                problems.append("physical cost quantity must be above 0")
+            if cost_electronic > 0:
+                problems.append("electronic cost quantity must be 0")
+        elif order_format == "Electronic Resource":
+            if cost_electronic == 0:
+                problems.append("electronic cost quantity must be above 0")
+            if cost_physical > 0:
+                problems.append("physical cost quantity must be 0")
+        elif order_format == "P/E Mix":
+            if cost_physical == 0:
+                problems.append("physical cost quantity must be above 0")
+            if cost_electronic == 0:
+                problems.append("electronic cost quantity must be above 0")
+        return problems
+
+    def _material_type_problems(self, pol: dict, order_format) -> list[str]:
+        """Material type is required when the inventory interaction creates items."""
+        problems: list[str] = []
+        for kind, wanted in (
+            ("physical", order_format != "Electronic Resource"),
+            ("eresource", order_format in ("Electronic Resource", "P/E Mix")),
+        ):
+            if (
+                wanted
+                and self._effective_create_inventory(pol, kind) == "Instance, Holding, Item"
+                and not (pol.get(kind) or {}).get("materialType")
+            ):
+                problems.append(f"{kind} material type is required to create items")
+        return problems
+
+    def _location_problems(
+        self, index_or_id: str, pol: dict, locations: list, cost: dict
+    ) -> list[str]:
+        problems: list[str] = []
+        order_format = pol.get("orderFormat")
+        totals = {}
+        for field in ("quantityPhysical", "quantityElectronic"):
+            totals[field] = sum(
+                self._as_int(loc.get(field), index_or_id, f"location {field}") for loc in locations
+            )
+        for field, kind, holds in (
+            ("quantityPhysical", "physical", order_format != "Electronic Resource"),
+            (
+                "quantityElectronic",
+                "eresource",
+                order_format in ("Electronic Resource", "P/E Mix"),
+            ),
+        ):
+            expected = self._as_int(cost.get(field), index_or_id, f"cost {field}")
+            requires = self._effective_create_inventory(pol, kind) != "None" and holds
+            if locations and (totals[field] > 0 or requires) and totals[field] != expected:
+                problems.append(
+                    f"location {field} total {totals[field]} does not match the cost ({expected})"
+                )
+        for loc in locations:
+            if sum(
+                self._as_int(loc.get(f), index_or_id, f"location {f}")
+                for f in ("quantityPhysical", "quantityElectronic")
+            ) == 0 and any(f in loc for f in ("quantityPhysical", "quantityElectronic")):
+                problems.append("a location has no physical or electronic quantity")
+            if bool(loc.get("locationId")) == bool(loc.get("holdingId")):
+                problems.append("a location needs exactly one of locationId or holdingId")
+        return problems
+
+    @staticmethod
+    def _cost_price_problems(order_format: str | None, cost: dict) -> list[str]:
+        def number(key):
+            try:
+                return float(cost[key])
+            except (KeyError, TypeError, ValueError):
+                return None
+
+        problems = []
+        unit, electronic = number("listUnitPrice"), number("listUnitPriceElectronic")
+        if unit is not None and (unit > 0 if order_format == "Electronic Resource" else unit < 0):
+            problems.append("list unit price is not valid for the order format")
+        if electronic is not None and (
+            electronic < 0
+            if order_format in ("Electronic Resource", "P/E Mix")
+            else electronic > 0
+        ):
+            problems.append("electronic list unit price is not valid for the order format")
+        if (number("additionalCost") or 0) < 0:
+            problems.append("additional cost cannot be negative")
+        discount = number("discount") or 0
+        if discount < 0 or (cost.get("discountType") == "percentage" and discount > 100):
+            problems.append("discount is not valid")
+        elif discount > 0 and cost.get("discountType") != "percentage":
+            price = CompositeOrderMapper._estimated_price(cost)
+            if price is not None and price < 0:
+                problems.append("discount makes the estimated price negative")
+        return problems
+
+    @staticmethod
+    def _estimated_price(cost: dict) -> Decimal | None:
+        """The PO line estimated price as mod-orders computes it, or None if a value is invalid.
+
+        List prices times quantities, less the discount (an amount, or a percentage of the
+        total, which is the default), plus additional cost and the FYRO adjustment.
+        """
+
+        def amount(key: str) -> Decimal:
+            value = cost.get(key)
+            return Decimal(str(value).strip()) if str(value or "").strip() else Decimal(0)
+
+        try:
+            total = amount("listUnitPrice") * amount("quantityPhysical") + amount(
+                "listUnitPriceElectronic"
+            ) * amount("quantityElectronic")
+            discount = amount("discount")
+            total -= (
+                discount if cost.get("discountType") != "percentage" else total * discount / 100
+            )
+            total += amount("additionalCost") + amount("fyroAdjustmentAmount")
+        except InvalidOperation:
+            return None
+        return total.quantize(Decimal("0.01"), rounding="ROUND_HALF_EVEN")
+
+    @staticmethod
+    def _fund_distribution_problems(pol: dict) -> list[str]:
+        """Fund distributions must add up to the PO line's estimated price (checked on open)."""
+        distributions = [d for d in pol.get("fundDistribution") or [] if isinstance(d, dict)]
+        cost = pol.get("cost")
+        if not isinstance(cost, dict):
+            cost = {}
+        price = CompositeOrderMapper._estimated_price(cost)
+        if not distributions or price is None:
+            return []
+        try:
+            values = [Decimal(str(d.get("value") or 0)) for d in distributions]
+        except InvalidOperation:
+            return []
+        is_percentage = [
+            str(d.get("distributionType")).lower() == "percentage" for d in distributions
+        ]
+        message = "fund distributions do not add up to the estimated price"
+        if price == 0:
+            if len(set(is_percentage)) > 1:
+                return ["fund distribution types cannot be mixed when the estimated price is 0"]
+            if is_percentage[0]:
+                return [] if sum(values) == 100 else [message]
+            return [] if all(v == 0 for v in values) else [message]
+        remaining = Decimal(100)
+        for value, percentage in zip(values, is_percentage, strict=True):
+            remaining -= value if percentage else value / price * 100
+        return [message] if abs(remaining) > Decimal("1e-10") else []
 
     def _drop_incomplete_product_ids(self, index_or_id: str, composite_order: dict) -> None:
         """Drop product ids missing a productId or a usable productIdType.
@@ -855,7 +1443,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             folio_rec, legacy_id = self.do_map(
                 legacy_order, index_or_id, FOLIONamespaces.orders, True
             )
-            self.perform_additional_mapping(legacy_id, folio_rec)
+            self.perform_additional_mapping(legacy_id, folio_rec, legacy_order)
             self.report_folio_mapping(folio_rec, self.composite_order_schema)
             self.notes_mapper.map_notes(
                 legacy_order,
@@ -879,7 +1467,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         error.index_or_id = self._with_row(error.index_or_id or index_or_id)
         super().handle_transformation_field_mapping_error(self._with_row(index_or_id), error)
 
-    def perform_additional_mapping(self, index_or_id, composite_order):
+    def perform_additional_mapping(self, index_or_id, composite_order, legacy_object=None):
         self.validate_po_number(index_or_id, composite_order.get("poNumber"))
 
         # Get organization UUID from FOLIO
@@ -898,8 +1486,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
             composite_order[self.po_lines_key][0]["instanceId"] = matching_instance
 
         self._drop_incomplete_product_ids(index_or_id, composite_order)
-        self._merge_duplicate_locations(composite_order)
-        self._validate_location_quantities(index_or_id, composite_order)
+        self._merge_duplicate_locations(
+            composite_order, self._delimited_location_quantity_fields(legacy_object), index_or_id
+        )
+        self._copy_quantity_to_format_field(composite_order)
+        self._ensure_ongoing_info(composite_order)
+        self._validate_composite_order(index_or_id, composite_order)
 
         return composite_order
 
@@ -933,6 +1525,15 @@ class CompositeOrderMapper(MappingFileMapperBase):
             normalize_for_compare(org["code"]): (org["id"], org["code"])
             for org in organizations
             if org.get("code")
+        }
+        self.folio_organizations_by_id = {
+            org["id"]: {
+                "status": org.get("status"),
+                "isVendor": org.get("isVendor"),
+                "name": org.get("name") or org.get("code"),
+            }
+            for org in organizations
+            if org.get("id")
         }
         logger.info("Loaded %s organizations from FOLIO", len(by_code))
         return by_code

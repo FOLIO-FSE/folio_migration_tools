@@ -114,7 +114,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
                 "legacy_field": "vendor",
                 "value": "",
                 "description": "",
-                "rules": {"replaceValues": {"EBSCO": "Electronic Resource"}},
+                "rules": {"replaceValues": {"EBSCO": "Physical Resource"}},
             },
             {
                 "folio_field": "compositePoLines[0].cost.quantityPhysical",
@@ -160,6 +160,12 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
             },
             {
                 "folio_field": "compositePoLines[0].locations[0].quantity",
+                "legacy_field": "copies",
+                "value": "",
+                "description": "",
+            },
+            {
+                "folio_field": "compositePoLines[0].locations[0].quantityPhysical",
                 "legacy_field": "copies",
                 "value": "",
                 "description": "",
@@ -250,6 +256,7 @@ def mapper(pytestconfig) -> CompositeOrderMapper:
         "",
     )
 
+
 from folio_migration_tools.mapping_file_transformation.acq_schema_resolver import (  # noqa: E402
     resolve_acq_schema,
 )
@@ -264,8 +271,7 @@ def test_fetch_acq_schemas_from_github_happy_path():
     assert composite_order_schema["properties"]["orderType"]["enum"] == ["One-Time", "Ongoing"]
     # Detect the PO lines key (compositePoLines or poLines depending on version)
     po_lines_key = next(
-        (p for p in composite_order_schema["properties"]
-         if p in ("compositePoLines", "poLines")),
+        (p for p in composite_order_schema["properties"] if p in ("compositePoLines", "poLines")),
         None,
     )
     assert po_lines_key is not None
@@ -297,7 +303,9 @@ def test_fetch_acq_schemas_from_github_happy_path():
 def test_fetch_acq_schemas_for_specific_release():
     # Ramsons-era release should use compositePoLines
     old_schema = resolve_acq_schema(
-        "mod-orders", "composite_purchase_order", "v12.9.14",
+        "mod-orders",
+        "composite_purchase_order",
+        "v12.9.14",
     )
     assert old_schema["$schema"]
     assert "compositePoLines" in old_schema["properties"]
@@ -311,7 +319,9 @@ def test_fetch_acq_schemas_for_specific_release():
 
     # Trillium release should use poLines
     new_schema = resolve_acq_schema(
-        "mod-orders", "composite_purchase_order", "v13.1.0",
+        "mod-orders",
+        "composite_purchase_order",
+        "v13.1.0",
     )
     assert new_schema["$schema"]
     assert "poLines" in new_schema["properties"]
@@ -386,7 +396,10 @@ def test_composite_order_mapping(mapper):
     # the item discarded, and the record should still map.
     composite_order, idx = mapper.do_map(data, data["order_number"], FOLIONamespaces.orders)
     assert composite_order["poNumber"] == "o123"
-    assert mapper.po_lines_key not in composite_order or len(composite_order[mapper.po_lines_key]) == 0
+    assert (
+        mapper.po_lines_key not in composite_order
+        or len(composite_order[mapper.po_lines_key]) == 0
+    )
 
 
 def test_composite_order_with_one_pol_mapping(mapper):
@@ -411,15 +424,11 @@ def test_composite_order_with_one_pol_mapping(mapper):
     assert composite_order_with_pol["poNumber"] == "o124"
 
     pol_key = mapper.po_lines_key
-    assert (
-        composite_order_with_pol[pol_key][0]["titleOrPackage"] == "Once upon a time..."
-    )
+    assert composite_order_with_pol[pol_key][0]["titleOrPackage"] == "Once upon a time..."
     assert composite_order_with_pol[pol_key][0]["instanceId"] == "1"
     assert composite_order_with_pol[pol_key][0]["cost"]["currency"] == "USD"
     assert composite_order_with_pol[pol_key][0]["cost"]["quantityPhysical"] == "1"
-    assert (
-        composite_order_with_pol[pol_key][0]["cost"]["poLineEstimatedPrice"] == "125.00"
-    )
+    assert composite_order_with_pol[pol_key][0]["cost"]["poLineEstimatedPrice"] == "125.00"
     assert (
         composite_order_with_pol[pol_key][0]["locations"][0]["locationId"]
         == "184aae84-a5bf-4c6a-85ba-4a7c73026cd5"
@@ -485,8 +494,10 @@ def test_legacy_field_counted_once_per_mapping_not_once_per_array_prefix(mapper)
     assert pol["cost"]["quantityPhysical"] == "1"
     assert len(order[mapper.po_lines_key]) == 1
     # Each of these is mapped to exactly one FOLIO field
-    for legacy_field in ["TITLE", "bibnumber", "acqmethod", "copies", "location"]:
+    for legacy_field in ["TITLE", "bibnumber", "acqmethod", "location"]:
         assert counts[legacy_field] == [1, 1], legacy_field
+    # "copies" is mapped to two FOLIO fields (location quantity and quantityPhysical)
+    assert counts["copies"] == [2, 2]
     # order_number is reported for poNumber and compositePoLines[0].id (legacyIdentifier is
     # not reported as a mapped legacy field)
     assert counts["order_number"] == [2, 2]
@@ -547,8 +558,9 @@ def test_one_order_one_pol_multiple_notes(mapper):
         "type": "One-Time",
         "TITLE": "Once upon a time...",
         "bibnumber": "1",
-        "copies": "",
-        "location": "",
+        "quantity_physical": "1",
+        "copies": "1",
+        "location": "order",
         "note1": "Hello, hello, hello!",
         "note2": "Make it work!",
         "order_note": "Buy only important stuff.",
@@ -570,9 +582,7 @@ def test_one_order_one_pol_multiple_notes(mapper):
     assert str(mapper.extradata_writer.cache).count('"domain": "orders"') == 2
 
     # There should be two notes linked to the POL
-    assert (
-        str(mapper.extradata_writer.cache).count(composite_order[pol_key][0]["id"]) == 2
-    )
+    assert str(mapper.extradata_writer.cache).count(composite_order[pol_key][0]["id"]) == 2
 
 
 def test_pol_level_notes_are_extracted_and_linked_to_pol(mapper):
@@ -580,14 +590,30 @@ def test_pol_level_notes_are_extracted_and_linked_to_pol(mapper):
     pol_map = {
         "data": mapper.record_map["data"]
         + [
-            {"folio_field": f"{pol_key}[0].notes[0].typeId", "legacy_field": "",
-             "value": "44cf3bf5-6e57-4541-8f8c-63b67c81e581", "description": ""},
-            {"folio_field": f"{pol_key}[0].notes[0].domain", "legacy_field": "Not mapped",
-             "value": "orders", "description": ""},
-            {"folio_field": f"{pol_key}[0].notes[0].title", "legacy_field": "",
-             "value": "POL note", "description": ""},
-            {"folio_field": f"{pol_key}[0].notes[0].content", "legacy_field": "note1",
-             "value": "", "description": ""},
+            {
+                "folio_field": f"{pol_key}[0].notes[0].typeId",
+                "legacy_field": "",
+                "value": "44cf3bf5-6e57-4541-8f8c-63b67c81e581",
+                "description": "",
+            },
+            {
+                "folio_field": f"{pol_key}[0].notes[0].domain",
+                "legacy_field": "Not mapped",
+                "value": "orders",
+                "description": "",
+            },
+            {
+                "folio_field": f"{pol_key}[0].notes[0].title",
+                "legacy_field": "",
+                "value": "POL note",
+                "description": "",
+            },
+            {
+                "folio_field": f"{pol_key}[0].notes[0].content",
+                "legacy_field": "note1",
+                "value": "",
+                "description": "",
+            },
         ]
     }
     from folio_migration_tools.mapping_file_transformation.notes_mapper import NotesMapper
@@ -660,16 +686,10 @@ def test_multiple_pols_with_one_or_more_notes(mapper):
     assert str(mapper.extradata_writer.cache).count('"domain": "orders"') == 3
 
     # There should be two notes linked to the first POL
-    assert (
-        str(mapper.extradata_writer.cache).count(composite_orders[0][pol_key][0]["id"])
-        == 2
-    )
+    assert str(mapper.extradata_writer.cache).count(composite_orders[0][pol_key][0]["id"]) == 2
 
     # There should be one notes linked to the first POL
-    assert (
-        str(mapper.extradata_writer.cache).count(composite_orders[1][pol_key][0]["id"])
-        == 1
-    )
+    assert str(mapper.extradata_writer.cache).count(composite_orders[1][pol_key][0]["id"]) == 1
 
 
 def test_composite_order_mapping_with_custom_fields(mapper):
@@ -1009,7 +1029,11 @@ def test_perform_additional_mapping_get_org_from_folio(mapper):
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
+                    {
+                        "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+                        "quantity": "1",
+                        "quantityPhysical": "1",
+                    }
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "1",
@@ -1019,7 +1043,7 @@ def test_perform_additional_mapping_get_org_from_folio(mapper):
                     "quantityPhysical": "1",
                     "poLineEstimatedPrice": "125.00",
                 },
-                "orderFormat": "Electronic Resource",
+                "orderFormat": "Physical Resource",
                 "source": "API",
                 "titleOrPackage": "Once upon a time...",
             }
@@ -1040,7 +1064,11 @@ def test_perform_additional_mapping_org_and_instance_uuids_from_folio_and_id_map
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
+                    {
+                        "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+                        "quantity": "1",
+                        "quantityPhysical": "1",
+                    }
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "1",
@@ -1050,7 +1078,7 @@ def test_perform_additional_mapping_org_and_instance_uuids_from_folio_and_id_map
                     "quantityPhysical": "1",
                     "poLineEstimatedPrice": "125.00",
                 },
-                "orderFormat": "Electronic Resource",
+                "orderFormat": "Physical Resource",
                 "source": "API",
                 "titleOrPackage": "Once upon a time...",
             }
@@ -1074,7 +1102,8 @@ def test_perform_additional_mapping_invalid_po_number(mapper):
                 "locations": [
                     {
                         "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
-                        "quantity": "1"
+                        "quantity": "1",
+                        "quantityPhysical": "1",
                     }
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
@@ -1085,7 +1114,7 @@ def test_perform_additional_mapping_invalid_po_number(mapper):
                     "quantityPhysical": "1",
                     "poLineEstimatedPrice": "125.00",
                 },
-                "orderFormat": "Electronic Resource",
+                "orderFormat": "Physical Resource",
                 "source": "API",
                 "titleOrPackage": "Once upon a time...",
             }
@@ -1106,7 +1135,11 @@ def test_perform_additional_mapping_org_uuid_no_match(mapper):
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
+                    {
+                        "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+                        "quantity": "1",
+                        "quantityPhysical": "1",
+                    }
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "1",
@@ -1116,7 +1149,7 @@ def test_perform_additional_mapping_org_uuid_no_match(mapper):
                     "quantityPhysical": "1",
                     "poLineEstimatedPrice": "125.00",
                 },
-                "orderFormat": "Electronic Resource",
+                "orderFormat": "Physical Resource",
                 "source": "API",
                 "titleOrPackage": "Once upon a time...",
             }
@@ -1137,7 +1170,11 @@ def test_perform_additional_mapping_instance_uuid_no_match(mapper):
         pol_key: [
             {
                 "locations": [
-                    {"locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5", "quantity": "1"}
+                    {
+                        "locationId": "184aae84-a5bf-4c6a-85ba-4a7c73026cd5",
+                        "quantity": "1",
+                        "quantityPhysical": "1",
+                    }
                 ],
                 "id": "a10af88f-100c-4c5e-8ef3-c95fc85590c2",
                 "instanceId": "myunpublishedbook",
@@ -1147,7 +1184,7 @@ def test_perform_additional_mapping_instance_uuid_no_match(mapper):
                     "quantityPhysical": "1",
                     "poLineEstimatedPrice": "125.00",
                 },
-                "orderFormat": "Electronic Resource",
+                "orderFormat": "Physical Resource",
                 "source": "API",
                 "titleOrPackage": "Once upon a time...",
             }
@@ -1177,8 +1214,9 @@ def test_map_order_with_notes_links_notes_to_the_mapped_pol_id(mapper):
         "type": "One-Time",
         "TITLE": "Once upon a time...",
         "bibnumber": "1",
-        "copies": "",
-        "location": "",
+        "quantity_physical": "1",
+        "copies": "1",
+        "location": "order",
         "note1": "First",
         "note2": "Second",
         "order_note": "PO level",
@@ -1202,8 +1240,12 @@ def test_map_order_with_notes_links_notes_to_the_mapped_pol_id(mapper):
 def test_po_level_mod_notes_mapping_halts_the_transformation(mapper):
     bad_map = deepcopy(mapper.record_map)
     bad_map["data"].append(
-        {"folio_field": "notes[0].content", "legacy_field": "note1", "value": "",
-         "description": ""}
+        {
+            "folio_field": "notes[0].content",
+            "legacy_field": "note1",
+            "value": "",
+            "description": "",
+        }
     )
     with pytest.raises(TransformationProcessError) as exc_info:
         CompositeOrderMapper._validate_no_po_level_mod_notes_mappings(bad_map)
@@ -1336,12 +1378,29 @@ def test_material_type_map_is_used_for_pol_material_types(mapper):
     )
     mapper_with_map = copy.copy(mapper)
     mapper_with_map.material_type_mapping = material_mapping
+    mapper_with_map.record_map = {
+        "data": [
+            {
+                "folio_field": f"compositePoLines[0].{kind}.materialType",
+                "legacy_field": "legacy_mt",
+                "value": "",
+                "description": "",
+            }
+            for kind in ("physical", "eresource")
+        ]
+    }
+    mapper_with_map.mapped_from_legacy_data = {
+        f"compositePoLines[0].{kind}.materialType": ["legacy_mt"]
+        for kind in ("physical", "eresource")
+    }
 
     physical = "compositePoLines[0].physical.materialType"
     eresource = "compositePoLines[0].eresource.materialType"
     assert mapper_with_map.get_prop({"legacy_mt": "B"}, physical, "1", "") == "mt-1"
     assert mapper_with_map.get_prop({"legacy_mt": "E"}, eresource, "1", "") == "mt-2"
     assert "B -> book" in mapper.migration_report.report["MaterialTypeMapping"]
+    # An empty value stays empty rather than taking the map's default
+    assert mapper_with_map.get_prop({"legacy_mt": ""}, physical, "1", "") == ""
 
 
 def test_material_type_passes_through_without_map(mapper):
@@ -1387,10 +1446,7 @@ def test_material_type_passes_through_without_map(mapper):
         )
     assert error_info.value.index_or_id == "7"
     assert error_info.value.data_value == "nonsense"
-    assert any(
-        "nonsense" in key
-        for key in mapper.migration_report.report["MaterialTypeMapping"]
-    )
+    assert any("nonsense" in key for key in mapper.migration_report.report["MaterialTypeMapping"])
 
 
 def test_hardcoded_material_type_is_validated(mapper):
@@ -1568,18 +1624,94 @@ def test_single_location_keeps_its_mapped_quantity(mapper):
     assert order[mapper.po_lines_key][0]["locations"] == locations
 
 
-def test_location_quantities_are_validated_against_cost(mapper):
-    def order(locations, cost):
-        return {mapper.po_lines_key: [{"locations": locations, "cost": cost}]}
+def _pol(**kw):
+    pol = {
+        "orderFormat": "Physical Resource",
+        "cost": {"quantityPhysical": 3, "listUnitPrice": 10},
+        "locations": [
+            {"locationId": "a", "quantityPhysical": 2},
+            {"locationId": "b", "quantityPhysical": 1},
+        ],
+    }
+    pol.update(kw)
+    return pol
 
-    ok = order(
-        [{"locationId": "a", "quantityPhysical": 2}, {"locationId": "b", "quantityPhysical": 1}],
-        {"quantityPhysical": 3},
-    )
-    bad = order([{"locationId": "a", "quantity": 1}], {"quantityPhysical": 2})
-    mapper._validate_location_quantities("1", ok)
-    with pytest.raises(TransformationRecordFailedError, match="quantity total"):
-        mapper._validate_location_quantities("1", bad)
+
+def _validate(mapper, pol, status="Pending"):
+    mapper._validate_composite_order("1", {"workflowStatus": status, mapper.po_lines_key: [pol]})
+
+
+def test_valid_order_passes_validation(mapper):
+    _validate(mapper, _pol())
+
+
+def test_location_quantities_are_validated_against_cost(mapper):
+    bad = _pol(locations=[{"locationId": "a", "quantityPhysical": 1}])
+    with pytest.raises(TransformationRecordFailedError, match="quantityPhysical total 1"):
+        _validate(mapper, bad)
+
+
+def test_location_quantity_field_is_not_compared_with_cost(mapper):
+    # mod-orders recomputes location.quantity itself
+    _validate(mapper, _pol(locations=[{"locationId": "a", "quantity": 9, "quantityPhysical": 3}]))
+
+
+@pytest.mark.parametrize(
+    "pol, message",
+    [
+        (_pol(cost={"quantityPhysical": 0}), "physical cost quantity must be above 0"),
+        (_pol(cost={"quantityPhysical": 3, "quantityElectronic": 1}), "electronic cost"),
+        (
+            _pol(orderFormat="Electronic Resource", cost={"quantityPhysical": 1}),
+            "electronic cost quantity must be above 0",
+        ),
+        (
+            _pol(orderFormat="P/E Mix", cost={"quantityPhysical": 3}),
+            "electronic cost quantity must be above 0",
+        ),
+        (_pol(locations=[{"quantityPhysical": 3}]), "exactly one of locationId"),
+        (_pol(cost={"quantityPhysical": 3, "listUnitPrice": -1}), "list unit price"),
+        (_pol(cost={"quantityPhysical": 3, "discount": -2}), "discount"),
+        (_pol(isPackage=True, instanceId="x"), "package"),
+        (
+            _pol(
+                orderFormat="Electronic Resource",
+                cost={"quantityElectronic": 1},
+                locations=[],
+                details={"isBinderyActive": True},
+            ),
+            "binder",
+        ),
+    ],
+)
+def test_validation_rejects_what_folio_rejects(mapper, pol, message):
+    with pytest.raises(TransformationRecordFailedError, match=message):
+        _validate(mapper, pol)
+
+
+def test_line_without_quantities_skips_validation(mapper):
+    _validate(mapper, _pol(cost={}, locations=[]))
+
+
+def test_material_type_is_only_required_for_open_orders(mapper):
+    pol = _pol(physical={"createInventory": "Instance, Holding, Item"})
+    _validate(mapper, pol, "Pending")
+    with pytest.raises(TransformationRecordFailedError, match="material type"):
+        _validate(mapper, pol, "Open")
+    pol["physical"]["materialType"] = "mt"
+    _validate(mapper, pol, "Open")
+
+
+def test_tenant_inventory_defaults_decide_material_type_requirement(mapper):
+    mapper = copy.copy(mapper)
+    mapper.create_inventory_defaults = {"physical": "Instance, Holding"}
+    _validate(mapper, _pol(), "Open")
+    mapper.create_inventory_defaults = {"physical": "Instance, Holding, Item"}
+    with pytest.raises(TransformationRecordFailedError, match="material type"):
+        _validate(mapper, _pol(), "Open")
+    # Without a tenant setting the fallback is "None", so no material type is required
+    mapper.create_inventory_defaults = {}
+    _validate(mapper, _pol(), "Open")
 
 
 def test_issues_are_logged_with_the_legacy_id_and_the_row(mapper):
@@ -1608,3 +1740,332 @@ def test_field_mapping_errors_are_logged_with_the_legacy_id_and_the_row(mapper):
     error = TransformationFieldMappingError("o301", "Bad value", "x")
     mapper.handle_transformation_field_mapping_error("o301", error)
     assert error.index_or_id == "o301 (row 3)"
+
+
+def test_delimited_quantities_are_summed_when_locations_merge(mapper):
+    locations = [
+        {"locationId": "a", "quantityPhysical": "2"},
+        {"locationId": "a", "quantityPhysical": "3"},
+    ]
+    order = {mapper.po_lines_key: [{"locations": [dict(loc) for loc in locations]}]}
+    mapper._merge_duplicate_locations(order, {"quantityPhysical"}, "1")
+    assert order[mapper.po_lines_key][0]["locations"] == [
+        {"locationId": "a", "quantityPhysical": 5}
+    ]
+
+
+def test_delimited_quantity_fields_are_detected_from_the_legacy_row(mapper):
+    delimited = {"copies": "2^-^3", "quantity_physical": "1", "location": "x^-^y"}
+    assert "quantity" in mapper._delimited_location_quantity_fields(delimited)
+    plain = {"copies": "2", "quantity_physical": "1", "location": "x^-^y"}
+    assert mapper._delimited_location_quantity_fields(plain) == set()
+
+
+def test_non_integer_quantity_fails_the_record(mapper):
+    assert mapper._as_int("1.0", "1", "x") == 1
+    assert mapper._as_int("", "1", "x") == 0
+    with pytest.raises(TransformationRecordFailedError, match="whole number"):
+        mapper._as_int("1.5", "1", "x")
+    with pytest.raises(TransformationRecordFailedError, match="whole number"):
+        mapper._as_int("abc", "1", "x")
+
+
+def test_location_quantity_is_copied_to_the_format_field(mapper):
+    def order(order_format, location):
+        return {mapper.po_lines_key: [{"orderFormat": order_format, "locations": [location]}]}
+
+    physical = order("Physical Resource", {"locationId": "a", "quantity": "2"})
+    electronic = order("Electronic Resource", {"locationId": "a", "quantity": "2"})
+    mixed = order("P/E Mix", {"locationId": "a", "quantity": "2"})
+    explicit = order(
+        "Physical Resource", {"locationId": "a", "quantity": "2", "quantityElectronic": "1"}
+    )
+    for composite in (physical, electronic, mixed, explicit):
+        mapper._copy_quantity_to_format_field(composite)
+    loc = lambda composite: composite[mapper.po_lines_key][0]["locations"][0]  # noqa: E731
+    assert loc(physical)["quantityPhysical"] == "2"
+    assert loc(electronic)["quantityElectronic"] == "2"
+    assert (loc(mixed)["quantityElectronic"], loc(mixed)["quantityPhysical"]) == (1, 1)
+    single = order("P/E Mix", {"locationId": "a", "quantity": "1"})
+    mapper._copy_quantity_to_format_field(single)
+    assert "quantityPhysical" not in loc(single) and "quantityElectronic" not in loc(single)
+    many = order("P/E Mix", {"locationId": "a", "quantity": "4"})
+    mapper._copy_quantity_to_format_field(many)
+    assert (loc(many)["quantityElectronic"], loc(many)["quantityPhysical"]) == (1, 3)
+    assert "quantityPhysical" not in loc(explicit)
+
+
+def test_explicit_mix_quantity_is_respected_when_copying(mapper):
+    def run(location):
+        composite = {mapper.po_lines_key: [{"orderFormat": "P/E Mix", "locations": [location]}]}
+        mapper._copy_quantity_to_format_field(composite)
+        return composite[mapper.po_lines_key][0]["locations"][0]
+
+    electronic = run({"locationId": "a", "quantity": "5", "quantityElectronic": "2"})
+    assert (electronic["quantityElectronic"], electronic["quantityPhysical"]) == ("2", 3)
+    physical = run({"locationId": "a", "quantity": "5", "quantityPhysical": "4"})
+    assert (physical["quantityPhysical"], physical["quantityElectronic"]) == ("4", 1)
+    both = run(
+        {"locationId": "a", "quantity": "5", "quantityPhysical": 1, "quantityElectronic": 1}
+    )
+    assert (both["quantityPhysical"], both["quantityElectronic"]) == (1, 1)
+    covered = run({"locationId": "a", "quantity": "2", "quantityElectronic": "2"})
+    assert "quantityPhysical" not in covered
+
+
+@pytest.mark.parametrize(
+    "pol, message",
+    [
+        (_pol(claimingActive=True), "claiming interval"),
+        (_pol(claimingActive="true", claimingInterval="0"), "claiming interval"),
+        (_pol(receiptStatus="Receipt Not Required"), "receipt not required"),
+        (
+            _pol(receiptStatus="Receipt Not Required", checkinItems=False),
+            "receipt not required",
+        ),
+        (
+            _pol(
+                details={"isBinderyActive": True},
+                physical={"createInventory": "Instance, Holding, Item"},
+            ),
+            "binder active requires the Independent",
+        ),
+        (
+            _pol(multiYearPayment=True, paymentTerms={"prepaymentTerm": 2}),
+            "prepayment term 2",
+        ),
+        (
+            _pol(
+                multiYearPayment=True,
+                paymentTerms={"prepaymentTerm": 2, "fiscalYearDistributions": [{}, {}, {}]},
+            ),
+            "prepayment term 2",
+        ),
+        (
+            _pol(cost={"quantityPhysical": 3, "listUnitPrice": 10, "discount": 50}),
+            "estimated price negative",
+        ),
+    ],
+)
+def test_validation_rejects_more_of_what_folio_rejects(mapper, pol, message):
+    with pytest.raises(TransformationRecordFailedError, match=message):
+        _validate(mapper, pol)
+
+
+def test_independent_workflow_satisfies_receipt_and_binder_rules(mapper):
+    mapper = copy.copy(mapper)
+    mapper.create_inventory_defaults = {"physical": "Instance, Holding, Item"}
+    _validate(
+        mapper,
+        _pol(
+            checkinItems="true",
+            receiptStatus="Receipt Not Required",
+            details={"isBinderyActive": True},
+        ),
+    )
+
+
+def test_valid_claiming_prepayment_and_percentage_discount_pass(mapper):
+    _validate(
+        mapper,
+        _pol(
+            claimingActive=True,
+            claimingInterval=30,
+            multiYearPayment=True,
+            paymentTerms={"prepaymentTerm": 2, "fiscalYearDistributions": [{}, {}]},
+            cost={
+                "quantityPhysical": 3,
+                "listUnitPrice": 10,
+                "discount": 50,
+                "discountType": "percentage",
+            },
+        ),
+    )
+
+
+def test_ongoing_order_gets_a_minimal_ongoing_object_only_when_none_is_mapped(mapper):
+    order = {"orderType": "Ongoing"}
+    mapper._ensure_ongoing_info(order)
+    assert order["ongoing"] == {"isSubscription": False, "manualRenewal": False}
+    mapped = {"orderType": "Ongoing", "ongoing": {"interval": 90}}
+    mapper._ensure_ongoing_info(mapped)
+    assert mapped["ongoing"] == {"interval": 90}
+    one_time = {"orderType": "One-Time"}
+    mapper._ensure_ongoing_info(one_time)
+    assert "ongoing" not in one_time
+    mapped_one_time = {"orderType": "One-Time", "ongoing": {"interval": 365}}
+    mapper._ensure_ongoing_info(mapped_one_time)
+    assert "ongoing" not in mapped_one_time
+
+
+def test_fund_distribution_total_is_only_checked_for_open_orders(mapper):
+    pol = _pol(fundDistribution=[{"distributionType": "percentage", "value": 60}])
+    _validate(mapper, pol, "Pending")
+    with pytest.raises(TransformationRecordFailedError, match="do not add up"):
+        _validate(mapper, pol, "Open")
+    pol["fundDistribution"].append({"distributionType": "percentage", "value": 40})
+    _validate(mapper, pol, "Open")
+
+
+def test_fund_distribution_amounts_are_compared_with_the_estimated_price(mapper):
+    # 3 x 10 = 30 estimated
+    amounts = [
+        {"distributionType": "amount", "value": 10},
+        {"distributionType": "amount", "value": 20},
+    ]
+    _validate(mapper, _pol(fundDistribution=amounts), "Open")
+    amounts[1]["value"] = 15
+    with pytest.raises(TransformationRecordFailedError, match="do not add up"):
+        _validate(mapper, _pol(fundDistribution=amounts), "Open")
+
+
+def test_zero_price_fund_distributions(mapper):
+    free = {"quantityPhysical": 3, "listUnitPrice": 0}
+    mixed = [
+        {"distributionType": "amount", "value": 0},
+        {"distributionType": "percentage", "value": 100},
+    ]
+    with pytest.raises(TransformationRecordFailedError, match="cannot be mixed"):
+        _validate(mapper, _pol(cost=free, fundDistribution=mixed), "Open")
+    _validate(mapper, _pol(cost=free, fundDistribution=mixed[:1]), "Open")
+    _validate(mapper, _pol(cost=free, fundDistribution=mixed[1:]), "Open")
+
+
+def _fund_info(restrict=False, locations=(), expense_classes=None):
+    return {
+        "restrict_by_locations": restrict,
+        "locations": set(locations),
+        "expense_classes": expense_classes or {},
+    }
+
+
+def test_expense_class_must_be_in_the_funds_active_budget(mapper):
+    mapper._fund_info_cache["f1"] = _fund_info(expense_classes={"ec1": "Active"})
+    ok = _pol(fundDistribution=[{"fundId": "f1", "expenseClassId": "ec1"}])
+    _validate(mapper, ok)
+    bad = _pol(fundDistribution=[{"fundId": "f1", "expenseClassId": "ec2", "code": "F1"}])
+    with pytest.raises(
+        TransformationRecordFailedError, match="not in an Active budget of fund F1"
+    ):
+        _validate(mapper, bad)
+
+
+def test_inactive_expense_class_only_fails_open_orders(mapper):
+    mapper._fund_info_cache["f1"] = _fund_info(expense_classes={"ec1": "Inactive"})
+    pol = _pol(
+        fundDistribution=[
+            {
+                "fundId": "f1",
+                "expenseClassId": "ec1",
+                "distributionType": "percentage",
+                "value": 100,
+            }
+        ]
+    )
+    _validate(mapper, pol)
+    with pytest.raises(TransformationRecordFailedError, match="inactive"):
+        _validate(mapper, pol, status="Open")
+
+
+def test_fund_location_restrictions_only_fail_open_orders_with_other_locations(mapper):
+    mapper._fund_info_cache["f1"] = _fund_info(restrict=True, locations=["x"])
+    pol = _pol(fundDistribution=[{"fundId": "f1", "distributionType": "percentage", "value": 100}])
+    _validate(mapper, pol)  # Pending
+    with pytest.raises(TransformationRecordFailedError, match="restricted to locations"):
+        _validate(mapper, pol, status="Open")
+    allowed = _pol(
+        fundDistribution=[{"fundId": "f1", "distributionType": "percentage", "value": 100}],
+        locations=[{"locationId": "x", "quantityPhysical": 3}],
+    )
+    _validate(mapper, allowed, status="Open")
+    mapper._fund_info_cache["f2"] = _fund_info(restrict=False, locations=["x"])
+    _validate(
+        mapper,
+        _pol(fundDistribution=[{"fundId": "f2", "distributionType": "percentage", "value": 100}]),
+        status="Open",
+    )
+
+
+def test_unreadable_fund_skips_its_checks(mapper):
+    mapper._fund_info_cache["f1"] = None
+    pol = _pol(
+        fundDistribution=[
+            {
+                "fundId": "f1",
+                "expenseClassId": "ec9",
+                "distributionType": "percentage",
+                "value": 100,
+            }
+        ]
+    )
+    _validate(mapper, pol, status="Open")
+
+
+def test_po_lines_limit(mapper):
+    order = {"workflowStatus": "Pending", mapper.po_lines_key: [_pol(), _pol()]}
+    mapper.po_lines_limit = 1
+    with pytest.raises(TransformationRecordFailedError, match="above the tenant limit of 1"):
+        mapper._validate_composite_order("1", order)
+    mapper.po_lines_limit = 2
+    mapper._validate_composite_order("1", order)
+    mapper.po_lines_limit = None
+
+
+def test_vendor_and_access_provider_must_be_active_for_open_orders(mapper):
+    mapper.folio_organizations_by_id = {
+        "v1": {"status": "Active", "isVendor": True, "name": "Zed"},
+        "v2": {"status": "Inactive", "isVendor": True, "name": "Acme"},
+        "v3": {"status": "Active", "isVendor": False, "name": "Beta"},
+    }
+
+    def order(vendor, provider=None, status="Open"):
+        pol = _pol(eresource={"accessProvider": provider} if provider else {})
+        return {"workflowStatus": status, "vendor": vendor, mapper.po_lines_key: [pol]}
+
+    mapper._validate_composite_order("1", order("v1", "v1"))
+    mapper._validate_composite_order("1", order("v2", "v2", status="Pending"))
+    for vendor, provider, message in [
+        ("v2", None, "vendor organization Acme \\(v2\\) is not Active"),
+        ("v3", None, "Beta \\(v3\\) is not flagged as a vendor"),
+        ("v1", "v2", "access provider Acme \\(v2\\) is not Active"),
+        ("v1", "zz", "access provider zz is not an organization"),
+    ]:
+        with pytest.raises(TransformationRecordFailedError, match=message):
+            mapper._validate_composite_order("1", order(vendor, provider))
+
+
+def test_messages_use_names_for_expense_classes_and_locations(mapper):
+    mapper._reference_names["/finance/expense-classes"] = {"ec2": "Electronic"}
+    mapper._reference_names["/locations"] = {"x": "Main Library"}
+    mapper._fund_info_cache["f1"] = _fund_info(
+        restrict=True, locations=["x"], expense_classes={"ec1": "Active"}
+    )
+    mapper._fund_info_cache["f1"]["code"] = "LIB1"
+    dist = {
+        "fundId": "f1",
+        "expenseClassId": "ec2",
+        "distributionType": "percentage",
+        "value": 100,
+    }
+    with pytest.raises(TransformationRecordFailedError) as error:
+        _validate(mapper, _pol(fundDistribution=[dist]), status="Open")
+    assert "expense class Electronic (ec2) is not in an Active budget of fund LIB1" in str(
+        error.value
+    )
+    assert "Main Library (x)" in str(error.value)
+
+
+def test_validation_failures_are_counted_by_rule_in_the_report(mapper):
+    mapper.migration_report.report.pop("OrderValidationFailures", None)
+    bad = _pol(
+        cost={"quantityPhysical": 3, "listUnitPrice": -1},
+        locations=[{"locationId": "a", "quantityPhysical": 1}],
+        claimingActive=True,
+    )
+    with pytest.raises(TransformationRecordFailedError):
+        _validate(mapper, bad)
+    section = mapper.migration_report.report["OrderValidationFailures"]
+    assert section["Quantities and locations"] >= 1
+    assert section["Cost prices and discount"] >= 1
+    assert section["Claiming"] == 1
+    assert "Other" not in section

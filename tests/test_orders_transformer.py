@@ -202,9 +202,12 @@ def test_transformer_loads_material_type_map_into_mapper(tmp_path):
     )
 
     assert transformer.mapper.material_type_mapping is not None
-    result = transformer.mapper.get_prop(
-        {"mtype": "B"}, "compositePoLines[0].physical.materialType", "1", ""
-    )
+    prop = "compositePoLines[0].physical.materialType"
+    transformer.mapper.record_map = {
+        "data": [{"folio_field": prop, "legacy_field": "mtype", "value": "", "description": ""}]
+    }
+    transformer.mapper.mapped_from_legacy_data = {prop: ["mtype"]}
+    result = transformer.mapper.get_prop({"mtype": "B"}, prop, "1", "")
     assert result == "mt-book"
     assert "B -> book" in transformer.mapper.migration_report.report["MaterialTypeMapping"]
 

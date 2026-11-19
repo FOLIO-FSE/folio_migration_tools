@@ -252,6 +252,20 @@ The code map does not support hybrid mappings. Unlike the other reference data m
 
 Records whose vendor cannot be resolved fail and are counted under `PurchaseOrderVendorLinking` in the migration report. Each vendor value is also reported individually under the "Organization mappings" (`OrganizationsMapping`) section as `legacy value -> FOLIO organization code`, with failed values shown as `Unmapped (Record failed)`.
 
+## Validation Before Posting
+
+The transformer checks each composite order against the rules that FOLIO's `mod-orders` enforces when the order is posted, and fails a record that would be rejected. This catches problems in the data issues log instead of during `BatchPoster`. The failure message names the rules that were broken, using names as well as UUIDs where it can, and the log line carries the legacy identifier and the row.
+
+- Order line locations with the same location or holding are merged, and the location quantities must match the cost quantities.
+- Cost quantities and prices, claiming, receiving workflow, binder active and prepayment term are checked.
+- An Ongoing order with no `ongoing` object mapped gets a minimal one. A One-Time order loses any `ongoing` object the field mapping created.
+- Checks that read FOLIO data: the expense class against the fund's Active budgets, fund location restrictions, the vendor and access provider organizations, and the tenant's PO line limit. If the data cannot be read, the check is skipped and a warning is logged.
+- Pending orders get the rules that apply to every order. Open orders also get the Open-only rules, such as material types and fund distributions that add up to the estimated price.
+
+The migration report lists the rules that failed records broke under "Order validation failures". A record that breaks several rules is counted once for each, so the total can exceed the number of failed records.
+
+See [mod-orders validation rules](../appendix_mod_orders_validation) for the full list of what is and is not checked.
+
 ## Mapping Notes
 
 FOLIO orders have two different kinds of notes, and they are mapped differently.
@@ -445,3 +459,4 @@ Orders are posted one at a time (`batchSize: 1`) because FOLIO's orders API proc
 - [Mapping File Based Mapping](../mapping_file_based_mapping) - Mapping file syntax
 - [OrganizationTransformer](organization_transformer) - Creating vendor organizations
 - [BatchPoster](batch_poster) - Posting orders
+- [mod-orders validation rules](../appendix_mod_orders_validation) - What FOLIO checks when orders are posted

@@ -257,7 +257,44 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folio_keys,
                 False,
             ),
+            self._load_create_inventory_defaults(),
+            self._load_po_lines_limit(),
         )
+
+    def _load_create_inventory_defaults(self) -> dict:
+        """Read the tenant's default inventory interaction for POLs that leave it empty.
+
+        Best effort: if the setting cannot be read, "None" is assumed for every kind.
+        """
+        try:
+            settings = self.folio_client.folio_get(
+                "/orders-storage/settings", "settings", query="key==createInventory"
+            )
+            return json.loads(settings[0]["value"]) if settings else {}
+        except Exception as exception:
+            logging.warning(
+                "Could not read the tenant createInventory defaults (%s). "
+                "Assuming no inventory is created for POLs that leave it empty.",
+                exception,
+            )
+            return {}
+
+    def _load_po_lines_limit(self) -> int | None:
+        """Read the tenant's limit on PO lines per order (setting poLines-limit).
+
+        Best effort: None, meaning the limit is not checked, if the setting is missing or
+        cannot be read.
+        """
+        try:
+            settings = self.folio_client.folio_get(
+                "/orders-storage/settings", "settings", query="key==poLines-limit"
+            )
+            return int(settings[0]["value"]) if settings else None
+        except Exception as exception:
+            logging.warning(
+                "Could not read the tenant PO line limit (%s). It is not checked.", exception
+            )
+            return None
 
     def list_source_files(self):
         files = []
