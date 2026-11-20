@@ -265,17 +265,32 @@ class InstanceCsvTransformer(MigrationTaskBase):
                 try:
                     self.process_single_file(file_def, results_file)
                 except Exception as exception:
-                    error_str = f"\n\nProcessing of {file_def.file_name} failed:\n{exception}."
-                    logger.exception(error_str, stack_info=True)
-                    logger.fatal("Check source files for empty rows or missing reference data.")
-                    self.mapper.migration_report.add(
-                        "FailedFiles", f"{file_def.file_name} - {exception}"
-                    )
-                    logger.fatal(error_str)
-                    sys.exit(1)
+                    self._fail_file(file_def, exception)
         logger.info(
             f"processed {self.total_records:,} records in {len(self.task_config.files)} files"
         )
+
+    # TODO: share this and _handle_record_exception across transformers (issue #1088)
+    def _fail_file(self, file_def: FileDefinition, exception: Exception):
+        error_str = f"\n\nProcessing of {file_def.file_name} failed:\n{exception}."
+        logger.exception(error_str, stack_info=True)
+        logger.fatal("Check source files for empty rows or missing reference data.")
+        self.mapper.migration_report.add("FailedFiles", f"{file_def.file_name} - {exception}")
+        logger.fatal(error_str)
+        sys.exit(1)
+
+    def _handle_record_exception(self, idx: int, exception: Exception):
+        if isinstance(exception, TransformationProcessError):
+            self.mapper.handle_transformation_process_error(idx, exception)
+        elif isinstance(exception, TransformationRecordFailedError):
+            self.mapper.handle_transformation_record_failed_error(idx, exception)
+        elif isinstance(exception, AttributeError):
+            traceback.print_exc()
+            logger.fatal(exception)
+            logger.info("Quitting...")
+            sys.exit(1)
+        else:
+            self.mapper.handle_generic_exception(idx, exception)
 
     def process_single_file(self, file_def: FileDefinition, results_file):
         full_path = self.folder_structure.legacy_records_folder / file_def.file_name
@@ -306,17 +321,8 @@ class InstanceCsvTransformer(MigrationTaskBase):
                         i18n_t("Number of records written to disk")
                     )
                     self.mapper.report_folio_mapping(folio_rec, self.mapper.schema)
-                except TransformationProcessError as process_error:
-                    self.mapper.handle_transformation_process_error(idx, process_error)
-                except TransformationRecordFailedError as data_error:
-                    self.mapper.handle_transformation_record_failed_error(idx, data_error)
-                except AttributeError as attribute_error:
-                    traceback.print_exc()
-                    logger.fatal(attribute_error)
-                    logger.info("Quitting...")
-                    sys.exit(1)
                 except Exception as exception:
-                    self.mapper.handle_generic_exception(idx, exception)
+                    self._handle_record_exception(idx, exception)
                 self.mapper.migration_report.add(
                     "GeneralStatistics",
                     i18n.t(
