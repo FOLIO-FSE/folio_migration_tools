@@ -80,7 +80,7 @@ class InstanceCsvTransformer(MigrationTaskBase):
                 title="Instance types map file name",
                 description=(
                     "File name for the instance type map. A TSV file with a legacy value "
-                    "column and a folio_name column."
+                    "column and a folio_name or folio_code column."
                 ),
             ),
         ]
