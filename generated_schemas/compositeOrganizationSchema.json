@@ -5,9 +5,10 @@
     "type": "object",
     "properties": {
         "id": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
             "description": "The unique UUID for this organization",
-            "$ref": "../../common/schemas/uuid.json",
-            "type": "string"
+            "type": "string",
+            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
         },
         "name": {
             "description": "The name of this organization",
@@ -40,9 +41,10 @@
             "description": "A list of organization types assigned to this organization",
             "type": "array",
             "items": {
+                "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "UUID of an organization type record",
-                "$ref": "../../common/schemas/uuid.json",
-                "type": "string"
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
             },
             "uniqueItems": true
         },
@@ -55,10 +57,9 @@
             "description": "The list of aliases for this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "alias.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "An organization alias",
+                "type": "object",
                 "properties": {
                     "value": {
                         "description": "The unique name of this alias",
@@ -80,15 +81,15 @@
             "description": "The list of addresses for this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "address.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "An address record",
+                "type": "object",
                 "properties": {
                     "id": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
                         "description": "UUID",
-                        "$ref": "../../common/schemas/uuid.json",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "addressLine1": {
                         "description": "The first line of this address",
@@ -123,9 +124,10 @@
                         "description": "The list of category ids for this organization address",
                         "type": "array",
                         "items": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "UUID of the organization category",
-                            "$ref": "../../common/schemas/uuid.json",
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     },
                     "language": {
@@ -133,8 +135,45 @@
                         "type": "string"
                     },
                     "metadata": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "id": "metadata.schema",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                         "type": "object",
-                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ],
                         "readonly": true
                     }
                 },
@@ -146,15 +185,15 @@
             "description": "The list of phone numbers for this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "phone_number.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "A phone number record",
+                "type": "object",
                 "properties": {
                     "id": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
                         "description": "UUID",
-                        "$ref": "../../common/schemas/uuid.json",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "phoneNumber": {
                         "description": "The entire sequence of digits for this phone number",
@@ -165,9 +204,10 @@
                         "description": "The list of category ids for this organization phone",
                         "type": "array",
                         "items": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "UUID of the organization category",
-                            "$ref": "../../common/schemas/uuid.json",
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     },
                     "type": {
@@ -189,8 +229,45 @@
                         "type": "string"
                     },
                     "metadata": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "id": "metadata.schema",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                         "type": "object",
-                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ],
                         "readonly": true
                     }
                 },
@@ -205,15 +282,15 @@
             "description": "The list of emails for this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "email.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "An email record",
+                "type": "object",
                 "properties": {
                     "id": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
                         "description": "The unique id of this email",
-                        "$ref": "../../common/schemas/uuid.json",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "value": {
                         "description": "The value for this email",
@@ -232,9 +309,10 @@
                         "description": "The list of category ids for this organization email",
                         "type": "array",
                         "items": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "UUID of the organization category",
-                            "$ref": "../../common/schemas/uuid.json",
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     },
                     "language": {
@@ -242,8 +320,45 @@
                         "type": "string"
                     },
                     "metadata": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "id": "metadata.schema",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                         "type": "object",
-                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ],
                         "readonly": true
                     }
                 },
@@ -258,15 +373,15 @@
             "description": "The list of URLs for this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "url.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "A URL record",
+                "type": "object",
                 "properties": {
                     "id": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
                         "description": "The unique id of this url",
-                        "$ref": "../../common/schemas/uuid.json",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "value": {
                         "description": "The value for this URL",
@@ -290,9 +405,10 @@
                         "description": "The list of category ids for this organization URL",
                         "type": "array",
                         "items": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "UUID of the organization category",
-                            "$ref": "../../common/schemas/uuid.json",
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     },
                     "notes": {
@@ -300,8 +416,45 @@
                         "type": "string"
                     },
                     "metadata": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "id": "metadata.schema",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                         "type": "object",
-                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ],
                         "readonly": true
                     }
                 },
@@ -312,8 +465,7 @@
             }
         },
         "contacts": {
-            "id": "contact",
-            "description": "An array of contact record IDs",
+            "description": "Contacts",
             "type": "array",
             "items": {
                 "$schema": "http://json-schema.org/draft-04/schema#",
@@ -321,9 +473,10 @@
                 "type": "object",
                 "properties": {
                     "id": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
                         "description": "The unique id of this contact",
-                        "$ref": "../../common/schemas/uuid.json",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "_version": {
                         "type": "integer",
@@ -354,15 +507,15 @@
                         "description": "The list of phone numbers for this contact person",
                         "type": "array",
                         "items": {
-                            "type": "object",
-                            "$ref": "phone_number.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "A phone number record",
+                            "type": "object",
                             "properties": {
                                 "id": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
                                     "description": "UUID",
-                                    "$ref": "../../common/schemas/uuid.json",
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                 },
                                 "phoneNumber": {
                                     "description": "The entire sequence of digits for this phone number",
@@ -373,9 +526,10 @@
                                     "description": "The list of category ids for this organization phone",
                                     "type": "array",
                                     "items": {
+                                        "$schema": "http://json-schema.org/draft-04/schema#",
                                         "description": "UUID of the organization category",
-                                        "$ref": "../../common/schemas/uuid.json",
-                                        "type": "string"
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                     }
                                 },
                                 "type": {
@@ -397,8 +551,45 @@
                                     "type": "string"
                                 },
                                 "metadata": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "id": "metadata.schema",
+                                    "title": "Metadata Schema",
+                                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                                     "type": "object",
-                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "properties": {
+                                        "createdDate": {
+                                            "description": "Date and time when the record was created",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "createdByUserId": {
+                                            "description": "ID of the user who created the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "createdByUsername": {
+                                            "description": "Username of the user who created the record (when available)",
+                                            "type": "string"
+                                        },
+                                        "updatedDate": {
+                                            "description": "Date and time when the record was last updated",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updatedByUserId": {
+                                            "description": "ID of the user who last updated the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "updatedByUsername": {
+                                            "description": "Username of the user who last updated the record (when available)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "createdDate"
+                                    ],
                                     "readonly": true
                                 }
                             },
@@ -413,15 +604,15 @@
                         "description": "The list of emails for this contact person",
                         "type": "array",
                         "items": {
-                            "type": "object",
-                            "$ref": "email.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "An email record",
+                            "type": "object",
                             "properties": {
                                 "id": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
                                     "description": "The unique id of this email",
-                                    "$ref": "../../common/schemas/uuid.json",
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                 },
                                 "value": {
                                     "description": "The value for this email",
@@ -440,9 +631,10 @@
                                     "description": "The list of category ids for this organization email",
                                     "type": "array",
                                     "items": {
+                                        "$schema": "http://json-schema.org/draft-04/schema#",
                                         "description": "UUID of the organization category",
-                                        "$ref": "../../common/schemas/uuid.json",
-                                        "type": "string"
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                     }
                                 },
                                 "language": {
@@ -450,8 +642,45 @@
                                     "type": "string"
                                 },
                                 "metadata": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "id": "metadata.schema",
+                                    "title": "Metadata Schema",
+                                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                                     "type": "object",
-                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "properties": {
+                                        "createdDate": {
+                                            "description": "Date and time when the record was created",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "createdByUserId": {
+                                            "description": "ID of the user who created the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "createdByUsername": {
+                                            "description": "Username of the user who created the record (when available)",
+                                            "type": "string"
+                                        },
+                                        "updatedDate": {
+                                            "description": "Date and time when the record was last updated",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updatedByUserId": {
+                                            "description": "ID of the user who last updated the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "updatedByUsername": {
+                                            "description": "Username of the user who last updated the record (when available)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "createdDate"
+                                    ],
                                     "readonly": true
                                 }
                             },
@@ -466,15 +695,15 @@
                         "description": "The list of addresses for this contact person",
                         "type": "array",
                         "items": {
-                            "type": "object",
-                            "$ref": "address.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "An address record",
+                            "type": "object",
                             "properties": {
                                 "id": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
                                     "description": "UUID",
-                                    "$ref": "../../common/schemas/uuid.json",
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                 },
                                 "addressLine1": {
                                     "description": "The first line of this address",
@@ -509,9 +738,10 @@
                                     "description": "The list of category ids for this organization address",
                                     "type": "array",
                                     "items": {
+                                        "$schema": "http://json-schema.org/draft-04/schema#",
                                         "description": "UUID of the organization category",
-                                        "$ref": "../../common/schemas/uuid.json",
-                                        "type": "string"
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                     }
                                 },
                                 "language": {
@@ -519,8 +749,45 @@
                                     "type": "string"
                                 },
                                 "metadata": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "id": "metadata.schema",
+                                    "title": "Metadata Schema",
+                                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                                     "type": "object",
-                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "properties": {
+                                        "createdDate": {
+                                            "description": "Date and time when the record was created",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "createdByUserId": {
+                                            "description": "ID of the user who created the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "createdByUsername": {
+                                            "description": "Username of the user who created the record (when available)",
+                                            "type": "string"
+                                        },
+                                        "updatedDate": {
+                                            "description": "Date and time when the record was last updated",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updatedByUserId": {
+                                            "description": "ID of the user who last updated the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "updatedByUsername": {
+                                            "description": "Username of the user who last updated the record (when available)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "createdDate"
+                                    ],
                                     "readonly": true
                                 }
                             },
@@ -532,15 +799,15 @@
                         "description": "The list of URLs for this contact person",
                         "type": "array",
                         "items": {
-                            "type": "object",
-                            "$ref": "url.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "A URL record",
+                            "type": "object",
                             "properties": {
                                 "id": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
                                     "description": "The unique id of this url",
-                                    "$ref": "../../common/schemas/uuid.json",
-                                    "type": "string"
+                                    "type": "string",
+                                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                 },
                                 "value": {
                                     "description": "The value for this URL",
@@ -564,9 +831,10 @@
                                     "description": "The list of category ids for this organization URL",
                                     "type": "array",
                                     "items": {
+                                        "$schema": "http://json-schema.org/draft-04/schema#",
                                         "description": "UUID of the organization category",
-                                        "$ref": "../../common/schemas/uuid.json",
-                                        "type": "string"
+                                        "type": "string",
+                                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                                     }
                                 },
                                 "notes": {
@@ -574,8 +842,45 @@
                                     "type": "string"
                                 },
                                 "metadata": {
+                                    "$schema": "http://json-schema.org/draft-04/schema#",
+                                    "id": "metadata.schema",
+                                    "title": "Metadata Schema",
+                                    "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                                     "type": "object",
-                                    "$ref": "../../../raml-util/schemas/metadata.schema",
+                                    "properties": {
+                                        "createdDate": {
+                                            "description": "Date and time when the record was created",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "createdByUserId": {
+                                            "description": "ID of the user who created the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "createdByUsername": {
+                                            "description": "Username of the user who created the record (when available)",
+                                            "type": "string"
+                                        },
+                                        "updatedDate": {
+                                            "description": "Date and time when the record was last updated",
+                                            "type": "string",
+                                            "format": "date-time"
+                                        },
+                                        "updatedByUserId": {
+                                            "description": "ID of the user who last updated the record (when available)",
+                                            "type": "string",
+                                            "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                                        },
+                                        "updatedByUsername": {
+                                            "description": "Username of the user who last updated the record (when available)",
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "createdDate"
+                                    ],
                                     "readonly": true
                                 }
                             },
@@ -590,9 +895,10 @@
                         "description": "The list of category ids for this organization contact person",
                         "type": "array",
                         "items": {
+                            "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "UUID of the organization category",
-                            "$ref": "../../common/schemas/uuid.json",
-                            "type": "string"
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     },
                     "inactive": {
@@ -601,8 +907,45 @@
                         "default": false
                     },
                     "metadata": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "id": "metadata.schema",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                         "type": "object",
-                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ],
                         "readonly": true
                     }
                 },
@@ -617,9 +960,10 @@
             "description": "An array of privileged contact record IDs",
             "type": "array",
             "items": {
+                "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "UUID of a privileged contact record",
-                "$ref": "../../common/schemas/uuid.json",
-                "type": "string"
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
             }
         },
         "agreements": {
@@ -627,10 +971,9 @@
             "description": "The the list of agreements for this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "agreement.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "An organization agreement",
+                "type": "object",
                 "properties": {
                     "name": {
                         "description": "The unique name of this agreement",
@@ -926,8 +1269,7 @@
             }
         },
         "interfaces": {
-            "id": "interfaces",
-            "description": "The list of interfaces assigned to this organization",
+            "description": "Interfaces",
             "type": "array",
             "items": {
                 "$schema": "http://json-schema.org/draft-04/schema#",
@@ -935,9 +1277,10 @@
                 "type": "object",
                 "properties": {
                     "id": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
                         "description": "The unique id of this interface",
-                        "$ref": "../../common/schemas/uuid.json",
-                        "type": "string"
+                        "type": "string",
+                        "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                     },
                     "name": {
                         "description": "The name of this interface",
@@ -985,10 +1328,9 @@
                         "description": "Interface types",
                         "type": "array",
                         "items": {
-                            "type": "string",
-                            "$ref": "interface_type.json",
                             "$schema": "http://json-schema.org/draft-04/schema#",
                             "description": "the type of interface",
+                            "type": "string",
                             "enum": [
                                 "Admin",
                                 "End user",
@@ -1000,8 +1342,45 @@
                         }
                     },
                     "metadata": {
+                        "$schema": "http://json-schema.org/draft-04/schema#",
+                        "id": "metadata.schema",
+                        "title": "Metadata Schema",
+                        "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
                         "type": "object",
-                        "$ref": "../../../raml-util/schemas/metadata.schema",
+                        "properties": {
+                            "createdDate": {
+                                "description": "Date and time when the record was created",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "createdByUserId": {
+                                "description": "ID of the user who created the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "createdByUsername": {
+                                "description": "Username of the user who created the record (when available)",
+                                "type": "string"
+                            },
+                            "updatedDate": {
+                                "description": "Date and time when the record was last updated",
+                                "type": "string",
+                                "format": "date-time"
+                            },
+                            "updatedByUserId": {
+                                "description": "ID of the user who last updated the record (when available)",
+                                "type": "string",
+                                "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                            },
+                            "updatedByUsername": {
+                                "description": "Username of the user who last updated the record (when available)",
+                                "type": "string"
+                            }
+                        },
+                        "additionalProperties": false,
+                        "required": [
+                            "createdDate"
+                        ],
                         "readonly": true
                     },
                     "interfaceCredential": {
@@ -1010,9 +1389,10 @@
                         "type": "object",
                         "properties": {
                             "id": {
+                                "$schema": "http://json-schema.org/draft-04/schema#",
                                 "description": "The unique id of this interface credential",
-                                "$ref": "../../common/schemas/uuid.json",
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                             },
                             "username": {
                                 "description": "The login username for this interface",
@@ -1023,18 +1403,17 @@
                                 "type": "string"
                             },
                             "interfaceId": {
+                                "$schema": "http://json-schema.org/draft-04/schema#",
                                 "description": "The unique id of the associated interface",
-                                "$ref": "../../common/schemas/uuid.json",
-                                "type": "string"
+                                "type": "string",
+                                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                             }
                         },
                         "additionalProperties": false,
                         "required": [
-                            [
-                                "username",
-                                "password",
-                                "interfaceId"
-                            ]
+                            "username",
+                            "password",
+                            "interfaceId"
                         ]
                     }
                 },
@@ -1049,10 +1428,9 @@
             "description": "The list of accounts for this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "account.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "An organization account",
+                "type": "object",
                 "properties": {
                     "name": {
                         "description": "The unique name of this account",
@@ -1108,8 +1486,10 @@
                         "description": "Acquisition unit UUIDs associated with this organizations account",
                         "type": "array",
                         "items": {
-                            "$ref": "../../common/schemas/uuid.json",
-                            "type": "string"
+                            "$schema": "http://json-schema.org/draft-04/schema#",
+                            "description": "The UUID format string",
+                            "type": "string",
+                            "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
                         }
                     }
                 },
@@ -1142,10 +1522,9 @@
             "description": "The list of changes applied to this organization",
             "type": "array",
             "items": {
-                "type": "object",
-                "$ref": "changelog.json",
                 "$schema": "http://json-schema.org/draft-04/schema#",
                 "description": "A changelog record",
+                "type": "object",
                 "properties": {
                     "description": {
                         "description": "The description of the change",
@@ -1168,14 +1547,18 @@
             "description": "Acquisition unit UUIDs associated with this organization",
             "type": "array",
             "items": {
-                "$ref": "../../common/schemas/uuid.json",
-                "type": "string"
+                "$schema": "http://json-schema.org/draft-04/schema#",
+                "description": "The UUID format string",
+                "type": "string",
+                "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$"
             }
         },
         "tags": {
-            "type": "object",
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "id": "tags.schema",
+            "title": "tags",
             "description": "arbitrary tags associated with this organization",
-            "$ref": "../../../raml-util/schemas/tags.schema",
+            "type": "object",
             "properties": {
                 "tagList": {
                     "description": "List of tags",
@@ -1184,11 +1567,49 @@
                         "type": "string"
                     }
                 }
-            }
+            },
+            "additionalProperties": false
         },
         "metadata": {
+            "$schema": "http://json-schema.org/draft-04/schema#",
+            "id": "metadata.schema",
+            "title": "Metadata Schema",
+            "description": "Metadata about creation and changes to records, provided by the server (client should not provide)",
             "type": "object",
-            "$ref": "../../../raml-util/schemas/metadata.schema",
+            "properties": {
+                "createdDate": {
+                    "description": "Date and time when the record was created",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "createdByUserId": {
+                    "description": "ID of the user who created the record (when available)",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                },
+                "createdByUsername": {
+                    "description": "Username of the user who created the record (when available)",
+                    "type": "string"
+                },
+                "updatedDate": {
+                    "description": "Date and time when the record was last updated",
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "updatedByUserId": {
+                    "description": "ID of the user who last updated the record (when available)",
+                    "type": "string",
+                    "pattern": "^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$"
+                },
+                "updatedByUsername": {
+                    "description": "Username of the user who last updated the record (when available)",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "createdDate"
+            ],
             "readonly": true
         }
     },

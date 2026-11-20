@@ -71,6 +71,12 @@
             "$ref": "#/$defs/FileDefinition",
             "description": "Path to the file with course reserves",
             "title": "Course reserve file path"
+        },
+        "skipBarcodePrevalidation": {
+            "default": false,
+            "description": "Skip pre-validation of item barcodes against FOLIO. By default, item barcodes are validated before reserves are posted.",
+            "title": "Skip barcode pre-validation",
+            "type": "boolean"
         }
     },
     "required": [

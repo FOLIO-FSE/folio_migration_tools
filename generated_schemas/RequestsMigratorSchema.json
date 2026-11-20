@@ -97,12 +97,32 @@
             "default": false,
             "description": "Skip pre-validation of patron and item barcodes against FOLIO. By default, barcodes are validated before request migration.",
             "title": "Skip barcode pre-validation"
+        },
+        "servicePointMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "default": "",
+            "description": "Optional file name for service point mapping. Maps legacy service point codes to FOLIO service point codes.",
+            "title": "Service point map file name"
+        },
+        "fallbackServicePointId": {
+            "description": "Fallback service point ID (UUID or code) to use when request does not specify a pickup service point.",
+            "minLength": 1,
+            "title": "Fallback service point ID",
+            "type": "string"
         }
     },
     "required": [
         "name",
         "migrationTaskType",
-        "openRequestsFile"
+        "openRequestsFile",
+        "fallbackServicePointId"
     ],
     "title": "TaskConfiguration",
     "type": "object"

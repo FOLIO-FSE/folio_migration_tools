@@ -218,6 +218,12 @@
             "description": "At the end of the run, update FOLIO with the HRID settings",
             "title": "Update HRID settings",
             "type": "boolean"
+        },
+        "captureBibLevelRelationships": {
+            "default": true,
+            "description": "If set to true, the raw contents of 773 (Host Item Entry) and 774 (Constituent Unit Entry) fields are captured to a separate file for analysis, along with prevalence statistics in the migration report. This does not create FOLIO instance relationships.",
+            "title": "Capture bib-level relationship fields (773/774)",
+            "type": "boolean"
         }
     },
     "required": [

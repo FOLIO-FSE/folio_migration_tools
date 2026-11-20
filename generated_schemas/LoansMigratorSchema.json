@@ -76,7 +76,8 @@
             "type": "array"
         },
         "fallbackServicePointId": {
-            "description": "Identifier of the fallback service point.",
+            "description": "Identifier of the fallback service point (UUID or code).",
+            "minLength": 1,
             "title": "Fallback service point ID",
             "type": "string"
         },
@@ -108,6 +109,25 @@
             "default": false,
             "description": "Skip pre-validation of patron and item barcodes against FOLIO. By default, barcodes are validated before loan migration.",
             "title": "Skip barcode pre-validation",
+            "type": "boolean"
+        },
+        "servicePointMapFileName": {
+            "anyOf": [
+                {
+                    "type": "string"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "default": "",
+            "description": "Optional file name for service point mapping. Maps legacy service point codes to FOLIO service point codes.",
+            "title": "Service point map file name"
+        },
+        "allowDueDateBeforeOutDate": {
+            "default": false,
+            "description": "Do not reject loans whose due_date is earlier than their out_date. The legacy dates are loaded as given. Use this when the legacy data legitimately contains such loans. Leave off to catch date and timezone mangling in the source data. Loans with missing dates are always rejected.",
+            "title": "Allow due date before out date",
             "type": "boolean"
         }
     },
