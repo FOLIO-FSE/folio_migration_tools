@@ -55,6 +55,38 @@
             "title": "Multi field delimiter",
             "type": "string"
         },
+        "boolean_true_tokens": {
+            "anyOf": [
+                {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "default": null,
+            "description": "Values that mapping-file transformations read as true for boolean FOLIO properties. Matching is case-insensitive. Replaces the defaults (true, t, yes, y, 1). If not set, the FOLIO_BOOLEAN_TRUE_TOKENS environment variable (comma-separated) is used, then the defaults.",
+            "title": "Boolean true tokens"
+        },
+        "boolean_false_tokens": {
+            "anyOf": [
+                {
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
+                {
+                    "type": "null"
+                }
+            ],
+            "default": null,
+            "description": "Values that mapping-file transformations read as false for boolean FOLIO properties. Matching is case-insensitive. Replaces the defaults (false, f, no, n, 0). If not set, the FOLIO_BOOLEAN_FALSE_TOKENS environment variable (comma-separated) is used, then the defaults.",
+            "title": "Boolean false tokens"
+        },
         "failed_records_threshold": {
             "default": 5000,
             "description": "Number of failed records until the process shuts down",

@@ -140,6 +140,12 @@
             "description": "Disable progress reporting in the console output.",
             "title": "No progress",
             "type": "boolean"
+        },
+        "handlePermissionsUserObjects": {
+            "default": true,
+            "description": "Whether to handle permission user objects when updating users.",
+            "title": "Handle permission user objects",
+            "type": "boolean"
         }
     },
     "required": [
