@@ -343,7 +343,11 @@ class InstanceCsvTransformer(MigrationTaskBase):
 
     @staticmethod
     def get_id_map_entry(legacy_id: str, folio_rec: dict) -> tuple:
-        """Build the id map entry; the HRID is included only when it has been mapped."""
+        """Build the id map entry; the HRID is included only when it has been mapped.
+
+        The entry length varies (2 or 3) on purpose: it is written as a JSON array
+        to the id map file, and downstream tasks read it by position.
+        """
         if folio_rec.get("hrid"):
             return (legacy_id, folio_rec["id"], folio_rec["hrid"])
         return (legacy_id, folio_rec["id"])
