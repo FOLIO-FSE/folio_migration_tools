@@ -28,6 +28,19 @@ A line with zero physical and electronic cost quantities and no locations skips 
 * Every location must have exactly one of `locationId` or `holdingId`.
 * `location.quantity` is recomputed by mod-orders as `quantityPhysical + quantityElectronic`. Only the physical and electronic totals are compared with the cost.
 
+#### How the migration tools fill location quantities
+
+mod-orders compares only `quantityPhysical` and `quantityElectronic` with the cost, so a location with just `quantity` would be rejected. When a location sets only `quantity`, the OrdersTransformer fills in the quantity fields before validation:
+
+| Order format | Result |
+| --- | --- |
+| Physical Resource, Other | `quantityPhysical` = `quantity` |
+| Electronic Resource | `quantityElectronic` = `quantity` |
+| P/E Mix, `quantity` above 1 | `quantityElectronic` = 1, `quantityPhysical` = `quantity` − 1 |
+| P/E Mix, `quantity` of 1 | not filled in. The record fails the location total check, so map `quantityPhysical` and `quantityElectronic` explicitly |
+
+In a P/E Mix, a physical or electronic quantity you set explicitly is kept, and the other side gets the remainder of `quantity`. Locations that set both are left unchanged. The fixed split of 1 electronic plus the remainder physical only matches your cost totals when the electronic quantity equals the number of locations. Otherwise, map both quantities.
+
 ### Cost prices
 
 * Electronic Resource: `listUnitPrice` must not be above 0.
