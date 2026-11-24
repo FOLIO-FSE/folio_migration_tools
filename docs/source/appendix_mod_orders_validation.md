@@ -36,10 +36,9 @@ mod-orders compares only `quantityPhysical` and `quantityElectronic` with the co
 | --- | --- |
 | Physical Resource, Other | `quantityPhysical` = `quantity` |
 | Electronic Resource | `quantityElectronic` = `quantity` |
-| P/E Mix, `quantity` above 1 | `quantityElectronic` = 1, `quantityPhysical` = `quantity` − 1 |
-| P/E Mix, `quantity` of 1 | not filled in. The record fails the location total check, so map `quantityPhysical` and `quantityElectronic` explicitly |
+| P/E Mix | split for the whole PO line: `quantityElectronic` = 1 on the first location that only has `quantity`, and the rest of the line's pieces are `quantityPhysical` |
 
-In a P/E Mix, a physical or electronic quantity you set explicitly is kept, and the other side gets the remainder of `quantity`. Locations that set both are left unchanged. The fixed split of 1 electronic plus the remainder physical only matches your cost totals when the electronic quantity equals the number of locations. Otherwise, map both quantities.
+In a P/E Mix, if a location sets a physical or electronic quantity explicitly, it is kept and the other side gets the remainder of that location's `quantity`. If the line already has an electronic quantity, every other piece is physical. Locations that set both are left unchanged. A line with a single piece can't have both formats, so it fails validation. The line-level split gives one electronic copy, so map `quantityPhysical` and `quantityElectronic` explicitly when your cost has more electronic copies.
 
 The cost quantities follow the locations. If every cost quantity that is mapped (`quantityPhysical`, `quantityElectronic` or both) equals the total of the locations' `quantity`, the cost gets the physical and electronic totals of the locations. This lets a legacy system with a single quantity field map it to the locations and to both cost quantities. If a mapped cost quantity differs from the total, or a location has no `quantity`, the cost is left as mapped and validation reports any mismatch.
 

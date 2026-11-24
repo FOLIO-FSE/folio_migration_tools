@@ -784,10 +784,13 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         mod-orders only counts quantityPhysical and quantityElectronic, and recomputes
         quantity from them. A location with only quantity gets quantityPhysical (Physical
-        Resource, Other) or quantityElectronic (Electronic Resource). In a P/E Mix a
-        quantity above 1 becomes one electronic and the remainder physical. A P/E Mix
-        quantity of 1 is ambiguous and is left for validation to report. If one of the two
-        is set explicitly it is kept and the other gets the remainder of quantity.
+        Resource, Other) or quantityElectronic (Electronic Resource).
+
+        In a P/E Mix the split is done for the PO line as a whole: one piece is electronic
+        and the rest are physical. The electronic piece goes on the first location that only
+        has quantity, unless the line already has an electronic quantity. If one of the two
+        is set explicitly on a location it is kept and the other gets the remainder of
+        quantity. A line with a single piece can't be split and is left for validation.
         """
         targets = {
             "Physical Resource": "quantityPhysical",
@@ -799,34 +802,53 @@ class CompositeOrderMapper(MappingFileMapperBase):
             target = targets.get(order_format)
             if not target and order_format != "P/E Mix":
                 continue
-            for location in pol.get("locations") or []:
-                if not isinstance(location, dict) or location.get("quantity") in (None, ""):
-                    continue
+            locations = [
+                loc
+                for loc in pol.get("locations") or []
+                if isinstance(loc, dict) and loc.get("quantity") not in (None, "")
+            ]
+            if target:
+                for location in locations:
+                    if not any(location.get(f) not in (None, "") for f in self.FORMAT_FIELDS):
+                        location[target] = location["quantity"]
+            else:
+                self._split_mix_quantities(pol, locations)
+            self._mirror_location_split_in_cost(pol)
+
+    FORMAT_FIELDS = ("quantityPhysical", "quantityElectronic")
+
+    def _split_mix_quantities(self, pol: dict, locations: list[dict]) -> None:
+        """Fill the physical and electronic quantities of a P/E Mix PO line's locations."""
+        unfilled = []
+        try:
+            for location in locations:
                 physical = location.get("quantityPhysical") not in (None, "")
                 electronic = location.get("quantityElectronic") not in (None, "")
-                if target:
-                    if not (physical or electronic):
-                        location[target] = location["quantity"]
-                    continue
                 if physical and electronic:
                     continue
-                try:
-                    quantity = self._whole_number(location["quantity"])
-                    given_field = "quantityPhysical" if physical else "quantityElectronic"
-                    given = (
-                        self._whole_number(location[given_field]) if physical or electronic else 0
-                    )
-                except (InvalidOperation, ValueError):
-                    continue  # validation reports a quantity that is not a whole number
+                quantity = self._whole_number(location["quantity"])
                 if physical or electronic:
-                    # One side is set explicitly and is respected. The other gets the remainder
+                    given_field = "quantityPhysical" if physical else "quantityElectronic"
+                    given = self._whole_number(location[given_field])
                     if quantity > given:
                         missing = "quantityElectronic" if physical else "quantityPhysical"
                         location[missing] = quantity - given
-                elif quantity > 1:
-                    location["quantityElectronic"] = 1
-                    location["quantityPhysical"] = quantity - 1
-            self._mirror_location_split_in_cost(pol)
+                else:
+                    unfilled.append((location, quantity))
+            has_electronic = any(
+                self._whole_number(loc.get("quantityElectronic") or 0) > 0
+                for loc in pol.get("locations") or []
+                if isinstance(loc, dict)
+            )
+        except (InvalidOperation, ValueError):
+            return  # validation reports a quantity that is not a whole number
+        for location, quantity in unfilled:
+            if not has_electronic and quantity > 0:
+                location["quantityElectronic"] = 1
+                has_electronic = True
+                quantity -= 1
+            if quantity > 0:
+                location["quantityPhysical"] = quantity
 
     def _mirror_location_split_in_cost(self, pol: dict) -> None:
         """Give the cost the same physical/electronic split as the locations.
