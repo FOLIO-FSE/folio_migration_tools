@@ -46,6 +46,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 | `locationMapFileName` | string | No | TSV file mapping locations |
 | `fundsMapFileName` | string | No | TSV file mapping funds (required if POLs have fund distributions) |
 | `fundsExpenseClassMapFileName` | string | No | TSV file mapping legacy values to expense class codes, used for `expenseClassId`. Values with no explicit match are left empty rather than defaulted |
+| `acquisitionUnitMapFileName` | string | No | TSV file mapping legacy values to FOLIO acquisition unit names, applied to the order's `acqUnitIds`. Without it, the value must be a unit UUID or name (see Acquisition Units) |
 | `materialTypeMapFileName` | string | No | TSV file mapping legacy values to FOLIO material type names, applied to `physical.materialType` and `eresource.materialType` on order lines. Works like the items transformer material type map, including the required `*` default row. Without it, the value must be a material type UUID or name (see Material Types) |
 | `files` | array | Yes | List of source data files to process |
 
@@ -214,7 +215,23 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 | `fundsMapFileName` | `folio_code` | Fund code |
 | `locationMapFileName` | `folio_code` | Location code |
 | `fundsExpenseClassMapFileName` | `folio_code` | Expense class code. A `*` row is required in the file but never applied: a value with no explicit match is left empty (reported as "Not to be mapped. (No default)") |
+| `acquisitionUnitMapFileName` | `folio_name` | Acquisition unit name. A `*` row is required in the file but never applied: a value with no explicit match is left empty |
 | `materialTypeMapFileName` | `folio_name` | Material type name. A `*` row is required and is used as the default for unmatched values |
+
+## Acquisition Units
+
+`acqUnitIds` on the order can be mapped with `acquisitionUnitMapFileName`. A value with several units, joined with the multi-field delimiter (for example `A^-^B`), is mapped piece by piece into several units.
+
+Without a map file, and for hardcoded values, a unit UUID is used as-is and any other value is looked up as a FOLIO acquisition unit name (case- and whitespace-insensitive). A name that is not a FOLIO unit is skipped. It is reported under "Mapped Acquisition Units" and logged as a field mapping error, and the rest of the order is kept. Hardcoded values are checked against FOLIO at startup, and the task stops if one is not valid.
+
+Before an order is written, the task checks that the units exist and are active. The user that runs the task is the user that posts the orders, so the task also checks that user against the units, as mod-orders does. An order with units needs both of these:
+
+1. **Permission to assign units.** The user needs `orders.acquisitions-units-assignments.create.execute`. Nothing replaces it: without it, no order with units can be posted.
+2. **Membership, or a way around it.** The user must be a member of at least one of the order's units, unless one of these applies:
+   * The user has the permission `orders.acquisition-units.bypass.execute`. It lets the user post into any unit without being a member.
+   * At least one of the order's units does not protect create (`protectCreate` is false). Membership is then not required.
+
+Permissions are read from `/permissions/users/{id}` on Eureka tenants (which resolves capabilities, capability sets and roles), and from mod-permissions on others. If the user's memberships or permissions cannot be read, these checks are skipped and a warning is logged.
 
 ## Material Types
 

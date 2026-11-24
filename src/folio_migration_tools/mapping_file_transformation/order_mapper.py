@@ -39,6 +39,9 @@ logger = logging.getLogger(__name__)
 
 # Notes mapped under a purchase order line, e.g. compositePoLines[0].notes[0].content
 MATERIAL_TYPE_FIELD = re.compile(r"\.(?:physical|eresource)\.materialType$")
+ACQ_UNIT_FIELD = re.compile(r"^acqUnitIds(?:\[\d+\])?$")
+ACQ_UNIT_CREATE_PERMISSION = "orders.acquisitions-units-assignments.create.execute"
+ACQ_UNIT_BYPASS_PERMISSION = "orders.acquisition-units.bypass.execute"
 PRODUCT_ID_TYPE_FIELD = re.compile(r"productIds\[\d+\]\.productIdType$")
 POL_NOTE_PREFIX = re.compile(r"^(?:compositePoLines|poLines)\[\d+\]\.(?=notes\[)")
 
@@ -64,6 +67,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         material_type_map=None,
         create_inventory_defaults: dict | None = None,
         po_lines_limit: int | None = None,
+        acquisition_unit_map=None,
     ):
         """Initialize CompositeOrderMapper for purchase order transformations.
 
@@ -89,6 +93,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 (by name), used for physical and e-resource material types on order lines.
             po_lines_limit: Optional tenant limit on the number of PO lines per order. The
                 limit is not checked when it is None.
+            acquisition_unit_map: Optional mapping of legacy values to FOLIO acquisition
+                unit names, for the order's acqUnitIds.
         """
         # Get order schema, using module version from FOLIO environment if available
         release_tag = None
@@ -203,6 +209,21 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if material_type_map
             else None
         )
+        self.acquisition_unit_mapping = (
+            RefDataMapping(
+                self.folio_client,
+                "/acquisitions-units/units",
+                "acquisitionsUnits",
+                acquisition_unit_map,
+                "name",
+                "AcquisitionUnitMapping",
+            )
+            if acquisition_unit_map
+            else None
+        )
+        self._acq_units_by_id, self._acq_unit_ids_by_name = self._load_acquisition_units()
+        self._validate_hardcoded_acquisition_units()
+        self._user_acq_access: tuple | None | bool = False  # False = not read yet
         self._material_types_by_name = self._load_material_types_by_name()
         self._validate_hardcoded_material_types()
         self._identifier_types_by_name = self._load_identifier_types_by_name()
@@ -375,6 +396,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 prevent_default=True,
             )
 
+        if ACQ_UNIT_FIELD.match(folio_prop_name):
+            return self._get_acquisition_unit_value(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            )
+
         if MATERIAL_TYPE_FIELD.search(folio_prop_name):
             raw = str(
                 super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
@@ -538,6 +564,211 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self.TENANT_ADDRESSES_QUERY,
             )
         return addresses_by_name
+
+    def _load_acquisition_units(self) -> tuple[dict[str, dict], dict[str, str]]:
+        """Read the FOLIO acquisition units: id -> unit, and normalized name -> id."""
+        try:
+            units = list(
+                self.folio_client.folio_get_all(
+                    "/acquisitions-units/units", "acquisitionsUnits", "", 1000
+                )
+            )
+        except Exception as exception:
+            logger.warning("Could not read acquisition units (%s)", exception)
+            return {}, {}
+        by_id = {u["id"]: u for u in units if u.get("id")}
+        by_name = {
+            normalize_for_compare(u["name"]): u["id"]
+            for u in units
+            if u.get("name") and u.get("id")
+        }
+        logger.info("Loaded %s acquisition units from FOLIO", len(by_id))
+        return by_id, by_name
+
+    def _resolve_acquisition_unit(self, value: str, index_or_id: str) -> str:
+        """Accept a UUID as-is or resolve a FOLIO acquisition unit name.
+
+        Used without an acquisition unit map, and for hardcoded values even with one.
+        A name that is not a FOLIO acquisition unit is skipped: it is reported, logged as a
+        field mapping error, and the empty string is returned. The rest of the order is kept.
+        """
+        if not value or self.is_uuid(value):
+            return value
+        if resolved := self._acq_unit_ids_by_name.get(normalize_for_compare(value)):
+            self.migration_report.add("AcquisitionUnitMapping", f"{value} -> {resolved}")
+            return resolved
+        self.migration_report.add(
+            "AcquisitionUnitMapping", i18n.t("Unmapped (Value skipped)") + f" -- {value}"
+        )
+        self.handle_transformation_field_mapping_error(
+            index_or_id,
+            TransformationFieldMappingError(
+                index_or_id,
+                "Acquisition unit name not found in FOLIO acquisition units. Value skipped",
+                value,
+            ),
+        )
+        return ""
+
+    def _get_acquisition_unit_value(
+        self, legacy_object, folio_prop_name, index_or_id, schema_default_value
+    ) -> str:
+        """Resolve an acqUnitIds value to unit UUIDs, joined with the multi-field delimiter.
+
+        Legacy values go through the acquisition unit map when there is one. Hardcoded values
+        and values without a map are FOLIO unit names or UUIDs.
+        """
+        raw = str(
+            super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
+            or ""
+        )
+        if not raw:
+            return ""
+        delimiter = self.library_configuration.multi_field_delimiter
+        if self.acquisition_unit_mapping and not self._is_hardcoded_value(
+            folio_prop_name, legacy_object, raw
+        ):
+            return self._get_delimited_ref_data_value(
+                self.acquisition_unit_mapping,
+                legacy_object,
+                folio_prop_name,
+                index_or_id,
+                prevent_default=True,
+            )
+        pieces = raw.split(delimiter) if delimiter else [raw]
+        resolved = (self._resolve_acquisition_unit(p.strip(), index_or_id) for p in pieces)
+        return (delimiter or "").join(unit for unit in resolved if unit)
+
+    def _validate_hardcoded_acquisition_units(self) -> None:
+        """Halt if a hardcoded acquisition unit is not a FOLIO unit name or UUID."""
+        if not self._acq_units_by_id:
+            return
+        invalid_values: list[str] = []
+        for entry in self.record_map.get("data", []):
+            folio_field = entry.get("folio_field", "")
+            if not ACQ_UNIT_FIELD.match(folio_field):
+                continue
+            for value_key in ("value", "fallback_value"):
+                value = entry.get(value_key)
+                if not isinstance(value, str) or not value.strip():
+                    continue
+                delimiter = self.library_configuration.multi_field_delimiter
+                for piece in value.split(delimiter) if delimiter else [value]:
+                    piece = piece.strip()
+                    if not piece:
+                        continue
+                    if self.is_uuid(piece):
+                        known = piece in self._acq_units_by_id
+                    else:
+                        known = normalize_for_compare(piece) in self._acq_unit_ids_by_name
+                    if not known:
+                        invalid_values.append(
+                            f"  - '{piece}' (in field: {folio_field}, {value_key}) "
+                            "- not found in FOLIO acquisition units"
+                        )
+        if invalid_values:
+            raise TransformationProcessError(
+                "",
+                "Invalid acquisition unit values found in field mapping:",
+                "\n".join(
+                    [
+                        *invalid_values,
+                        "Available acquisition units: "
+                        + ", ".join(sorted(self._acq_unit_ids_by_name)),
+                        "Please update your mapping file with valid acquisition unit "
+                        "names or UUIDs.",
+                    ]
+                ),
+            )
+
+    def _read_user_permission_names(self, user_id: str) -> set[str]:
+        """Read the names of all permissions the user holds, on Eureka or with mod-permissions.
+
+        Eureka (mod-roles-keycloak) resolves capabilities, capability sets and roles into the
+        user's effective permissions at /permissions/users/{id}. That module is not on other
+        tenants, which read mod-permissions instead, with the user id as the index field and
+        permission sets expanded. Raises if neither works.
+        """
+        get = self.folio_client.folio_get
+        try:
+            response = get(f"/permissions/users/{user_id}")
+            return set(response["permissions"])
+        except Exception as eureka_exception:
+            logger.info(
+                "Could not read Eureka permissions (%s). Reading mod-permissions instead",
+                eureka_exception,
+            )
+        perms = get(
+            f"/perms/users/{user_id}/permissions",
+            "permissionNames",
+            query_params={"indexField": "userId", "expanded": "true"},
+        )
+        return {p if isinstance(p, str) else p.get("permissionName") for p in perms or []}
+
+    def _read_user_acq_access(self) -> tuple[set[str], set[str]] | None:
+        """Read the running user's acquisition unit memberships and permissions (cached).
+
+        Returns (unit ids the user belongs to, permission names), or None if either cannot
+        be read, in which case the membership rules are not checked.
+        """
+        if self._user_acq_access is not False:
+            return self._user_acq_access  # type: ignore[return-value]
+        try:
+            user_id = self.folio_client.current_user
+            memberships = self.folio_client.folio_get_all(
+                "/acquisitions-units/memberships",
+                "acquisitionsUnitMemberships",
+                f"userId=={user_id}",
+                1000,
+            )
+            member_of = {m["acquisitionsUnitId"] for m in memberships}
+            names = self._read_user_permission_names(str(user_id))
+            self._user_acq_access = (member_of, names)
+        except Exception as exception:
+            logger.warning(
+                "Could not read the running user's acquisition unit access (%s). "
+                "Membership is not checked",
+                exception,
+            )
+            self._user_acq_access = None
+        return self._user_acq_access  # type: ignore[return-value]
+
+    def _acquisition_unit_problems(self, composite_order: dict) -> list[str]:
+        """Check the order's units the way mod-orders does when the order is created.
+
+        Units must exist and be active. When the user lacks the bypass permission and every
+        unit protects create, the user must be a member of at least one of them.
+        """
+        unit_ids = [u for u in composite_order.get("acqUnitIds") or [] if u]
+        if not unit_ids or not self._acq_units_by_id:
+            return []
+        problems: list[str] = []
+        units = []
+        for unit_id in unit_ids:
+            unit = self._acq_units_by_id.get(unit_id)
+            if not unit or unit.get("isDeleted"):
+                problems.append(f"acquisition unit {unit_id} does not exist or is not active")
+            else:
+                units.append(unit)
+        if problems:
+            return problems
+        access = self._read_user_acq_access()
+        if not access:
+            return []
+        member_of, permissions = access
+        if ACQ_UNIT_CREATE_PERMISSION not in permissions:
+            return [
+                "acquisition units are assigned but the user lacks the permission "
+                f"{ACQ_UNIT_CREATE_PERMISSION}"
+            ]
+        if (
+            ACQ_UNIT_BYPASS_PERMISSION not in permissions
+            and all(u.get("protectCreate") for u in units)
+            and not any(u["id"] in member_of for u in units)
+        ):
+            names = ", ".join(self._named(u.get("name"), u["id"]) for u in units)
+            return [f"the user is not a member of any of the acquisition units: {names}"]
+        return []
 
     def _load_material_types_by_name(self) -> dict[str, str]:
         """Build normalized FOLIO material type name -> id, for lookups without a map file."""
@@ -921,6 +1152,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         ("restricted to locations", "Fund location restriction"),
         ("estimated price", "Fund distributions and estimated price"),
         ("fund distribution", "Fund distributions and estimated price"),
+        ("acquisition unit", "Acquisition units"),
         ("material type", "Material type missing"),
         ("quantity", "Quantities and locations"),
         ("location", "Quantities and locations"),
@@ -962,6 +1194,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 f"the order has {len(pols)} PO lines, above the tenant limit of "
                 f"{self.po_lines_limit}"
             )
+        problems.extend(self._acquisition_unit_problems(composite_order))
         if is_open:
             problems.extend(self._vendor_problems(composite_order.get("vendor")))
         for number, pol in enumerate(pols, start=1):

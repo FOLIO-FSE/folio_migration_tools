@@ -150,6 +150,18 @@ class OrdersTransformer(MigrationTaskBase):
             ),
         ] = ""
 
+        acquisition_unit_map_file_name: Annotated[
+            str,
+            Field(
+                title="Acquisition Unit Map File Name",
+                description=(
+                    "Optional file name for mapping legacy values to FOLIO acquisition unit "
+                    "names for the order's acqUnitIds. Without it, mapped values are unit "
+                    "names or UUIDs. By default is empty string."
+                ),
+            ),
+        ] = ""
+
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
         return FOLIONamespaces.orders
@@ -259,6 +271,13 @@ class OrdersTransformer(MigrationTaskBase):
             ),
             self._load_create_inventory_defaults(),
             self._load_po_lines_limit(),
+            self.load_ref_data_mapping_file(  # Optional
+                "acquisitionUnitMap",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.acquisition_unit_map_file_name,
+                self.folio_keys,
+                False,
+            ),
         )
 
     def _load_create_inventory_defaults(self) -> dict:

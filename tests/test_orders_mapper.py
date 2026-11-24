@@ -2132,3 +2132,147 @@ def test_validation_failures_are_counted_by_rule_in_the_report(mapper):
     assert section["Cost prices and discount"] >= 1
     assert section["Claiming"] == 1
     assert "Other" not in section
+
+
+UNIT_A = "11111111-1111-4111-8111-111111111111"
+UNIT_B = "22222222-2222-4222-8222-222222222222"
+
+
+def _acq_mapper(mapper, units, member_of=(), permissions=None, user_access="read"):
+    mapper_copy = copy.copy(mapper)
+    mapper_copy._acq_units_by_id = {u["id"]: u for u in units}
+    mapper_copy._acq_unit_ids_by_name = {u["name"].lower(): u["id"] for u in units}
+    mapper_copy.acquisition_unit_mapping = None
+    if permissions is None:
+        permissions = {
+            "orders.acquisitions-units-assignments.create.execute",
+        }
+    mapper_copy._user_acq_access = (
+        (set(member_of), set(permissions)) if user_access == "read" else None
+    )
+    return mapper_copy
+
+
+def _units(protect_a=True, protect_b=True):
+    return [
+        {"id": UNIT_A, "name": "Main", "protectCreate": protect_a},
+        {"id": UNIT_B, "name": "Special", "protectCreate": protect_b},
+    ]
+
+
+def _order(*unit_ids):
+    return {"workflowStatus": "Pending", "acqUnitIds": list(unit_ids), "compositePoLines": []}
+
+
+def test_acquisition_unit_name_or_uuid_resolves_without_a_map(mapper):
+    m = _acq_mapper(mapper, _units())
+    assert m._resolve_acquisition_unit(UNIT_B, "1") == UNIT_B
+    assert m._resolve_acquisition_unit(" main ", "1") == UNIT_A
+    assert m._resolve_acquisition_unit("Nope", "1") == ""
+    m.record_map = {"data": [{"folio_field": "acqUnitIds[0]", "legacy_field": "u"}]}
+    m.mapped_from_legacy_data = {"acqUnitIds[0]": ["u"]}
+    assert m.get_prop({"u": "Nope^-^Main"}, "acqUnitIds[0]", "1", "") == UNIT_A
+
+
+def test_acquisition_unit_hardcoded_values_are_validated(mapper):
+    m = _acq_mapper(mapper, _units())
+
+    def validate_with(value):
+        m.record_map = {"data": [{"folio_field": "acqUnitIds[0]", "value": value}]}
+        m._validate_hardcoded_acquisition_units()
+
+    validate_with("Main")
+    validate_with(UNIT_A)
+    validate_with("")
+    with pytest.raises(TransformationProcessError):
+        validate_with("Nope")
+    with pytest.raises(TransformationProcessError):
+        validate_with("33333333-3333-4333-8333-333333333333")
+
+
+def test_acquisition_units_are_resolved_through_get_prop_with_delimiter(mapper):
+    m = _acq_mapper(mapper, _units())
+    m.record_map = {"data": [{"folio_field": "acqUnitIds[0]", "legacy_field": "u"}]}
+    m.mapped_from_legacy_data = {"acqUnitIds[0]": ["u"]}
+    assert m.get_prop({"u": "Main^-^special"}, "acqUnitIds[0]", "1", "") == f"{UNIT_A}^-^{UNIT_B}"
+
+
+def test_acquisition_unit_map_handles_delimited_values(mapper):
+    class StubClient:
+        def folio_get_all(self, *args, **kwargs):
+            return _units()
+
+    m = _acq_mapper(mapper, _units())
+    m.acquisition_unit_mapping = RefDataMapping(
+        StubClient(),
+        "/acquisitions-units/units",
+        "acquisitionsUnits",
+        [{"legacy_unit": "M", "folio_name": "Main"}, {"legacy_unit": "S", "folio_name": "Special"}, {"legacy_unit": "*", "folio_name": "Main"}],
+        "name",
+        "AcquisitionUnitMapping",
+    )
+    m.record_map = {"data": [{"folio_field": "acqUnitIds[0]", "legacy_field": "legacy_unit"}]}
+    m.mapped_from_legacy_data = {"acqUnitIds[0]": ["legacy_unit"]}
+    assert m.get_prop({"legacy_unit": "M^-^S"}, "acqUnitIds[0]", "1", "") == f"{UNIT_A}^-^{UNIT_B}"
+
+
+def test_validation_rejects_unknown_or_inactive_units(mapper):
+    units = _units()
+    units[1]["isDeleted"] = True
+    m = _acq_mapper(mapper, units, member_of=[UNIT_A])
+    m._validate_composite_order("1", _order(UNIT_A))
+    with pytest.raises(TransformationRecordFailedError, match="not active"):
+        m._validate_composite_order("1", _order(UNIT_B))
+    with pytest.raises(TransformationRecordFailedError, match="does not exist"):
+        m._validate_composite_order("1", _order("33333333-3333-4333-8333-333333333333"))
+
+
+def test_validation_requires_membership_when_every_unit_protects_create(mapper):
+    m = _acq_mapper(mapper, _units(), member_of=[UNIT_B])
+    m._validate_composite_order("1", _order(UNIT_A, UNIT_B))  # member of one is enough
+    with pytest.raises(TransformationRecordFailedError, match="not a member"):
+        m._validate_composite_order("1", _order(UNIT_A))
+    m_open = _acq_mapper(mapper, _units(protect_b=False), member_of=[])
+    m_open._validate_composite_order("1", _order(UNIT_A, UNIT_B))  # one unit is unprotected
+
+
+def test_validation_bypass_and_missing_permission(mapper):
+    create = "orders.acquisitions-units-assignments.create.execute"
+    bypass = "orders.acquisition-units.bypass.execute"
+    m = _acq_mapper(mapper, _units(), permissions={create, bypass})
+    m._validate_composite_order("1", _order(UNIT_A))
+    m = _acq_mapper(mapper, _units(), permissions=set(), member_of=[UNIT_A])
+    with pytest.raises(TransformationRecordFailedError, match="lacks the permission"):
+        m._validate_composite_order("1", _order(UNIT_A))
+
+
+def test_membership_is_not_checked_when_user_access_cannot_be_read(mapper):
+    m = _acq_mapper(mapper, _units(), user_access="unreadable")
+    m._validate_composite_order("1", _order(UNIT_A))
+
+
+class _PermClient:
+    def __init__(self, responses):
+        self.responses = responses
+        self.calls = []
+
+    def folio_get(self, path, key=None, query="", **kwargs):
+        self.calls.append(path)
+        self.kwargs = getattr(self, "kwargs", []) + [kwargs]
+        if path not in self.responses:
+            raise RuntimeError("404")
+        return self.responses[path]
+
+
+def test_permissions_are_read_from_eureka(mapper):
+    m = copy.copy(mapper)
+    m.folio_client = _PermClient({"/permissions/users/u1": {"userId": "u1", "permissions": ["a.b"]}})
+    assert m._read_user_permission_names("u1") == {"a.b"}
+    assert m.folio_client.calls == ["/permissions/users/u1"]
+
+
+def test_permissions_fall_back_to_mod_permissions(mapper):
+    m = copy.copy(mapper)
+    m.folio_client = _PermClient({"/perms/users/u1/permissions": ["a.b", {"permissionName": "c.d"}]})
+    assert m._read_user_permission_names("u1") == {"a.b", "c.d"}
+    assert m.folio_client.kwargs[-1]["query_params"] == {"indexField": "userId", "expanded": "true"}

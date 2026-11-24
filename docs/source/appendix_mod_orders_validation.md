@@ -42,6 +42,16 @@ In a P/E Mix, if a location sets a physical or electronic quantity explicitly, i
 
 The cost quantities follow the locations. If every cost quantity that is mapped (`quantityPhysical`, `quantityElectronic` or both) equals the total of the locations' `quantity`, the cost gets the physical and electronic totals of the locations. This lets a legacy system with a single quantity field map it to the locations and to both cost quantities. If a mapped cost quantity differs from the total, or a location has no `quantity`, the cost is left as mapped and validation reports any mismatch.
 
+### Acquisition units
+
+When an order is created with `acqUnitIds` (`ProtectionService`):
+
+* The user always needs `orders.acquisitions-units-assignments.create.execute`. Without it the POST returns 403 `userHasNoAcqUnitsPermission`. No other permission replaces it.
+* Every unit must exist and be active, or the POST returns 422 `orderAcqUnitsNotFound`.
+* Membership: the user must be a member of at least one of the order's units (403 `userNotAMemberOfTheAcq` otherwise), unless either of these applies:
+  * The user has `orders.acquisition-units.bypass.execute`, which skips the membership check for any unit.
+  * Any of the order's units has `protectCreate` false.
+
 ### Cost prices
 
 * Electronic Resource: `listUnitPrice` must not be above 0.
@@ -87,6 +97,7 @@ The OrdersTransformer reads the tenant setting (`/orders-storage/settings`, key 
 The transformer fails a record before it reaches FOLIO when it breaks one of these rules:
 
 * Cost quantities by order format, location quantity totals against the cost, location quantities above 0, and exactly one of `locationId` or `holdingId` per location.
+* Acquisition units: units exist and are active, and the running user can assign them (see above). The user's memberships and permissions are read from FOLIO. If they cannot be read, the membership checks are skipped.
 * Cost prices: list unit prices, additional cost, and the discount sign and percentage limit. An amount discount that makes the estimated price negative is also rejected.
 * A package line with an `instanceId`.
 * Claiming: `claimingInterval` above 0 when `claimingActive` is true.
