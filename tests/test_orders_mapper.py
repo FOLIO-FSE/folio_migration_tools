@@ -1522,14 +1522,13 @@ def test_hardcoded_material_type_bypasses_the_map(mapper):
 def test_product_id_type_resolves_by_name_or_uuid(mapper):
     mapper_copy = copy.copy(mapper)
     mapper_copy._identifier_types_by_name = {"isbn": "8261054f-be78-422d-bd51-4ed9f33c3422"}
-    prop = "compositePoLines[0].details.productIds[0].productIdType"
     resolve = mapper_copy._resolve_product_id_type
-    assert resolve("ISBN", prop, "1") == "8261054f-be78-422d-bd51-4ed9f33c3422"
-    assert resolve(" isbn ", prop, "1") == "8261054f-be78-422d-bd51-4ed9f33c3422"
+    assert resolve("ISBN") == "8261054f-be78-422d-bd51-4ed9f33c3422"
+    assert resolve(" isbn ") == "8261054f-be78-422d-bd51-4ed9f33c3422"
     explicit = "913300b2-03ed-469a-8179-c1092c991227"
-    assert resolve(explicit, prop, "1") == explicit
+    assert resolve(explicit) == explicit
     # A bad legacy value does not fail the record
-    assert resolve("Not a type", prop, "1") == ""
+    assert resolve("Not a type") == ""
 
 
 def test_incomplete_product_ids_are_dropped_but_record_is_kept(mapper):

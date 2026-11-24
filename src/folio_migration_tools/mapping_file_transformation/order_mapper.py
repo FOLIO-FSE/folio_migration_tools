@@ -6,6 +6,7 @@ acquisition units, fund distributions, and vendor references.
 """
 
 import json
+from itertools import product
 import logging
 import re
 import uuid
@@ -39,6 +40,10 @@ logger = logging.getLogger(__name__)
 
 # Notes mapped under a purchase order line, e.g. compositePoLines[0].notes[0].content
 MATERIAL_TYPE_FIELD = re.compile(r"\.(?:physical|eresource)\.materialType$")
+FORMAT_PHYSICAL = "Physical Resource"
+FORMAT_ELECTRONIC = "Electronic Resource"
+FORMAT_MIX = "P/E Mix"
+COST_RULE_LABEL = "Cost prices and discount"
 ACQ_UNIT_FIELD = re.compile(r"^acqUnitIds(?:\[\d+\])?$")
 ACQ_UNIT_CREATE_PERMISSION = "orders.acquisitions-units-assignments.create.execute"
 ACQ_UNIT_BYPASS_PERMISSION = "orders.acquisition-units.bypass.execute"
@@ -402,46 +407,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
             )
 
         if MATERIAL_TYPE_FIELD.search(folio_prop_name):
-            raw = str(
-                super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
-                or ""
-            )
-            # Hardcoded values are FOLIO names or UUIDs (validated at startup), not legacy
-            # values, so they are never run through the map.
-            if not raw:
-                # Material type is only required when inventory creates items, so an empty
-                # value stays empty instead of taking the map's default.
-                return ""
-            if self.material_type_mapping and not self._is_hardcoded_value(
-                folio_prop_name, legacy_object, raw
-            ):
-                # Look up this field's own value. The physical and electronic material
-                # types can come from different columns, but share one map.
-                lookup_object = legacy_object
-                keys = self.material_type_mapping.mapped_legacy_keys
-                if len(keys) == 1:
-                    lookup_object = {**legacy_object, keys[0]: raw}
-                return self.get_mapped_ref_data_value(
-                    self.material_type_mapping,
-                    lookup_object,
-                    index_or_id,
-                    folio_prop_name,
-                    False,
-                )
-            return self._resolve_material_type(raw, index_or_id)
-
-        if folio_prop_name.endswith(".productIdType"):
-            raw = super().get_prop(
+            return self._get_material_type_value(
                 legacy_object, folio_prop_name, index_or_id, schema_default_value
             )
-            raw = str(raw or "")
-            delimiter = self.library_configuration.multi_field_delimiter
-            if delimiter and delimiter in raw:
-                return delimiter.join(
-                    self._resolve_product_id_type(piece.strip(), folio_prop_name, index_or_id)
-                    for piece in raw.split(delimiter)
-                )
-            return self._resolve_product_id_type(raw, folio_prop_name, index_or_id)
+
+        if folio_prop_name.endswith(".productIdType"):
+            return self._get_product_id_type_value(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            )
 
         if folio_prop_name in ("billTo", "shipTo"):
             raw = super().get_prop(
@@ -457,6 +430,66 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         return mapped_value
+
+    def _get_material_type_value(
+        self, legacy_object, folio_prop_name, index_or_id, schema_default_value
+    ):
+        raw = str(
+            super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
+            or ""
+        )
+        # Hardcoded values are FOLIO names or UUIDs (validated at startup), not legacy
+        # values, so they are never run through the map.
+        if not raw:
+            # Material type is only required when inventory creates items, so an empty
+            # value stays empty instead of taking the map's default.
+            return ""
+        if self.material_type_mapping and not self._is_hardcoded_value(
+            folio_prop_name, legacy_object, raw
+        ):
+            # Look up this field's own value. The physical and electronic material
+            # types can come from different columns, but share one map.
+            lookup_object = legacy_object
+            keys = self.material_type_mapping.mapped_legacy_keys
+            if len(keys) == 1:
+                lookup_object = {**legacy_object, keys[0]: raw}
+            return self.get_mapped_ref_data_value(
+                self.material_type_mapping,
+                lookup_object,
+                index_or_id,
+                folio_prop_name,
+                False,
+            )
+        return self._resolve_material_type(raw, index_or_id)
+
+    def _get_product_id_type_value(
+        self, legacy_object, folio_prop_name, index_or_id, schema_default_value
+    ):
+        raw = super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
+        raw = str(raw or "")
+        delimiter = self.library_configuration.multi_field_delimiter
+        if delimiter and delimiter in raw:
+            return delimiter.join(
+                self._resolve_product_id_type(piece.strip()) for piece in raw.split(delimiter)
+            )
+        return self._resolve_product_id_type(raw)
+
+    @staticmethod
+    def _delimited_piece_objects(legacy_object: dict, keys: list, delimiter: str):
+        """Yield one copy of the legacy object per delimited piece of the mapped columns."""
+        pieces = {
+            k: [piece.strip() for piece in str(legacy_object.get(k) or "").split(delimiter)]
+            for k in keys
+        }
+        for i in range(max(len(v) for v in pieces.values())):
+            piece_object = dict(legacy_object)
+            for k, values in pieces.items():
+                # A column without the delimiter applies to every piece.
+                if len(values) == 1:
+                    piece_object[k] = values[0]
+                else:
+                    piece_object[k] = values[i] if i < len(values) else ""
+            yield piece_object
 
     def _get_delimited_ref_data_value(
         self,
@@ -479,19 +512,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 ref_data_mapping, legacy_object, index_or_id, folio_prop_name, prevent_default
             )
-        pieces = {
-            k: [piece.strip() for piece in str(legacy_object.get(k) or "").split(delimiter)]
-            for k in keys
-        }
         results = []
-        for i in range(max(len(v) for v in pieces.values())):
-            piece_object = dict(legacy_object)
-            for k, values in pieces.items():
-                # A column without the delimiter applies to every piece.
-                if len(values) == 1:
-                    piece_object[k] = values[0]
-                else:
-                    piece_object[k] = values[i] if i < len(values) else ""
+        for piece_object in self._delimited_piece_objects(legacy_object, keys, delimiter):
             if not any(piece_object[k] for k in keys):
                 # Keep the piece, empty, so it stays lined up with the other delimited
                 # fields. Looking it up would give it the default value.
@@ -643,42 +665,74 @@ class CompositeOrderMapper(MappingFileMapperBase):
         """Halt if a hardcoded acquisition unit is not a FOLIO unit name or UUID."""
         if not self._acq_units_by_id:
             return
-        invalid_values: list[str] = []
-        for entry in self.record_map.get("data", []):
-            folio_field = entry.get("folio_field", "")
-            if not ACQ_UNIT_FIELD.match(folio_field):
+        invalid_values = []
+        for piece, folio_field, value_key in self._hardcoded_values(
+            ACQ_UNIT_FIELD.match, split_on_delimiter=True
+        ):
+            if self.is_uuid(piece):
+                known = piece in self._acq_units_by_id
+            else:
+                known = normalize_for_compare(piece) in self._acq_unit_ids_by_name
+            if not known:
+                invalid_values.append(
+                    f"  - '{piece}' (in field: {folio_field}, {value_key}) "
+                    "- not found in FOLIO acquisition units"
+                )
+        self._raise_if_invalid(
+            invalid_values,
+            "Invalid acquisition unit values found in field mapping:",
+            "Available acquisition units: " + ", ".join(sorted(self._acq_unit_ids_by_name)),
+            "Please update your mapping file with valid acquisition unit names or UUIDs.",
+        )
+
+    def _hardcoded_values(self, field_matcher, split_on_delimiter: bool = False):
+        """Yield (value, folio_field, value_key) for hardcoded values of matching fields."""
+        delimiter = self.library_configuration.multi_field_delimiter if split_on_delimiter else ""
+        entries = (
+            e for e in self.record_map.get("data", []) if field_matcher(e.get("folio_field", ""))
+        )
+        for entry, value_key in product(entries, ("value", "fallback_value")):
+            value = entry.get(value_key)
+            if not isinstance(value, str):
                 continue
-            for value_key in ("value", "fallback_value"):
-                value = entry.get(value_key)
-                if not isinstance(value, str) or not value.strip():
-                    continue
-                delimiter = self.library_configuration.multi_field_delimiter
-                for piece in value.split(delimiter) if delimiter else [value]:
-                    piece = piece.strip()
-                    if not piece:
-                        continue
-                    if self.is_uuid(piece):
-                        known = piece in self._acq_units_by_id
-                    else:
-                        known = normalize_for_compare(piece) in self._acq_unit_ids_by_name
-                    if not known:
-                        invalid_values.append(
-                            f"  - '{piece}' (in field: {folio_field}, {value_key}) "
-                            "- not found in FOLIO acquisition units"
-                        )
+            for piece in value.split(delimiter) if delimiter else [value]:
+                if piece.strip():
+                    yield piece.strip(), entry["folio_field"], value_key
+
+    def _validate_hardcoded_names(
+        self, field_matcher, by_name: dict[str, str], description: str, summary: str
+    ) -> None:
+        """Halt if a hardcoded value is not a FOLIO name or UUID from by_name.
+
+        description names the FOLIO objects in messages ("material types"), and summary
+        names the offending values ("material type").
+        """
+        known_ids = set(by_name.values())
+        invalid_values = []
+        for value, folio_field, value_key in self._hardcoded_values(field_matcher):
+            if self.is_uuid(value):
+                if value not in known_ids:
+                    invalid_values.append(
+                        f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                        f"- UUID not found in FOLIO {description}"
+                    )
+            elif normalize_for_compare(value) not in by_name:
+                invalid_values.append(
+                    f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                    f"- name not found in FOLIO {description}"
+                )
+        self._raise_if_invalid(
+            invalid_values,
+            f"Invalid {summary} values found in field mapping:",
+            f"Available {description}: " + ", ".join(sorted(by_name)),
+            f"Please update your mapping file with valid {summary} names or UUIDs.",
+        )
+
+    @staticmethod
+    def _raise_if_invalid(invalid_values: list[str], header: str, available: str, footer: str):
         if invalid_values:
             raise TransformationProcessError(
-                "",
-                "Invalid acquisition unit values found in field mapping:",
-                "\n".join(
-                    [
-                        *invalid_values,
-                        "Available acquisition units: "
-                        + ", ".join(sorted(self._acq_unit_ids_by_name)),
-                        "Please update your mapping file with valid acquisition unit "
-                        "names or UUIDs.",
-                    ]
-                ),
+                "", header, "\n".join([*invalid_values, available, footer])
             )
 
     def _read_user_permission_names(self, user_id: str) -> set[str]:
@@ -828,41 +882,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     def _validate_hardcoded_material_types(self) -> None:
         """Halt if a hardcoded material type is not a FOLIO material type name or UUID."""
-        known_ids = set(self._material_types_by_name.values())
-        invalid_values: list[str] = []
-        for entry in self.record_map.get("data", []):
-            folio_field = entry.get("folio_field", "")
-            if not MATERIAL_TYPE_FIELD.search(folio_field):
-                continue
-            for value_key in ("value", "fallback_value"):
-                value = entry.get(value_key)
-                value = value.strip() if isinstance(value, str) else value
-                if not value:
-                    continue
-                if self.is_uuid(value):
-                    if value not in known_ids:
-                        invalid_values.append(
-                            f"  - '{value}' (in field: {folio_field}, {value_key}) "
-                            "- UUID not found in FOLIO material types"
-                        )
-                elif normalize_for_compare(value) not in self._material_types_by_name:
-                    invalid_values.append(
-                        f"  - '{value}' (in field: {folio_field}, {value_key}) "
-                        "- name not found in FOLIO material types"
-                    )
-        if invalid_values:
-            raise TransformationProcessError(
-                "",
-                "Invalid material type values found in field mapping:",
-                "\n".join(
-                    [
-                        *invalid_values,
-                        "Available material types: "
-                        + ", ".join(sorted(self._material_types_by_name)),
-                        "Please update your mapping file with valid material type names or UUIDs.",
-                    ]
-                ),
-            )
+        self._validate_hardcoded_names(
+            MATERIAL_TYPE_FIELD.search,
+            self._material_types_by_name,
+            "material types",
+            "material type",
+        )
 
     def _load_identifier_types_by_name(self) -> dict[str, str]:
         """Build normalized FOLIO identifier type name -> id, for productIdType lookups."""
@@ -876,7 +901,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         logger.info("Loaded %s identifier types from FOLIO", len(by_name))
         return by_name
 
-    def _resolve_product_id_type(self, value: str, folio_prop_name: str, index_or_id: str) -> str:
+    def _resolve_product_id_type(self, value: str) -> str:
         """Accept an identifier type UUID as-is, or resolve a name (case/space-insensitive).
 
         An unrecognized value does not fail the record. It resolves to an empty type, and
@@ -894,42 +919,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
     def _validate_hardcoded_product_id_types(self) -> None:
         """Halt if a hardcoded productIdType in the field mapping is not a FOLIO type."""
-        known_ids = set(self._identifier_types_by_name.values())
-        invalid_values: list[str] = []
-        for entry in self.record_map.get("data", []):
-            folio_field = entry.get("folio_field", "")
-            if not PRODUCT_ID_TYPE_FIELD.search(folio_field):
-                continue
-            for value_key in ("value", "fallback_value"):
-                value = entry.get(value_key)
-                value = value.strip() if isinstance(value, str) else value
-                if not value:
-                    continue
-                if self.is_uuid(value):
-                    if value not in known_ids:
-                        invalid_values.append(
-                            f"  - '{value}' (in field: {folio_field}, {value_key}) "
-                            "- UUID not found in FOLIO identifier types"
-                        )
-                elif normalize_for_compare(value) not in self._identifier_types_by_name:
-                    invalid_values.append(
-                        f"  - '{value}' (in field: {folio_field}, {value_key}) "
-                        "- name not found in FOLIO identifier types"
-                    )
-        if invalid_values:
-            raise TransformationProcessError(
-                "",
-                "Invalid productIdType values found in field mapping:",
-                "\n".join(
-                    [
-                        *invalid_values,
-                        "Available identifier types: "
-                        + ", ".join(sorted(self._identifier_types_by_name)),
-                        "Please update your mapping file with valid identifier type "
-                        "names or UUIDs.",
-                    ]
-                ),
-            )
+        self._validate_hardcoded_names(
+            PRODUCT_ID_TYPE_FIELD.search,
+            self._identifier_types_by_name,
+            "identifier types",
+            "productIdType",
+        )
 
     LOCATION_QUANTITY_FIELDS = ("quantity", "quantityPhysical", "quantityElectronic")
 
@@ -952,14 +947,18 @@ class CompositeOrderMapper(MappingFileMapperBase):
         for folio_key in self.folio_keys:
             if not (match := pattern.fullmatch(folio_key)):
                 continue
-            for entry in self.get_map_entries_by_folio_prop_name(
-                folio_key, self.record_map["data"]
-            ):
-                for key in ("legacy_field", "fallback_legacy_field"):
-                    value = legacy_object.get(entry.get(key) or "")
-                    if isinstance(value, str) and delimiter in value:
-                        fields.add(match.group(1))
+            entries = self.get_map_entries_by_folio_prop_name(folio_key, self.record_map["data"])
+            if any(self._has_delimited_value(e, legacy_object, delimiter) for e in entries):
+                fields.add(match.group(1))
         return fields
+
+    @staticmethod
+    def _has_delimited_value(entry: dict, legacy_object: dict, delimiter: str) -> bool:
+        values = (
+            legacy_object.get(entry.get(key) or "")
+            for key in ("legacy_field", "fallback_legacy_field")
+        )
+        return any(isinstance(v, str) and delimiter in v for v in values)
 
     def _merge_duplicate_locations(
         self,
@@ -986,29 +985,36 @@ class CompositeOrderMapper(MappingFileMapperBase):
             locations = pol.get("locations", [])
             if len(locations) < 2:
                 continue
-            groups: dict = {}
-            merged = []
-            for location in locations:
-                location_id = location.get("locationId") if isinstance(location, dict) else None
-                if not location_id:
-                    merged.append(location)
-                elif location_id in groups:
-                    groups[location_id].append(location)
-                else:
-                    groups[location_id] = [location]
-                    merged.append(location)
+            groups, merged = self._group_locations_by_id(locations)
             for group in groups.values():
-                for field in self.LOCATION_QUANTITY_FIELDS:
-                    if not any(field in loc for loc in group):
-                        continue
-                    if field in delimited_fields:
-                        group[0][field] = sum(
-                            self._as_int(loc.get(field), index_or_id, f"location {field}")
-                            for loc in group
-                        )
-                    else:
-                        group[0][field] = len(group)
+                self._merge_group_quantities(group, delimited_fields, index_or_id)
             pol["locations"] = merged
+
+    @staticmethod
+    def _group_locations_by_id(locations: list) -> tuple[dict, list]:
+        """Group locations by locationId. Returns the groups and the locations to keep."""
+        groups: dict = {}
+        merged = []
+        for location in locations:
+            location_id = location.get("locationId") if isinstance(location, dict) else None
+            if location_id in groups:
+                groups[location_id].append(location)
+                continue
+            if location_id:
+                groups[location_id] = [location]
+            merged.append(location)
+        return groups, merged
+
+    def _merge_group_quantities(self, group: list, delimited_fields, index_or_id: str) -> None:
+        for field in self.LOCATION_QUANTITY_FIELDS:
+            if not any(field in loc for loc in group):
+                continue
+            if field in delimited_fields:
+                group[0][field] = sum(
+                    self._as_int(loc.get(field), index_or_id, f"location {field}") for loc in group
+                )
+            else:
+                group[0][field] = len(group)
 
     def _copy_quantity_to_format_field(self, composite_order: dict) -> None:
         """Copy a location's quantity to the field its order format uses.
@@ -1024,14 +1030,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
         quantity. A line with a single piece can't be split and is left for validation.
         """
         targets = {
-            "Physical Resource": "quantityPhysical",
+            FORMAT_PHYSICAL: "quantityPhysical",
             "Other": "quantityPhysical",
-            "Electronic Resource": "quantityElectronic",
+            FORMAT_ELECTRONIC: "quantityElectronic",
         }
         for pol in composite_order.get(self.po_lines_key, []):
             order_format = pol.get("orderFormat")
             target = targets.get(order_format)
-            if not target and order_format != "P/E Mix":
+            if not target and order_format != FORMAT_MIX:
                 continue
             locations = [
                 loc
@@ -1039,33 +1045,22 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 if isinstance(loc, dict) and loc.get("quantity") not in (None, "")
             ]
             if target:
-                for location in locations:
-                    if not any(location.get(f) not in (None, "") for f in self.FORMAT_FIELDS):
-                        location[target] = location["quantity"]
+                self._copy_quantity_to(locations, target)
             else:
                 self._split_mix_quantities(pol, locations)
             self._mirror_location_split_in_cost(pol)
+
+    def _copy_quantity_to(self, locations: list[dict], target: str) -> None:
+        for location in locations:
+            if all(location.get(f) in (None, "") for f in self.FORMAT_FIELDS):
+                location[target] = location["quantity"]
 
     FORMAT_FIELDS = ("quantityPhysical", "quantityElectronic")
 
     def _split_mix_quantities(self, pol: dict, locations: list[dict]) -> None:
         """Fill the physical and electronic quantities of a P/E Mix PO line's locations."""
-        unfilled = []
         try:
-            for location in locations:
-                physical = location.get("quantityPhysical") not in (None, "")
-                electronic = location.get("quantityElectronic") not in (None, "")
-                if physical and electronic:
-                    continue
-                quantity = self._whole_number(location["quantity"])
-                if physical or electronic:
-                    given_field = "quantityPhysical" if physical else "quantityElectronic"
-                    given = self._whole_number(location[given_field])
-                    if quantity > given:
-                        missing = "quantityElectronic" if physical else "quantityPhysical"
-                        location[missing] = quantity - given
-                else:
-                    unfilled.append((location, quantity))
+            unfilled = self._fill_given_quantities(locations)
             has_electronic = any(
                 self._whole_number(loc.get("quantityElectronic") or 0) > 0
                 for loc in pol.get("locations") or []
@@ -1080,6 +1075,29 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 quantity -= 1
             if quantity > 0:
                 location["quantityPhysical"] = quantity
+
+    def _fill_given_quantities(self, locations: list[dict]) -> list[tuple[dict, int]]:
+        """Complete locations that set one side. Return those that set neither, with quantity."""
+        unfilled = []
+        for location in locations:
+            physical = location.get("quantityPhysical") not in (None, "")
+            electronic = location.get("quantityElectronic") not in (None, "")
+            if physical and electronic:
+                continue
+            quantity = self._whole_number(location["quantity"])
+            if physical or electronic:
+                self._fill_remainder(location, quantity, physical)
+            else:
+                unfilled.append((location, quantity))
+        return unfilled
+
+    def _fill_remainder(self, location: dict, quantity: int, physical_given: bool) -> None:
+        """Give the side that is not set the rest of the location's quantity."""
+        given_field = "quantityPhysical" if physical_given else "quantityElectronic"
+        given = self._whole_number(location[given_field])
+        if quantity > given:
+            missing = "quantityElectronic" if physical_given else "quantityPhysical"
+            location[missing] = quantity - given
 
     def _mirror_location_split_in_cost(self, pol: dict) -> None:
         """Give the cost the same physical/electronic split as the locations.
@@ -1156,9 +1174,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
         ("material type", "Material type missing"),
         ("quantity", "Quantities and locations"),
         ("location", "Quantities and locations"),
-        ("price", "Cost prices and discount"),
-        ("additional cost", "Cost prices and discount"),
-        ("discount", "Cost prices and discount"),
+        ("price", COST_RULE_LABEL),
+        ("additional cost", COST_RULE_LABEL),
+        ("discount", COST_RULE_LABEL),
         ("claiming", "Claiming"),
         ("binder", "Receiving workflow, binder active"),
         ("receipt not required", "Receiving workflow, binder active"),
@@ -1223,7 +1241,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             composite_order.pop("ongoing", None)
 
     def _pol_problems(self, index_or_id: str, pol: dict, is_open: bool) -> list[str]:
-        problems: list[str] = []
+        problems: list[str] = self._claiming_and_package_problems(index_or_id, pol)
         cost = pol.get("cost")
         if not isinstance(cost, dict):
             cost = {}
@@ -1233,13 +1251,6 @@ class CompositeOrderMapper(MappingFileMapperBase):
         cost_electronic = self._as_int(
             cost.get("quantityElectronic"), index_or_id, "cost electronic"
         )
-
-        if pol.get("isPackage") and pol.get("instanceId"):
-            problems.append("a package line cannot have an instance")
-
-        interval = self._as_int(pol.get("claimingInterval"), index_or_id, "claiming interval")
-        if self._is_true(pol.get("claimingActive")) and interval <= 0:
-            problems.append("a claiming interval above 0 is required when claiming is active")
 
         problems.extend(self._fund_reference_problems(pol, locations, is_open))
         if is_open:
@@ -1254,6 +1265,24 @@ class CompositeOrderMapper(MappingFileMapperBase):
         problems.extend(self._location_problems(index_or_id, pol, locations, cost))
         problems.extend(self._cost_price_problems(order_format, cost))
 
+        problems.extend(self._receiving_problems(pol, order_format))
+        problems.extend(self._prepayment_term_problems(pol))
+        if is_open:
+            problems.extend(self._material_type_problems(pol, order_format))
+            problems.extend(self._fund_distribution_problems(pol))
+        return problems
+
+    def _claiming_and_package_problems(self, index_or_id: str, pol: dict) -> list[str]:
+        problems = []
+        if pol.get("isPackage") and pol.get("instanceId"):
+            problems.append("a package line cannot have an instance")
+        interval = self._as_int(pol.get("claimingInterval"), index_or_id, "claiming interval")
+        if self._is_true(pol.get("claimingActive")) and interval <= 0:
+            problems.append("a claiming interval above 0 is required when claiming is active")
+        return problems
+
+    def _receiving_problems(self, pol: dict, order_format: str | None) -> list[str]:
+        problems = []
         # FOLIO's default for checkinItems is false (Synchronized), so an unmapped value is false
         independent = self._is_true(pol.get("checkinItems"))
         if (
@@ -1262,17 +1291,12 @@ class CompositeOrderMapper(MappingFileMapperBase):
         ):
             problems.append("receipt not required needs the Independent receiving workflow")
         if (pol.get("details") or {}).get("isBinderyActive"):
-            if order_format not in ("Physical Resource", "P/E Mix"):
+            if order_format not in (FORMAT_PHYSICAL, FORMAT_MIX):
                 problems.append("binder active requires Physical Resource or P/E Mix")
             if self._effective_create_inventory(pol, "physical") != "Instance, Holding, Item":
                 problems.append("binder active requires inventory interaction that creates items")
             if not independent:
                 problems.append("binder active requires the Independent receiving workflow")
-
-        problems.extend(self._prepayment_term_problems(pol))
-        if is_open:
-            problems.extend(self._material_type_problems(pol, order_format))
-            problems.extend(self._fund_distribution_problems(pol))
         return problems
 
     @staticmethod
@@ -1385,35 +1409,38 @@ class CompositeOrderMapper(MappingFileMapperBase):
             if not info:
                 continue
             fund = distribution.get("code") or info.get("code") or fund_id
-            expense_class = distribution.get("expenseClassId")
-            if expense_class:
-                class_label = self._named(
-                    self._reference_name(
-                        "/finance/expense-classes", "expenseClasses", expense_class
-                    ),
-                    expense_class,
-                )
-                status = info["expense_classes"].get(expense_class, "missing")
-                if status == "missing":
-                    problems.append(
-                        f"expense class {class_label} is not in an Active budget of fund {fund}"
-                    )
-                elif is_open and str(status).lower() == "inactive":
-                    problems.append(f"expense class {class_label} is inactive for fund {fund}")
-            if (
-                is_open
-                and locations
-                and not has_holding
-                and info["restrict_by_locations"]
-                and info["locations"]
-                and not info["locations"] & line_locations
-            ):
-                allowed = ", ".join(self._location_label(i) for i in sorted(info["locations"]))
-                problems.append(
-                    f"fund {fund} is restricted to locations that are not among the line's "
-                    f"locations ({allowed})"
-                )
+            if expense_class := distribution.get("expenseClassId"):
+                problems.extend(self._expense_class_problems(expense_class, info, fund, is_open))
+            if is_open and locations and not has_holding:
+                problems.extend(self._location_restriction_problems(info, fund, line_locations))
         return problems
+
+    def _expense_class_problems(
+        self, expense_class: str, info: dict, fund, is_open: bool
+    ) -> list[str]:
+        class_label = self._named(
+            self._reference_name("/finance/expense-classes", "expenseClasses", expense_class),
+            expense_class,
+        )
+        status = info["expense_classes"].get(expense_class, "missing")
+        if status == "missing":
+            return [f"expense class {class_label} is not in an Active budget of fund {fund}"]
+        if is_open and str(status).lower() == "inactive":
+            return [f"expense class {class_label} is inactive for fund {fund}"]
+        return []
+
+    def _location_restriction_problems(self, info: dict, fund, line_locations: set) -> list:
+        if not (
+            info["restrict_by_locations"]
+            and info["locations"]
+            and not info["locations"] & line_locations
+        ):
+            return []
+        allowed = ", ".join(self._location_label(i) for i in sorted(info["locations"]))
+        return [
+            f"fund {fund} is restricted to locations that are not among the line's "
+            f"locations ({allowed})"
+        ]
 
     @staticmethod
     def _whole_number(value) -> int:
@@ -1451,17 +1478,17 @@ class CompositeOrderMapper(MappingFileMapperBase):
     def _format_quantity_problems(order_format, cost_physical: int, cost_electronic: int):
         """Cost quantity rules by order format."""
         problems: list[str] = []
-        if order_format in ("Physical Resource", "Other"):
+        if order_format in (FORMAT_PHYSICAL, "Other"):
             if cost_physical == 0:
                 problems.append("physical cost quantity must be above 0")
             if cost_electronic > 0:
                 problems.append("electronic cost quantity must be 0")
-        elif order_format == "Electronic Resource":
+        elif order_format == FORMAT_ELECTRONIC:
             if cost_electronic == 0:
                 problems.append("electronic cost quantity must be above 0")
             if cost_physical > 0:
                 problems.append("physical cost quantity must be 0")
-        elif order_format == "P/E Mix":
+        elif order_format == FORMAT_MIX:
             if cost_physical == 0:
                 problems.append("physical cost quantity must be above 0")
             if cost_electronic == 0:
@@ -1472,8 +1499,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
         """Material type is required when the inventory interaction creates items."""
         problems: list[str] = []
         for kind, wanted in (
-            ("physical", order_format != "Electronic Resource"),
-            ("eresource", order_format in ("Electronic Resource", "P/E Mix")),
+            ("physical", order_format != FORMAT_ELECTRONIC),
+            ("eresource", order_format in (FORMAT_ELECTRONIC, FORMAT_MIX)),
         ):
             if (
                 wanted
@@ -1494,11 +1521,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self._as_int(loc.get(field), index_or_id, f"location {field}") for loc in locations
             )
         for field, kind, holds in (
-            ("quantityPhysical", "physical", order_format != "Electronic Resource"),
+            ("quantityPhysical", "physical", order_format != FORMAT_ELECTRONIC),
             (
                 "quantityElectronic",
                 "eresource",
-                order_format in ("Electronic Resource", "P/E Mix"),
+                order_format in (FORMAT_ELECTRONIC, FORMAT_MIX),
             ),
         ):
             expected = self._as_int(cost.get(field), index_or_id, f"cost {field}")
@@ -1527,24 +1554,27 @@ class CompositeOrderMapper(MappingFileMapperBase):
 
         problems = []
         unit, electronic = number("listUnitPrice"), number("listUnitPriceElectronic")
-        if unit is not None and (unit > 0 if order_format == "Electronic Resource" else unit < 0):
+        if unit is not None and (unit > 0 if order_format == FORMAT_ELECTRONIC else unit < 0):
             problems.append("list unit price is not valid for the order format")
         if electronic is not None and (
-            electronic < 0
-            if order_format in ("Electronic Resource", "P/E Mix")
-            else electronic > 0
+            electronic < 0 if order_format in (FORMAT_ELECTRONIC, FORMAT_MIX) else electronic > 0
         ):
             problems.append("electronic list unit price is not valid for the order format")
         if (number("additionalCost") or 0) < 0:
             problems.append("additional cost cannot be negative")
-        discount = number("discount") or 0
-        if discount < 0 or (cost.get("discountType") == "percentage" and discount > 100):
-            problems.append("discount is not valid")
-        elif discount > 0 and cost.get("discountType") != "percentage":
+        problems.extend(CompositeOrderMapper._discount_problems(cost, number("discount") or 0))
+        return problems
+
+    @staticmethod
+    def _discount_problems(cost: dict, discount: float) -> list[str]:
+        is_percentage = cost.get("discountType") == "percentage"
+        if discount < 0 or (is_percentage and discount > 100):
+            return ["discount is not valid"]
+        if discount > 0 and not is_percentage:
             price = CompositeOrderMapper._estimated_price(cost)
             if price is not None and price < 0:
-                problems.append("discount makes the estimated price negative")
-        return problems
+                return ["discount makes the estimated price negative"]
+        return []
 
     @staticmethod
     def _estimated_price(cost: dict) -> Decimal | None:
@@ -1590,15 +1620,21 @@ class CompositeOrderMapper(MappingFileMapperBase):
         ]
         message = "fund distributions do not add up to the estimated price"
         if price == 0:
-            if len(set(is_percentage)) > 1:
-                return ["fund distribution types cannot be mixed when the estimated price is 0"]
-            if is_percentage[0]:
-                return [] if sum(values) == 100 else [message]
-            return [] if all(v == 0 for v in values) else [message]
+            return CompositeOrderMapper._zero_price_distribution_problems(
+                values, is_percentage, message
+            )
         remaining = Decimal(100)
         for value, percentage in zip(values, is_percentage, strict=True):
             remaining -= value if percentage else value / price * 100
         return [message] if abs(remaining) > Decimal("1e-10") else []
+
+    @staticmethod
+    def _zero_price_distribution_problems(values: list, is_percentage: list, message: str) -> list:
+        if len(set(is_percentage)) > 1:
+            return ["fund distribution types cannot be mixed when the estimated price is 0"]
+        if is_percentage[0]:
+            return [] if sum(values) == 100 else [message]
+        return [] if all(v == 0 for v in values) else [message]
 
     def _drop_incomplete_product_ids(self, index_or_id: str, composite_order: dict) -> None:
         """Drop product ids missing a productId or a usable productIdType.
@@ -1616,7 +1652,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
                     product_id.get("productId") and product_id.get("productIdType")
                 ):
                     kept.append(product_id)
-                elif any(v for v in product_id.values()):
+                elif any(product_id.values()):
                     missing = [k for k in ("productId", "productIdType") if not product_id.get(k)]
                     self.handle_transformation_field_mapping_error(
                         index_or_id,
