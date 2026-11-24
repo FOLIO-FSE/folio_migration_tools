@@ -505,6 +505,8 @@
   "blurbs.OrderLineLocationMapping.title": "POL location mapping",
   "blurbs.OrderValidationFailures.description": "Records failed because FOLIO would reject them. Each problem is counted under the rule it breaks, so a record with several problems appears more than once. The data issues log has the details for each record.",
   "blurbs.OrderValidationFailures.title": "Order validation failures",
+  "blurbs.OrderValidationWarnings.description": "Problems that would fail a record but were let through because a check is set to warn (see `expenseClassCheck`). Each warning is counted under the rule it breaks. The data issues log has the details for each record.",
+  "blurbs.OrderValidationWarnings.title": "Order validation warnings",
   "blurbs.OrganizationsMapping.description": "Vendors from the legacy data, resolved to FOLIO organizations. Shown as `legacy value -> FOLIO organization code`. With an organizations code map the legacy value is mapped through it; without one, the legacy value is used as the FOLIO organization code.",
   "blurbs.OrganizationsMapping.title": "Organization mappings",
   "blurbs.ProductIdTypeMapping.description": "Product identifier types given by name in the legacy data, resolved to FOLIO identifier type ids. Shown as `name -> id`. Values that are already UUIDs are used as-is and are not listed. A name that is not a FOLIO identifier type is reported as unmapped and its product id is dropped; the rest of the record is kept.",

@@ -47,6 +47,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 | `fundsMapFileName` | string | No | TSV file mapping funds (required if POLs have fund distributions) |
 | `fundsExpenseClassMapFileName` | string | No | TSV file mapping legacy values to expense class codes, used for `expenseClassId`. Values with no explicit match are left empty rather than defaulted |
 | `acquisitionUnitMapFileName` | string | No | TSV file mapping legacy values to FOLIO acquisition unit names, applied to the order's `acqUnitIds`. Without it, the value must be a unit UUID or name (see Acquisition Units) |
+| `expenseClassCheck` | string | No | What to do when a fund distribution's expense class is not in an Active budget of the fund: `fail` (default) fails the record, `warn` logs it and counts it under "Order validation warnings" but keeps the record, `off` skips the check |
 | `materialTypeMapFileName` | string | No | TSV file mapping legacy values to FOLIO material type names, applied to `physical.materialType` and `eresource.materialType` on order lines. Works like the items transformer material type map, including the required `*` default row. Without it, the value must be a material type UUID or name (see Material Types) |
 | `files` | array | Yes | List of source data files to process |
 
@@ -276,7 +277,7 @@ The transformer checks each composite order against the rules that FOLIO's `mod-
 - Order line locations with the same location or holding are merged, and the location quantities must match the cost quantities.
 - Cost quantities and prices, claiming, receiving workflow, binder active and prepayment term are checked.
 - An Ongoing order with no `ongoing` object mapped gets a minimal one. A One-Time order loses any `ongoing` object the field mapping created.
-- Checks that read FOLIO data: the expense class against the fund's Active budgets, fund location restrictions, the vendor and access provider organizations, and the tenant's PO line limit. If the data cannot be read, the check is skipped and a warning is logged.
+- Checks that read FOLIO data: the expense class against the fund's Active budgets (set `expenseClassCheck` to `warn` or `off` to relax this, for example when validating legacy data against budgets that don't have the expense classes assigned), fund location restrictions, the vendor and access provider organizations, and the tenant's PO line limit. If the data cannot be read, the check is skipped and a warning is logged.
 - Pending orders get the rules that apply to every order. Open orders also get the Open-only rules, such as material types and fund distributions that add up to the estimated price.
 
 The migration report lists the rules that failed records broke under "Order validation failures". A record that breaks several rules is counted once for each, so the total can exceed the number of failed records.

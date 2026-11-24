@@ -1252,7 +1252,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             cost.get("quantityElectronic"), index_or_id, "cost electronic"
         )
 
-        problems.extend(self._fund_reference_problems(pol, locations, is_open))
+        problems.extend(self._fund_reference_problems(index_or_id, pol, locations, is_open))
         if is_open:
             problems.extend(self._access_provider_problems(pol))
 
@@ -1390,7 +1390,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self._fund_info_cache[fund_id] = None
         return self._fund_info_cache[fund_id]
 
-    def _fund_reference_problems(self, pol: dict, locations: list, is_open: bool) -> list[str]:
+    def _fund_reference_problems(
+        self, index_or_id: str, pol: dict, locations: list, is_open: bool
+    ) -> list[str]:
         """Check expense classes and location restrictions against the funds in FOLIO.
 
         An expense class must be in an Active budget of the fund, and be active there when
@@ -1410,12 +1412,33 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 continue
             fund = distribution.get("code") or info.get("code") or fund_id
             if expense_class := distribution.get("expenseClassId"):
-                problems.extend(self._expense_class_problems(expense_class, info, fund, is_open))
+                problems.extend(
+                    self._expense_class_problems(index_or_id, expense_class, info, fund, is_open)
+                )
             if is_open and locations and not has_holding:
                 problems.extend(self._location_restriction_problems(info, fund, line_locations))
         return problems
 
     def _expense_class_problems(
+        self, index_or_id: str, expense_class: str, info: dict, fund, is_open: bool
+    ) -> list[str]:
+        """Expense class problems, handled as the task's expenseClassCheck setting says.
+
+        "fail" returns them, so the record fails. "warn" logs and counts them in the report
+        but lets the record through. "off" does not check expense classes.
+        """
+        mode = getattr(self.task_configuration, "expense_class_check", "fail")
+        if mode == "off":
+            return []
+        problems = self._expense_class_status_problems(expense_class, info, fund, is_open)
+        if mode != "warn":
+            return problems
+        for problem in problems:
+            logger.warning("%s: %s (not failed, expenseClassCheck is warn)", index_or_id, problem)
+            self.migration_report.add("OrderValidationWarnings", i18n.t("Expense class"))
+        return []
+
+    def _expense_class_status_problems(
         self, expense_class: str, info: dict, fund, is_open: bool
     ) -> list[str]:
         class_label = self._named(

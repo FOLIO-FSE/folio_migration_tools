@@ -1,6 +1,7 @@
 import copy
 import json
 import logging
+import types
 from copy import deepcopy
 
 import pytest
@@ -2010,6 +2011,37 @@ def test_expense_class_must_be_in_the_funds_active_budget(mapper):
         TransformationRecordFailedError, match="not in an Active budget of fund F1"
     ):
         _validate(mapper, bad)
+
+
+def _with_expense_class_check(mapper, mode):
+    variant = copy.copy(mapper)
+    variant.task_configuration = types.SimpleNamespace(expense_class_check=mode)
+    variant._fund_info_cache = {"f1": _fund_info(expense_classes={"ec1": "Active"})}
+    variant.migration_report = copy.copy(mapper.migration_report)
+    variant.migration_report.report = {}
+    return variant
+
+
+def test_expense_class_check_warn_keeps_the_record_and_counts_it(mapper):
+    variant = _with_expense_class_check(mapper, "warn")
+    bad = _pol(fundDistribution=[{"fundId": "f1", "expenseClassId": "ec2", "code": "F1"}])
+    _validate(variant, bad)
+    assert "OrderValidationWarnings" in variant.migration_report.report
+    assert "OrderValidationFailures" not in variant.migration_report.report
+
+
+def test_expense_class_check_off_skips_the_check(mapper):
+    variant = _with_expense_class_check(mapper, "off")
+    bad = _pol(fundDistribution=[{"fundId": "f1", "expenseClassId": "ec2", "code": "F1"}])
+    _validate(variant, bad)
+    assert "OrderValidationWarnings" not in variant.migration_report.report
+
+
+def test_expense_class_check_fail_is_the_explicit_default(mapper):
+    variant = _with_expense_class_check(mapper, "fail")
+    bad = _pol(fundDistribution=[{"fundId": "f1", "expenseClassId": "ec2", "code": "F1"}])
+    with pytest.raises(TransformationRecordFailedError, match="not in an Active budget"):
+        _validate(variant, bad)
 
 
 def test_inactive_expense_class_only_fails_open_orders(mapper):

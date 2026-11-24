@@ -10,7 +10,7 @@ import json
 import logging
 import sys
 import time
-from typing import Annotated, List
+from typing import Annotated, List, Literal
 
 import i18n
 from deepdiff import DeepDiff
@@ -161,6 +161,19 @@ class OrdersTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
+
+        expense_class_check: Annotated[
+            Literal["fail", "warn", "off"],
+            Field(
+                title="Expense Class Check",
+                description=(
+                    "What to do when a fund distribution's expense class is not in an Active "
+                    "budget of the fund (or is inactive there, for Open orders). 'fail' fails "
+                    "the record, 'warn' logs it and counts it in the report but keeps the "
+                    "record, and 'off' does not check expense classes. By default is 'fail'."
+                ),
+            ),
+        ] = "fail"
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
