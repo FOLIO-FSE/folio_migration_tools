@@ -826,6 +826,38 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 elif quantity > 1:
                     location["quantityElectronic"] = 1
                     location["quantityPhysical"] = quantity - 1
+            self._mirror_location_split_in_cost(pol)
+
+    def _mirror_location_split_in_cost(self, pol: dict) -> None:
+        """Give the cost the same physical/electronic split as the locations.
+
+        Legacy data often has one quantity that is mapped to the locations and to the cost
+        quantities. When every cost quantity that is mapped equals the total of the locations'
+        quantity, the cost gets the physical and electronic totals of the locations (after the
+        split above). Anything that does not match is left for validation to report.
+        """
+        cost = pol.get("cost")
+        locations = [loc for loc in pol.get("locations") or [] if isinstance(loc, dict)]
+        if not isinstance(cost, dict) or not locations:
+            return
+        try:
+            mapped = [
+                self._whole_number(cost[f])
+                for f in ("quantityPhysical", "quantityElectronic")
+                if cost.get(f) not in (None, "")
+            ]
+            if not mapped or any(loc.get("quantity") in (None, "") for loc in locations):
+                return
+            total = sum(self._whole_number(loc["quantity"]) for loc in locations)
+            physical, electronic = (
+                sum(self._whole_number(loc.get(f) or 0) for loc in locations)
+                for f in ("quantityPhysical", "quantityElectronic")
+            )
+        except (InvalidOperation, ValueError):
+            return  # validation reports a quantity that is not a whole number
+        if total > 0 and set(mapped) == {total} and physical + electronic == total:
+            cost["quantityPhysical"] = physical
+            cost["quantityElectronic"] = electronic
 
     @staticmethod
     def _as_int(value, index_or_id, label: str) -> int:

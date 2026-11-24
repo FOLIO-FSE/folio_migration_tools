@@ -1813,6 +1813,51 @@ def test_explicit_mix_quantity_is_respected_when_copying(mapper):
     assert "quantityPhysical" not in covered
 
 
+def test_cost_mirrors_the_location_split_when_the_totals_match(mapper):
+    def run(order_format, cost, quantities):
+        locations = [{"locationId": str(i), "quantity": q} for i, q in enumerate(quantities)]
+        pol = {"orderFormat": order_format, "cost": cost, "locations": locations}
+        mapper._copy_quantity_to_format_field({mapper.po_lines_key: [pol]})
+        return pol["cost"]
+
+    mixed = run("P/E Mix", {"quantityPhysical": "5"}, ["2", "3"])
+    assert (mixed["quantityPhysical"], mixed["quantityElectronic"]) == (3, 2)
+    electronic = run("Electronic Resource", {"quantityPhysical": "4"}, ["4"])
+    assert (electronic["quantityPhysical"], electronic["quantityElectronic"]) == (0, 4)
+    mismatch = run("P/E Mix", {"quantityPhysical": "6"}, ["2", "3"])
+    assert mismatch == {"quantityPhysical": "6"}
+    both = run("P/E Mix", {"quantityPhysical": "5", "quantityElectronic": "5"}, ["2", "3"])
+    assert (both["quantityPhysical"], both["quantityElectronic"]) == (3, 2)
+    explicit = run("P/E Mix", {"quantityPhysical": 3, "quantityElectronic": 2}, ["2", "3"])
+    assert (explicit["quantityPhysical"], explicit["quantityElectronic"]) == (3, 2)
+
+
+def test_merged_location_counts_are_mirrored_in_the_cost(mapper):
+    def run(order_format, location_ids, total):
+        pol = {
+            "orderFormat": order_format,
+            "cost": {"quantityPhysical": str(total), "quantityElectronic": str(total)},
+            "locations": [{"locationId": i, "quantity": str(total)} for i in location_ids],
+        }
+        composite = {mapper.po_lines_key: [pol]}
+        mapper._merge_duplicate_locations(composite)
+        mapper._copy_quantity_to_format_field(composite)
+        return pol
+
+    physical = run("Physical Resource", "AAB", 3)
+    assert [loc["quantity"] for loc in physical["locations"]] == [2, 1]
+    assert (physical["cost"]["quantityPhysical"], physical["cost"]["quantityElectronic"]) == (3, 0)
+    mixed = run("P/E Mix", "AAABB", 5)
+    assert [(loc["quantityPhysical"], loc["quantityElectronic"]) for loc in mixed["locations"]] == [
+        (2, 1),
+        (1, 1),
+    ]
+    assert (mixed["cost"]["quantityPhysical"], mixed["cost"]["quantityElectronic"]) == (3, 2)
+    # A merged location count of 1 is not split in a P/E Mix, so the cost is left as mapped
+    single = run("P/E Mix", "AAB", 3)
+    assert single["cost"] == {"quantityPhysical": "3", "quantityElectronic": "3"}
+
+
 @pytest.mark.parametrize(
     "pol, message",
     [

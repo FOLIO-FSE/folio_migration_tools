@@ -41,6 +41,8 @@ mod-orders compares only `quantityPhysical` and `quantityElectronic` with the co
 
 In a P/E Mix, a physical or electronic quantity you set explicitly is kept, and the other side gets the remainder of `quantity`. Locations that set both are left unchanged. The fixed split of 1 electronic plus the remainder physical only matches your cost totals when the electronic quantity equals the number of locations. Otherwise, map both quantities.
 
+The cost quantities follow the locations. If every cost quantity that is mapped (`quantityPhysical`, `quantityElectronic` or both) equals the total of the locations' `quantity`, the cost gets the physical and electronic totals of the locations. This lets a legacy system with a single quantity field map it to the locations and to both cost quantities. If a mapped cost quantity differs from the total, or a location has no `quantity`, the cost is left as mapped and validation reports any mismatch.
+
 ### Cost prices
 
 * Electronic Resource: `listUnitPrice` must not be above 0.
