@@ -43,6 +43,7 @@ MATERIAL_TYPE_FIELD = re.compile(r"\.(?:physical|eresource)\.materialType$")
 FORMAT_PHYSICAL = "Physical Resource"
 FORMAT_ELECTRONIC = "Electronic Resource"
 FORMAT_MIX = "P/E Mix"
+EXPENSE_CLASS_RULE_LABEL = "Expense class not in the fund's active budget"
 COST_RULE_LABEL = "Cost prices and discount"
 ACQ_UNIT_FIELD = re.compile(r"^acqUnitIds(?:\[\d+\])?$")
 ACQ_UNIT_CREATE_PERMISSION = "orders.acquisitions-units-assignments.create.execute"
@@ -1166,7 +1167,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         ("tenant limit", "PO lines above the tenant limit"),
         ("vendor", "Vendor not active or not a vendor"),
         ("access provider", "Access provider missing or not active"),
-        ("expense class", "Expense class not in the fund's active budget"),
+        ("expense class", EXPENSE_CLASS_RULE_LABEL),
         ("restricted to locations", "Fund location restriction"),
         ("estimated price", "Fund distributions and estimated price"),
         ("fund distribution", "Fund distributions and estimated price"),
@@ -1435,7 +1436,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return problems
         for problem in problems:
             logger.warning("%s: %s (not failed, expenseClassCheck is warn)", index_or_id, problem)
-            self.migration_report.add("OrderValidationWarnings", i18n.t("Expense class"))
+            self.migration_report.add("OrderValidationWarnings", i18n.t(EXPENSE_CLASS_RULE_LABEL))
         return []
 
     def _expense_class_status_problems(
