@@ -6,9 +6,11 @@ acquisition units, fund distributions, and vendor references.
 """
 
 import json
+from itertools import product
 import logging
 import re
 import uuid
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 import i18n
@@ -16,6 +18,7 @@ from folio_uuid.folio_uuid import FOLIONamespaces
 from folioclient import FolioClient
 
 from folio_migration_tools.custom_exceptions import (
+    TransformationFieldMappingError,
     TransformationProcessError,
     TransformationRecordFailedError,
 )
@@ -36,6 +39,16 @@ from folio_migration_tools.utils import normalize_for_compare
 logger = logging.getLogger(__name__)
 
 # Notes mapped under a purchase order line, e.g. compositePoLines[0].notes[0].content
+MATERIAL_TYPE_FIELD = re.compile(r"\.(?:physical|eresource)\.materialType$")
+FORMAT_PHYSICAL = "Physical Resource"
+FORMAT_ELECTRONIC = "Electronic Resource"
+FORMAT_MIX = "P/E Mix"
+EXPENSE_CLASS_RULE_LABEL = "Expense class not in the fund's active budget"
+COST_RULE_LABEL = "Cost prices and discount"
+ACQ_UNIT_FIELD = re.compile(r"^acqUnitIds(?:\[\d+\])?$")
+ACQ_UNIT_CREATE_PERMISSION = "orders.acquisitions-units-assignments.create.execute"
+ACQ_UNIT_BYPASS_PERMISSION = "orders.acquisition-units.bypass.execute"
+PRODUCT_ID_TYPE_FIELD = re.compile(r"productIds\[\d+\]\.productIdType$")
 POL_NOTE_PREFIX = re.compile(r"^(?:compositePoLines|poLines)\[\d+\]\.(?=notes\[)")
 
 
@@ -48,7 +61,7 @@ class CompositeOrderMapper(MappingFileMapperBase):
         library_configuration: LibraryConfiguration,
         task_configuration,
         composite_order_map: dict,
-        organizations_id_map: dict,
+        organizations_code_map: list | None,
         instance_id_map: dict,
         acquisition_method_map,
         payment_status_map,
@@ -57,6 +70,10 @@ class CompositeOrderMapper(MappingFileMapperBase):
         location_map,
         funds_map,
         funds_expense_class_map=None,
+        material_type_map=None,
+        create_inventory_defaults: dict | None = None,
+        po_lines_limit: int | None = None,
+        acquisition_unit_map=None,
     ):
         """Initialize CompositeOrderMapper for purchase order transformations.
 
@@ -65,7 +82,9 @@ class CompositeOrderMapper(MappingFileMapperBase):
             library_configuration (LibraryConfiguration): Library configuration.
             task_configuration: Task configuration for orders migration.
             composite_order_map (dict): Mapping configuration for order fields.
-            organizations_id_map (dict): Mapping of legacy to FOLIO organizations.
+            organizations_code_map (list | None): Optional rows mapping legacy vendor values
+                to FOLIO organization codes (legacy column plus folio_code). If None, the
+                vendor value is assumed to be a FOLIO organization code.
             instance_id_map (dict): Mapping of legacy to FOLIO instances.
             acquisition_method_map: Mapping of legacy to FOLIO acquisition methods.
             payment_status_map: Mapping of legacy to FOLIO payment statuses.
@@ -74,6 +93,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
             location_map: Mapping of legacy to FOLIO locations.
             funds_map: Mapping of legacy to FOLIO funds.
             funds_expense_class_map: Mapping for fund expense classes.
+            material_type_map: Optional mapping of legacy values to FOLIO material types
+            create_inventory_defaults: Optional tenant defaults for a POL's inventory
+                interaction (keys: physical, other, eresource), used when validating orders
+                (by name), used for physical and e-resource material types on order lines.
+            po_lines_limit: Optional tenant limit on the number of PO lines per order. The
+                limit is not checked when it is None.
+            acquisition_unit_map: Optional mapping of legacy values to FOLIO acquisition
+                unit names, for the order's acqUnitIds.
         """
         # Get order schema, using module version from FOLIO environment if available
         release_tag = None
@@ -129,9 +156,11 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
         logger.info("Loading Instance ID map...")
         self.instance_id_map = instance_id_map
-        self.organizations_id_map = organizations_id_map
-        logger.debug("Organizations ID map: %s", json.dumps(self.organizations_id_map, indent=2))
-        self.folio_organization_cache = {}
+        self.folio_organizations_by_id: dict = {}
+        self.folio_organizations_by_code = self._load_folio_organizations_by_code()
+        self.organizations_code_map = self._build_organizations_code_map(
+            organizations_code_map, self.folio_organizations_by_code
+        )
 
         self.acquisitions_methods_mapping = RefDataMapping(
             self.folio_client,
@@ -158,6 +187,53 @@ class CompositeOrderMapper(MappingFileMapperBase):
             "code",
             "FundsMapping",
         )
+        self.expense_class_mapping = (
+            RefDataMapping(
+                self.folio_client,
+                "/finance/expense-classes",
+                "expenseClasses",
+                funds_expense_class_map,
+                "code",
+                "ExpenseClassMapping",
+            )
+            if funds_expense_class_map
+            else None
+        )
+        self.create_inventory_defaults = create_inventory_defaults or {}
+        self.po_lines_limit = po_lines_limit
+        self._fund_info_cache: dict = {}
+        self._reference_names: dict = {}
+        self.material_type_mapping = (
+            RefDataMapping(
+                self.folio_client,
+                "/material-types",
+                "mtypes",
+                material_type_map,
+                "name",
+                "MaterialTypeMapping",
+            )
+            if material_type_map
+            else None
+        )
+        self.acquisition_unit_mapping = (
+            RefDataMapping(
+                self.folio_client,
+                "/acquisitions-units/units",
+                "acquisitionsUnits",
+                acquisition_unit_map,
+                "name",
+                "AcquisitionUnitMapping",
+            )
+            if acquisition_unit_map
+            else None
+        )
+        self._acq_units_by_id, self._acq_unit_ids_by_name = self._load_acquisition_units()
+        self._validate_hardcoded_acquisition_units()
+        self._user_acq_access: tuple | None | bool = False  # False = not read yet
+        self._material_types_by_name = self._load_material_types_by_name()
+        self._validate_hardcoded_material_types()
+        self._identifier_types_by_name = self._load_identifier_types_by_name()
+        self._validate_hardcoded_product_id_types()
         self._order_addresses_by_name = self._load_order_addresses_by_name()
         self._validate_hardcoded_order_address_values()
 
@@ -292,8 +368,8 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return self.get_mapped_ref_data_value(
                 self.acquisitions_methods_mapping,
                 legacy_object,
-                folio_prop_name,
                 index_or_id,
+                folio_prop_name,
                 False,
             )
 
@@ -308,21 +384,37 @@ class CompositeOrderMapper(MappingFileMapperBase):
             return ""
 
         if folio_prop_name.endswith(".locationId"):
-            return self.get_mapped_ref_data_value(
-                self.location_mapping,
-                legacy_object,
-                folio_prop_name,
-                index_or_id,
-                False,
+            return self._get_delimited_ref_data_value(
+                self.location_mapping, legacy_object, folio_prop_name, index_or_id
             )
 
         if folio_prop_name.endswith(".fundId"):
-            return self.get_mapped_ref_data_value(
-                self.funds_mapping,
+            return self._get_delimited_ref_data_value(
+                self.funds_mapping, legacy_object, folio_prop_name, index_or_id
+            )
+
+        if folio_prop_name.endswith(".expenseClassId") and self.expense_class_mapping:
+            return self._get_delimited_ref_data_value(
+                self.expense_class_mapping,
                 legacy_object,
                 folio_prop_name,
                 index_or_id,
-                False,
+                prevent_default=True,
+            )
+
+        if ACQ_UNIT_FIELD.match(folio_prop_name):
+            return self._get_acquisition_unit_value(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            )
+
+        if MATERIAL_TYPE_FIELD.search(folio_prop_name):
+            return self._get_material_type_value(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
+            )
+
+        if folio_prop_name.endswith(".productIdType"):
+            return self._get_product_id_type_value(
+                legacy_object, folio_prop_name, index_or_id, schema_default_value
             )
 
         if folio_prop_name in ("billTo", "shipTo"):
@@ -339,6 +431,109 @@ class CompositeOrderMapper(MappingFileMapperBase):
         )
 
         return mapped_value
+
+    def _get_material_type_value(
+        self, legacy_object, folio_prop_name, index_or_id, schema_default_value
+    ):
+        raw = str(
+            super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
+            or ""
+        )
+        # Hardcoded values are FOLIO names or UUIDs (validated at startup), not legacy
+        # values, so they are never run through the map.
+        if not raw:
+            # Material type is only required when inventory creates items, so an empty
+            # value stays empty instead of taking the map's default.
+            return ""
+        if self.material_type_mapping and not self._is_hardcoded_value(
+            folio_prop_name, legacy_object, raw
+        ):
+            # Look up this field's own value. The physical and electronic material
+            # types can come from different columns, but share one map.
+            lookup_object = legacy_object
+            keys = self.material_type_mapping.mapped_legacy_keys
+            if len(keys) == 1:
+                lookup_object = {**legacy_object, keys[0]: raw}
+            return self.get_mapped_ref_data_value(
+                self.material_type_mapping,
+                lookup_object,
+                index_or_id,
+                folio_prop_name,
+                False,
+            )
+        return self._resolve_material_type(raw, index_or_id)
+
+    def _get_product_id_type_value(
+        self, legacy_object, folio_prop_name, index_or_id, schema_default_value
+    ):
+        raw = super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
+        raw = str(raw or "")
+        delimiter = self.library_configuration.multi_field_delimiter
+        if delimiter and delimiter in raw:
+            return delimiter.join(
+                self._resolve_product_id_type(piece.strip()) for piece in raw.split(delimiter)
+            )
+        return self._resolve_product_id_type(raw)
+
+    @staticmethod
+    def _delimited_piece_objects(legacy_object: dict, keys: list, delimiter: str):
+        """Yield one copy of the legacy object per delimited piece of the mapped columns."""
+        pieces = {
+            k: [piece.strip() for piece in str(legacy_object.get(k) or "").split(delimiter)]
+            for k in keys
+        }
+        for i in range(max(len(v) for v in pieces.values())):
+            piece_object = dict(legacy_object)
+            for k, values in pieces.items():
+                # A column without the delimiter applies to every piece.
+                if len(values) == 1:
+                    piece_object[k] = values[0]
+                else:
+                    piece_object[k] = values[i] if i < len(values) else ""
+            yield piece_object
+
+    def _get_delimited_ref_data_value(
+        self,
+        ref_data_mapping,
+        legacy_object,
+        folio_prop_name,
+        index_or_id,
+        prevent_default=False,
+    ):
+        """Look up a ref data value, one lookup per multi-field-delimited piece.
+
+        The pieces' FOLIO ids are rejoined with the delimiter so the array mapper
+        can split them into separate objects.
+        """
+        delimiter = self.library_configuration.multi_field_delimiter
+        keys = ref_data_mapping.mapped_legacy_keys
+        if not delimiter or not any(
+            isinstance(legacy_object.get(k), str) and delimiter in legacy_object[k] for k in keys
+        ):
+            return self.get_mapped_ref_data_value(
+                ref_data_mapping, legacy_object, index_or_id, folio_prop_name, prevent_default
+            )
+        results = []
+        for piece_object in self._delimited_piece_objects(legacy_object, keys, delimiter):
+            if not any(piece_object[k] for k in keys):
+                # Keep the piece, empty, so it stays lined up with the other delimited
+                # fields. Looking it up would give it the default value.
+                self.handle_transformation_field_mapping_error(
+                    index_or_id,
+                    TransformationFieldMappingError(
+                        index_or_id,
+                        f"Empty value in delimited {folio_prop_name}. Nothing mapped for it",
+                        str([legacy_object.get(k) for k in keys]),
+                    ),
+                )
+                results.append("")
+                continue
+            results.append(
+                self.get_mapped_ref_data_value(
+                    ref_data_mapping, piece_object, index_or_id, folio_prop_name, prevent_default
+                )
+            )
+        return delimiter.join(results)
 
     @staticmethod
     def _extract_address_name(address: dict[str, Any]) -> str:
@@ -392,6 +587,1110 @@ class CompositeOrderMapper(MappingFileMapperBase):
                 self.TENANT_ADDRESSES_QUERY,
             )
         return addresses_by_name
+
+    def _load_acquisition_units(self) -> tuple[dict[str, dict], dict[str, str]]:
+        """Read the FOLIO acquisition units: id -> unit, and normalized name -> id."""
+        try:
+            units = list(
+                self.folio_client.folio_get_all(
+                    "/acquisitions-units/units", "acquisitionsUnits", "", 1000
+                )
+            )
+        except Exception as exception:
+            logger.warning("Could not read acquisition units (%s)", exception)
+            return {}, {}
+        by_id = {u["id"]: u for u in units if u.get("id")}
+        by_name = {
+            normalize_for_compare(u["name"]): u["id"]
+            for u in units
+            if u.get("name") and u.get("id")
+        }
+        logger.info("Loaded %s acquisition units from FOLIO", len(by_id))
+        return by_id, by_name
+
+    def _resolve_acquisition_unit(self, value: str, index_or_id: str) -> str:
+        """Accept a UUID as-is or resolve a FOLIO acquisition unit name.
+
+        Used without an acquisition unit map, and for hardcoded values even with one.
+        A name that is not a FOLIO acquisition unit is skipped: it is reported, logged as a
+        field mapping error, and the empty string is returned. The rest of the order is kept.
+        """
+        if not value or self.is_uuid(value):
+            return value
+        if resolved := self._acq_unit_ids_by_name.get(normalize_for_compare(value)):
+            self.migration_report.add("AcquisitionUnitMapping", f"{value} -> {resolved}")
+            return resolved
+        self.migration_report.add(
+            "AcquisitionUnitMapping", i18n.t("Unmapped (Value skipped)") + f" -- {value}"
+        )
+        self.handle_transformation_field_mapping_error(
+            index_or_id,
+            TransformationFieldMappingError(
+                index_or_id,
+                "Acquisition unit name not found in FOLIO acquisition units. Value skipped",
+                value,
+            ),
+        )
+        return ""
+
+    def _get_acquisition_unit_value(
+        self, legacy_object, folio_prop_name, index_or_id, schema_default_value
+    ) -> str:
+        """Resolve an acqUnitIds value to unit UUIDs, joined with the multi-field delimiter.
+
+        Legacy values go through the acquisition unit map when there is one. Hardcoded values
+        and values without a map are FOLIO unit names or UUIDs.
+        """
+        raw = str(
+            super().get_prop(legacy_object, folio_prop_name, index_or_id, schema_default_value)
+            or ""
+        )
+        if not raw:
+            return ""
+        delimiter = self.library_configuration.multi_field_delimiter
+        if self.acquisition_unit_mapping and not self._is_hardcoded_value(
+            folio_prop_name, legacy_object, raw
+        ):
+            return self._get_delimited_ref_data_value(
+                self.acquisition_unit_mapping,
+                legacy_object,
+                folio_prop_name,
+                index_or_id,
+                prevent_default=True,
+            )
+        pieces = raw.split(delimiter) if delimiter else [raw]
+        resolved = (self._resolve_acquisition_unit(p.strip(), index_or_id) for p in pieces)
+        return (delimiter or "").join(unit for unit in resolved if unit)
+
+    def _validate_hardcoded_acquisition_units(self) -> None:
+        """Halt if a hardcoded acquisition unit is not a FOLIO unit name or UUID."""
+        if not self._acq_units_by_id:
+            return
+        invalid_values = []
+        for piece, folio_field, value_key in self._hardcoded_values(
+            ACQ_UNIT_FIELD.match, split_on_delimiter=True
+        ):
+            if self.is_uuid(piece):
+                known = piece in self._acq_units_by_id
+            else:
+                known = normalize_for_compare(piece) in self._acq_unit_ids_by_name
+            if not known:
+                invalid_values.append(
+                    f"  - '{piece}' (in field: {folio_field}, {value_key}) "
+                    "- not found in FOLIO acquisition units"
+                )
+        self._raise_if_invalid(
+            invalid_values,
+            "Invalid acquisition unit values found in field mapping:",
+            "Available acquisition units: " + ", ".join(sorted(self._acq_unit_ids_by_name)),
+            "Please update your mapping file with valid acquisition unit names or UUIDs.",
+        )
+
+    def _hardcoded_values(self, field_matcher, split_on_delimiter: bool = False):
+        """Yield (value, folio_field, value_key) for hardcoded values of matching fields."""
+        delimiter = self.library_configuration.multi_field_delimiter if split_on_delimiter else ""
+        entries = (
+            e for e in self.record_map.get("data", []) if field_matcher(e.get("folio_field", ""))
+        )
+        for entry, value_key in product(entries, ("value", "fallback_value")):
+            value = entry.get(value_key)
+            if not isinstance(value, str):
+                continue
+            for piece in value.split(delimiter) if delimiter else [value]:
+                if piece.strip():
+                    yield piece.strip(), entry["folio_field"], value_key
+
+    def _validate_hardcoded_names(
+        self, field_matcher, by_name: dict[str, str], description: str, summary: str
+    ) -> None:
+        """Halt if a hardcoded value is not a FOLIO name or UUID from by_name.
+
+        description names the FOLIO objects in messages ("material types"), and summary
+        names the offending values ("material type").
+        """
+        known_ids = set(by_name.values())
+        invalid_values = []
+        for value, folio_field, value_key in self._hardcoded_values(field_matcher):
+            if self.is_uuid(value):
+                if value not in known_ids:
+                    invalid_values.append(
+                        f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                        f"- UUID not found in FOLIO {description}"
+                    )
+            elif normalize_for_compare(value) not in by_name:
+                invalid_values.append(
+                    f"  - '{value}' (in field: {folio_field}, {value_key}) "
+                    f"- name not found in FOLIO {description}"
+                )
+        self._raise_if_invalid(
+            invalid_values,
+            f"Invalid {summary} values found in field mapping:",
+            f"Available {description}: " + ", ".join(sorted(by_name)),
+            f"Please update your mapping file with valid {summary} names or UUIDs.",
+        )
+
+    @staticmethod
+    def _raise_if_invalid(invalid_values: list[str], header: str, available: str, footer: str):
+        if invalid_values:
+            raise TransformationProcessError(
+                "", header, "\n".join([*invalid_values, available, footer])
+            )
+
+    def _read_user_permission_names(self, user_id: str) -> set[str]:
+        """Read the names of all permissions the user holds, on Eureka or with mod-permissions.
+
+        Eureka (mod-roles-keycloak) resolves capabilities, capability sets and roles into the
+        user's effective permissions at /permissions/users/{id}. That module is not on other
+        tenants, which read mod-permissions instead, with the user id as the index field and
+        permission sets expanded. Raises if neither works.
+        """
+        get = self.folio_client.folio_get
+        try:
+            response = get(f"/permissions/users/{user_id}")
+            return set(response["permissions"])
+        except Exception as eureka_exception:
+            logger.info(
+                "Could not read Eureka permissions (%s). Reading mod-permissions instead",
+                eureka_exception,
+            )
+        perms = get(
+            f"/perms/users/{user_id}/permissions",
+            "permissionNames",
+            query_params={"indexField": "userId", "expanded": "true"},
+        )
+        return {p if isinstance(p, str) else p.get("permissionName") for p in perms or []}
+
+    def _read_user_acq_access(self) -> tuple[set[str], set[str]] | None:
+        """Read the running user's acquisition unit memberships and permissions (cached).
+
+        Returns (unit ids the user belongs to, permission names), or None if either cannot
+        be read, in which case the membership rules are not checked.
+        """
+        if self._user_acq_access is not False:
+            return self._user_acq_access  # type: ignore[return-value]
+        try:
+            user_id = self.folio_client.current_user
+            memberships = self.folio_client.folio_get_all(
+                "/acquisitions-units/memberships",
+                "acquisitionsUnitMemberships",
+                f"userId=={user_id}",
+                1000,
+            )
+            member_of = {m["acquisitionsUnitId"] for m in memberships}
+            names = self._read_user_permission_names(str(user_id))
+            self._user_acq_access = (member_of, names)
+        except Exception as exception:
+            logger.warning(
+                "Could not read the running user's acquisition unit access (%s). "
+                "Membership is not checked",
+                exception,
+            )
+            self._user_acq_access = None
+        return self._user_acq_access  # type: ignore[return-value]
+
+    def _acquisition_unit_problems(self, composite_order: dict) -> list[str]:
+        """Check the order's units the way mod-orders does when the order is created.
+
+        Units must exist and be active. When the user lacks the bypass permission and every
+        unit protects create, the user must be a member of at least one of them.
+        """
+        unit_ids = [u for u in composite_order.get("acqUnitIds") or [] if u]
+        if not unit_ids or not self._acq_units_by_id:
+            return []
+        problems: list[str] = []
+        units = []
+        for unit_id in unit_ids:
+            unit = self._acq_units_by_id.get(unit_id)
+            if not unit or unit.get("isDeleted"):
+                problems.append(f"acquisition unit {unit_id} does not exist or is not active")
+            else:
+                units.append(unit)
+        if problems:
+            return problems
+        access = self._read_user_acq_access()
+        if not access:
+            return []
+        member_of, permissions = access
+        if ACQ_UNIT_CREATE_PERMISSION not in permissions:
+            return [
+                "acquisition units are assigned but the user lacks the permission "
+                f"{ACQ_UNIT_CREATE_PERMISSION}"
+            ]
+        if (
+            ACQ_UNIT_BYPASS_PERMISSION not in permissions
+            and all(u.get("protectCreate") for u in units)
+            and not any(u["id"] in member_of for u in units)
+        ):
+            names = ", ".join(self._named(u.get("name"), u["id"]) for u in units)
+            return [f"the user is not a member of any of the acquisition units: {names}"]
+        return []
+
+    def _load_material_types_by_name(self) -> dict[str, str]:
+        """Build normalized FOLIO material type name -> id, for lookups without a map file."""
+        by_name = {
+            normalize_for_compare(t["name"]): t["id"]
+            for t in self.folio_client.folio_get_all("/material-types", "mtypes", "", 1000)
+            if t.get("name") and t.get("id")
+        }
+        logger.info("Loaded %s material types from FOLIO", len(by_name))
+        return by_name
+
+    def _is_hardcoded_value(self, folio_prop_name: str, legacy_object: dict, value: str) -> bool:
+        """True if the resolved value is a literal from the field mapping, not legacy data.
+
+        A non-empty value always takes precedence and legacy fields are never read. A
+        fallback_value is only used when the legacy fields are empty.
+        """
+        if not value:
+            return False
+        for entry in MappingFileMapperBase.get_map_entries_by_folio_prop_name(
+            folio_prop_name, self.record_map["data"]
+        ):
+            if entry.get("value"):
+                return True
+            fallback = entry.get("fallback_value")
+            if (
+                isinstance(fallback, str)
+                and fallback.strip() == value.strip()
+                and not any(
+                    legacy_object.get(entry.get(key) or "")
+                    for key in ("legacy_field", "fallback_legacy_field")
+                )
+            ):
+                return True
+        return False
+
+    def _resolve_material_type(self, value: str, index_or_id: str) -> str:
+        """Accept a UUID as-is or resolve a FOLIO material type name.
+
+        Used without a material type map, and for hardcoded values even with one.
+
+        A name that is not a FOLIO material type fails the record.
+        """
+        if not value or self.is_uuid(value):
+            return value
+        if resolved := self._material_types_by_name.get(normalize_for_compare(value)):
+            self.migration_report.add("MaterialTypeMapping", f"{value} -> {resolved}")
+            return resolved
+        self.migration_report.add(
+            "MaterialTypeMapping", i18n.t("Unmapped (Record failed)") + f" -- {value}"
+        )
+        raise TransformationRecordFailedError(
+            index_or_id,
+            "Material type name not found in FOLIO material types",
+            value,
+        )
+
+    def _validate_hardcoded_material_types(self) -> None:
+        """Halt if a hardcoded material type is not a FOLIO material type name or UUID."""
+        self._validate_hardcoded_names(
+            MATERIAL_TYPE_FIELD.search,
+            self._material_types_by_name,
+            "material types",
+            "material type",
+        )
+
+    def _load_identifier_types_by_name(self) -> dict[str, str]:
+        """Build normalized FOLIO identifier type name -> id, for productIdType lookups."""
+        by_name = {
+            normalize_for_compare(t["name"]): t["id"]
+            for t in self.folio_client.folio_get_all(
+                "/identifier-types", "identifierTypes", "", 1000
+            )
+            if t.get("name") and t.get("id")
+        }
+        logger.info("Loaded %s identifier types from FOLIO", len(by_name))
+        return by_name
+
+    def _resolve_product_id_type(self, value: str) -> str:
+        """Accept an identifier type UUID as-is, or resolve a name (case/space-insensitive).
+
+        An unrecognized value does not fail the record. It resolves to an empty type, and
+        the product id it belongs to is dropped in _drop_incomplete_product_ids.
+        """
+        if not value or self.is_uuid(value):
+            return value
+        if resolved := self._identifier_types_by_name.get(normalize_for_compare(value)):
+            self.migration_report.add("ProductIdTypeMapping", f"{value} -> {resolved}")
+            return resolved
+        self.migration_report.add(
+            "ProductIdTypeMapping", i18n.t("Unmapped (Product ID dropped)") + f" -- {value}"
+        )
+        return ""
+
+    def _validate_hardcoded_product_id_types(self) -> None:
+        """Halt if a hardcoded productIdType in the field mapping is not a FOLIO type."""
+        self._validate_hardcoded_names(
+            PRODUCT_ID_TYPE_FIELD.search,
+            self._identifier_types_by_name,
+            "identifier types",
+            "productIdType",
+        )
+
+    LOCATION_QUANTITY_FIELDS = ("quantity", "quantityPhysical", "quantityElectronic")
+
+    def _delimited_location_quantity_fields(self, legacy_object: dict | None) -> set[str]:
+        """Return the location quantity fields whose legacy value holds one value per location.
+
+        A legacy quantity without the delimiter is a single PO-line total that gets copied
+        onto every location, so it can't be summed and each location counts as one piece.
+        A delimited quantity (e.g. "2<^>3") has one value per location, so those values are
+        used as-is and summed when locations merge.
+        """
+        delimiter = self.library_configuration.multi_field_delimiter
+        if not legacy_object or not delimiter:
+            return set()
+        pattern = re.compile(
+            rf"{re.escape(self.po_lines_key)}\[\d+\]\.locations\[\d+\]\."
+            rf"({'|'.join(self.LOCATION_QUANTITY_FIELDS)})"
+        )
+        fields: set[str] = set()
+        for folio_key in self.folio_keys:
+            if not (match := pattern.fullmatch(folio_key)):
+                continue
+            entries = self.get_map_entries_by_folio_prop_name(folio_key, self.record_map["data"])
+            if any(self._has_delimited_value(e, legacy_object, delimiter) for e in entries):
+                fields.add(match.group(1))
+        return fields
+
+    @staticmethod
+    def _has_delimited_value(entry: dict, legacy_object: dict, delimiter: str) -> bool:
+        values = (
+            legacy_object.get(entry.get(key) or "")
+            for key in ("legacy_field", "fallback_legacy_field")
+        )
+        return any(isinstance(v, str) and delimiter in v for v in values)
+
+    def _merge_duplicate_locations(
+        self,
+        composite_order: dict,
+        delimited_fields: set[str] | frozenset = frozenset(),
+        index_or_id: str = "",
+    ) -> None:
+        """Merge the locations of each PO line that share a locationId.
+
+        The merged location keeps the position of the first duplicate. Locations without a
+        locationId are left as they are.
+
+        Each quantity field present on any duplicate is recomputed:
+        - Not in delimited_fields: the legacy value is a PO-line total copied onto every
+          location, so it is ignored and the field becomes the number of duplicates merged
+          (1 for a location that occurs once).
+        - In delimited_fields: the legacy value has one quantity per location, so the
+          duplicates' values are summed.
+
+        A PO line with a single location is left untouched: there is nothing to merge, so
+        its mapped quantity is already the number of pieces at that location.
+        """
+        for pol in composite_order.get(self.po_lines_key, []):
+            locations = pol.get("locations", [])
+            if len(locations) < 2:
+                continue
+            groups, merged = self._group_locations_by_id(locations)
+            for group in groups.values():
+                self._merge_group_quantities(group, delimited_fields, index_or_id)
+            pol["locations"] = merged
+
+    @staticmethod
+    def _group_locations_by_id(locations: list) -> tuple[dict, list]:
+        """Group locations by locationId. Returns the groups and the locations to keep."""
+        groups: dict = {}
+        merged = []
+        for location in locations:
+            location_id = location.get("locationId") if isinstance(location, dict) else None
+            if location_id in groups:
+                groups[location_id].append(location)
+                continue
+            if location_id:
+                groups[location_id] = [location]
+            merged.append(location)
+        return groups, merged
+
+    def _merge_group_quantities(self, group: list, delimited_fields, index_or_id: str) -> None:
+        for field in self.LOCATION_QUANTITY_FIELDS:
+            if not any(field in loc for loc in group):
+                continue
+            if field in delimited_fields:
+                group[0][field] = sum(
+                    self._as_int(loc.get(field), index_or_id, f"location {field}") for loc in group
+                )
+            else:
+                group[0][field] = len(group)
+
+    def _copy_quantity_to_format_field(self, composite_order: dict) -> None:
+        """Copy a location's quantity to the field its order format uses.
+
+        mod-orders only counts quantityPhysical and quantityElectronic, and recomputes
+        quantity from them. A location with only quantity gets quantityPhysical (Physical
+        Resource, Other) or quantityElectronic (Electronic Resource).
+
+        In a P/E Mix the split is done for the PO line as a whole: one piece is electronic
+        and the rest are physical. The electronic piece goes on the first location that only
+        has quantity, unless the line already has an electronic quantity. If one of the two
+        is set explicitly on a location it is kept and the other gets the remainder of
+        quantity. A line with a single piece can't be split and is left for validation.
+        """
+        targets = {
+            FORMAT_PHYSICAL: "quantityPhysical",
+            "Other": "quantityPhysical",
+            FORMAT_ELECTRONIC: "quantityElectronic",
+        }
+        for pol in composite_order.get(self.po_lines_key, []):
+            order_format = pol.get("orderFormat")
+            target = targets.get(order_format)
+            if not target and order_format != FORMAT_MIX:
+                continue
+            locations = [
+                loc
+                for loc in pol.get("locations") or []
+                if isinstance(loc, dict) and loc.get("quantity") not in (None, "")
+            ]
+            if target:
+                self._copy_quantity_to(locations, target)
+            else:
+                self._split_mix_quantities(pol, locations)
+            self._mirror_location_split_in_cost(pol)
+
+    def _copy_quantity_to(self, locations: list[dict], target: str) -> None:
+        for location in locations:
+            if all(location.get(f) in (None, "") for f in self.FORMAT_FIELDS):
+                location[target] = location["quantity"]
+
+    FORMAT_FIELDS = ("quantityPhysical", "quantityElectronic")
+
+    def _split_mix_quantities(self, pol: dict, locations: list[dict]) -> None:
+        """Fill the physical and electronic quantities of a P/E Mix PO line's locations."""
+        try:
+            unfilled = self._fill_given_quantities(locations)
+            has_electronic = any(
+                self._whole_number(loc.get("quantityElectronic") or 0) > 0
+                for loc in pol.get("locations") or []
+                if isinstance(loc, dict)
+            )
+        except (InvalidOperation, ValueError):
+            return  # validation reports a quantity that is not a whole number
+        for location, quantity in unfilled:
+            if not has_electronic and quantity > 0:
+                location["quantityElectronic"] = 1
+                has_electronic = True
+                quantity -= 1
+            if quantity > 0:
+                location["quantityPhysical"] = quantity
+
+    def _fill_given_quantities(self, locations: list[dict]) -> list[tuple[dict, int]]:
+        """Complete locations that set one side. Return those that set neither, with quantity."""
+        unfilled = []
+        for location in locations:
+            physical = location.get("quantityPhysical") not in (None, "")
+            electronic = location.get("quantityElectronic") not in (None, "")
+            if physical and electronic:
+                continue
+            quantity = self._whole_number(location["quantity"])
+            if physical or electronic:
+                self._fill_remainder(location, quantity, physical)
+            else:
+                unfilled.append((location, quantity))
+        return unfilled
+
+    def _fill_remainder(self, location: dict, quantity: int, physical_given: bool) -> None:
+        """Give the side that is not set the rest of the location's quantity."""
+        given_field = "quantityPhysical" if physical_given else "quantityElectronic"
+        given = self._whole_number(location[given_field])
+        if quantity > given:
+            missing = "quantityElectronic" if physical_given else "quantityPhysical"
+            location[missing] = quantity - given
+
+    def _mirror_location_split_in_cost(self, pol: dict) -> None:
+        """Give the cost the same physical/electronic split as the locations.
+
+        Legacy data often has one quantity that is mapped to the locations and to the cost
+        quantities. When every cost quantity that is mapped equals the total of the locations'
+        quantity, the cost gets the physical and electronic totals of the locations (after the
+        split above). Anything that does not match is left for validation to report.
+        """
+        cost = pol.get("cost")
+        locations = [loc for loc in pol.get("locations") or [] if isinstance(loc, dict)]
+        if not isinstance(cost, dict) or not locations:
+            return
+        try:
+            mapped = [
+                self._whole_number(cost[f])
+                for f in ("quantityPhysical", "quantityElectronic")
+                if cost.get(f) not in (None, "")
+            ]
+            if not mapped or any(loc.get("quantity") in (None, "") for loc in locations):
+                return
+            total = sum(self._whole_number(loc["quantity"]) for loc in locations)
+            physical, electronic = (
+                sum(self._whole_number(loc.get(f) or 0) for loc in locations)
+                for f in ("quantityPhysical", "quantityElectronic")
+            )
+        except (InvalidOperation, ValueError):
+            return  # validation reports a quantity that is not a whole number
+        if total > 0 and set(mapped) == {total} and physical + electronic == total:
+            cost["quantityPhysical"] = physical
+            cost["quantityElectronic"] = electronic
+
+    @staticmethod
+    def _as_int(value, index_or_id, label: str) -> int:
+        """Convert a quantity to an int. Empty is 0, 1.0 is 1, anything else fails the record."""
+        if value is None or str(value).strip() == "":
+            return 0
+        try:
+            number = Decimal(str(value).strip())
+        except InvalidOperation:
+            number = None
+        if number is None or number != number.to_integral_value():
+            raise TransformationRecordFailedError(
+                index_or_id, f"Quantity is not a whole number ({label})", str(value)
+            )
+        return int(number)
+
+    # Fallback when a POL leaves createInventory empty and the tenant setting is missing or
+    # unreadable: assume no inventory is created, so nothing is validated against it.
+    DEFAULT_CREATE_INVENTORY = {
+        "physical": "None",
+        "other": "None",
+        "eresource": "None",
+    }
+
+    def _effective_create_inventory(self, pol: dict, kind: str) -> str:
+        """The createInventory value mod-orders would use: the POL's, else the tenant default."""
+        section = "eresource" if kind == "eresource" else "physical"
+        value = (pol.get(section) or {}).get("createInventory")
+        defaults = {**self.DEFAULT_CREATE_INVENTORY, **(self.create_inventory_defaults or {})}
+        return value or defaults.get(kind, "")
+
+    # Report heading for each validation rule, picked by a phrase in the problem text. The first
+    # match wins, so more specific phrases come first.
+    VALIDATION_RULE_LABELS = (
+        ("tenant limit", "PO lines above the tenant limit"),
+        ("vendor", "Vendor not active or not a vendor"),
+        ("access provider", "Access provider missing or not active"),
+        ("expense class", EXPENSE_CLASS_RULE_LABEL),
+        ("restricted to locations", "Fund location restriction"),
+        ("estimated price", "Fund distributions and estimated price"),
+        ("fund distribution", "Fund distributions and estimated price"),
+        ("acquisition unit", "Acquisition units"),
+        ("material type", "Material type missing"),
+        ("quantity", "Quantities and locations"),
+        ("location", "Quantities and locations"),
+        ("price", COST_RULE_LABEL),
+        ("additional cost", COST_RULE_LABEL),
+        ("discount", COST_RULE_LABEL),
+        ("claiming", "Claiming"),
+        ("binder", "Receiving workflow, binder active"),
+        ("receipt not required", "Receiving workflow, binder active"),
+        ("prepayment", "Prepayment term"),
+        ("package", "Package line with an instance"),
+    )
+
+    def _report_validation_problems(self, problems: list[str]) -> None:
+        """Count each failed validation rule in the migration report."""
+        for problem in problems:
+            text = problem.lower()
+            label = next(
+                (label for phrase, label in self.VALIDATION_RULE_LABELS if phrase in text),
+                "Other",
+            )
+            self.migration_report.add("OrderValidationFailures", i18n.t(label))
+
+    def _validate_composite_order(self, index_or_id: str, composite_order: dict) -> None:
+        """Check each PO line against the rules mod-orders enforces when it is POSTed.
+
+        Every rule is checked except the material type rule, which only applies when the
+        order's workflowStatus is Open, because FOLIO only requires a material type when an
+        order opens. Problems from all PO lines are collected, prefixed with the POL number,
+        and raised together as one failed record so the order is not sent to FOLIO.
+
+        The rules are listed in the appendix on mod-orders validation in the docs.
+        """
+        is_open = str(composite_order.get("workflowStatus") or "").lower() == "open"
+        problems: list[str] = []
+        pols = composite_order.get(self.po_lines_key, [])
+        if self.po_lines_limit is not None and len(pols) > self.po_lines_limit:
+            problems.append(
+                f"the order has {len(pols)} PO lines, above the tenant limit of "
+                f"{self.po_lines_limit}"
+            )
+        problems.extend(self._acquisition_unit_problems(composite_order))
+        if is_open:
+            problems.extend(self._vendor_problems(composite_order.get("vendor")))
+        for number, pol in enumerate(pols, start=1):
+            label = f"POL {number}: "
+            problems.extend(label + p for p in self._pol_problems(index_or_id, pol, is_open))
+        if problems:
+            self._report_validation_problems(problems)
+            raise TransformationRecordFailedError(
+                index_or_id,
+                "Order would be rejected by FOLIO: " + "; ".join(problems),
+                json.dumps(problems),
+            )
+
+    @staticmethod
+    def _ensure_ongoing_info(composite_order: dict) -> None:
+        """Make the ongoing object agree with the order type.
+
+        mod-orders rejects an Ongoing order without an ongoing object and a One-Time order
+        with one. An Ongoing order with none mapped gets a minimal one (the schema defaults).
+        A One-Time order loses any ongoing object that the field mapping created.
+        """
+        order_type = str(composite_order.get("orderType") or "").lower()
+        if order_type == "ongoing" and not composite_order.get("ongoing"):
+            composite_order["ongoing"] = {"isSubscription": False, "manualRenewal": False}
+        elif order_type == "one-time":
+            composite_order.pop("ongoing", None)
+
+    def _pol_problems(self, index_or_id: str, pol: dict, is_open: bool) -> list[str]:
+        problems: list[str] = self._claiming_and_package_problems(index_or_id, pol)
+        cost = pol.get("cost")
+        if not isinstance(cost, dict):
+            cost = {}
+        locations = [loc for loc in pol.get("locations") or [] if isinstance(loc, dict)]
+        order_format = pol.get("orderFormat")
+        cost_physical = self._as_int(cost.get("quantityPhysical"), index_or_id, "cost physical")
+        cost_electronic = self._as_int(
+            cost.get("quantityElectronic"), index_or_id, "cost electronic"
+        )
+
+        problems.extend(self._fund_reference_problems(index_or_id, pol, locations, is_open))
+        if is_open:
+            problems.extend(self._access_provider_problems(pol))
+
+        if not (locations or cost_physical or cost_electronic):
+            return problems  # mod-orders skips the remaining checks for a line with no quantities
+
+        problems.extend(
+            self._format_quantity_problems(order_format, cost_physical, cost_electronic)
+        )
+        problems.extend(self._location_problems(index_or_id, pol, locations, cost))
+        problems.extend(self._cost_price_problems(order_format, cost))
+
+        problems.extend(self._receiving_problems(pol, order_format))
+        problems.extend(self._prepayment_term_problems(pol))
+        if is_open:
+            problems.extend(self._material_type_problems(pol, order_format))
+            problems.extend(self._fund_distribution_problems(pol))
+        return problems
+
+    def _claiming_and_package_problems(self, index_or_id: str, pol: dict) -> list[str]:
+        problems = []
+        if pol.get("isPackage") and pol.get("instanceId"):
+            problems.append("a package line cannot have an instance")
+        interval = self._as_int(pol.get("claimingInterval"), index_or_id, "claiming interval")
+        if self._is_true(pol.get("claimingActive")) and interval <= 0:
+            problems.append("a claiming interval above 0 is required when claiming is active")
+        return problems
+
+    def _receiving_problems(self, pol: dict, order_format: str | None) -> list[str]:
+        problems = []
+        # FOLIO's default for checkinItems is false (Synchronized), so an unmapped value is false
+        independent = self._is_true(pol.get("checkinItems"))
+        if (
+            str(pol.get("receiptStatus") or "").lower() == "receipt not required"
+            and not independent
+        ):
+            problems.append("receipt not required needs the Independent receiving workflow")
+        if (pol.get("details") or {}).get("isBinderyActive"):
+            if order_format not in (FORMAT_PHYSICAL, FORMAT_MIX):
+                problems.append("binder active requires Physical Resource or P/E Mix")
+            if self._effective_create_inventory(pol, "physical") != "Instance, Holding, Item":
+                problems.append("binder active requires inventory interaction that creates items")
+            if not independent:
+                problems.append("binder active requires the Independent receiving workflow")
+        return problems
+
+    @staticmethod
+    def _named(name: str | None, uuid: str) -> str:
+        """Return 'name (uuid)', or just the uuid when the name is not known."""
+        return f"{name} ({uuid})" if name else str(uuid)
+
+    def _reference_name(self, path: str, collection: str, uuid: str) -> str | None:
+        """Look up a FOLIO reference record's name (cached, None if it cannot be read)."""
+        if path not in self._reference_names:
+            try:
+                records = self.folio_client.folio_get_all(path, collection, "", 1000)
+                self._reference_names[path] = {r["id"]: r.get("name") for r in records}
+            except Exception as exception:
+                logger.warning("Could not read %s for names in messages (%s)", path, exception)
+                self._reference_names[path] = {}
+        return self._reference_names[path].get(uuid)
+
+    def _location_label(self, location_id: str) -> str:
+        return self._named(
+            self._reference_name("/locations", "locations", location_id), location_id
+        )
+
+    def _vendor_problems(self, vendor_id: str | None) -> list[str]:
+        """An Open order's vendor must be an active organization that is flagged as a vendor.
+
+        Skipped when there is no vendor or the organizations were not loaded.
+        """
+        if not vendor_id:
+            return []
+        org = self.folio_organizations_by_id.get(vendor_id)
+        if not org:
+            return []
+        problems = []
+        label = self._named(org["name"], vendor_id)
+        if org["status"] != "Active":
+            problems.append(f"the vendor organization {label} is not Active")
+        if not org["isVendor"]:
+            problems.append(f"the organization {label} is not flagged as a vendor")
+        return problems
+
+    def _access_provider_problems(self, pol: dict) -> list[str]:
+        """An Open order's access provider must exist and be an active organization."""
+        provider = (pol.get("eresource") or {}).get("accessProvider")
+        if not provider or not self.folio_organizations_by_id:
+            return []
+        org = self.folio_organizations_by_id.get(provider)
+        if not org:
+            return [f"the access provider {provider} is not an organization in FOLIO"]
+        if org["status"] != "Active":
+            return [f"the access provider {self._named(org['name'], provider)} is not Active"]
+        return []
+
+    def _fund_info(self, fund_id: str) -> dict | None:
+        """Read a fund's location restrictions and the expense classes of its Active budgets.
+
+        The result is cached by fund id. It is None when FOLIO cannot be read, in which case
+        the checks that need it are skipped. The dict has "restrict_by_locations", "locations"
+        (a set of location ids) and "expense_classes" (expense class id to status).
+        """
+        if fund_id not in self._fund_info_cache:
+            try:
+                fund = self.folio_client.folio_get(f"/finance/funds/{fund_id}")
+                fund = fund.get("fund", fund)
+                budgets = self.folio_client.folio_get(
+                    "/finance/budgets",
+                    "budgets",
+                    query=f'fundId=="{fund_id}" and budgetStatus=="Active"',
+                )
+                self._fund_info_cache[fund_id] = {
+                    "code": fund.get("code"),
+                    "restrict_by_locations": bool(fund.get("restrictByLocations")),
+                    "locations": {
+                        loc.get("locationId")
+                        for loc in fund.get("locations") or []
+                        if loc.get("locationId")
+                    },
+                    "expense_classes": {
+                        ec["expenseClassId"]: ec.get("status")
+                        for budget in budgets
+                        for ec in budget.get("statusExpenseClasses") or []
+                    },
+                }
+            except Exception as exception:
+                logger.warning(
+                    "Could not read fund %s (%s). Its expense classes and location "
+                    "restrictions are not checked.",
+                    fund_id,
+                    exception,
+                )
+                self._fund_info_cache[fund_id] = None
+        return self._fund_info_cache[fund_id]
+
+    def _fund_reference_problems(
+        self, index_or_id: str, pol: dict, locations: list, is_open: bool
+    ) -> list[str]:
+        """Check expense classes and location restrictions against the funds in FOLIO.
+
+        An expense class must be in an Active budget of the fund, and be active there when
+        the order is Open. When the order is Open and the line has locations, a fund
+        restricted by locations needs at least one of its locations among the line's
+        locations. A line with a holdingId location is not checked, because the holding's
+        location is not known here.
+        """
+        problems: list[str] = []
+        distributions = [d for d in pol.get("fundDistribution") or [] if isinstance(d, dict)]
+        has_holding = any(loc.get("holdingId") for loc in locations)
+        line_locations = {loc.get("locationId") for loc in locations if loc.get("locationId")}
+        for distribution in distributions:
+            fund_id = distribution.get("fundId")
+            info = self._fund_info(fund_id) if fund_id else None
+            if not info:
+                continue
+            fund = distribution.get("code") or info.get("code") or fund_id
+            if expense_class := distribution.get("expenseClassId"):
+                problems.extend(
+                    self._expense_class_problems(index_or_id, expense_class, info, fund, is_open)
+                )
+            if is_open and locations and not has_holding:
+                problems.extend(self._location_restriction_problems(info, fund, line_locations))
+        return problems
+
+    def _expense_class_problems(
+        self, index_or_id: str, expense_class: str, info: dict, fund, is_open: bool
+    ) -> list[str]:
+        """Expense class problems, handled as the task's expenseClassCheck setting says.
+
+        "fail" returns them, so the record fails. "warn" logs and counts them in the report
+        but lets the record through. "off" does not check expense classes.
+        """
+        mode = getattr(self.task_configuration, "expense_class_check", "fail")
+        if mode == "off":
+            return []
+        problems = self._expense_class_status_problems(expense_class, info, fund, is_open)
+        if mode != "warn":
+            return problems
+        for problem in problems:
+            logger.warning("%s: %s (not failed, expenseClassCheck is warn)", index_or_id, problem)
+            self.migration_report.add("OrderValidationWarnings", i18n.t(EXPENSE_CLASS_RULE_LABEL))
+        return []
+
+    def _expense_class_status_problems(
+        self, expense_class: str, info: dict, fund, is_open: bool
+    ) -> list[str]:
+        class_label = self._named(
+            self._reference_name("/finance/expense-classes", "expenseClasses", expense_class),
+            expense_class,
+        )
+        status = info["expense_classes"].get(expense_class, "missing")
+        if status == "missing":
+            return [f"expense class {class_label} is not in an Active budget of fund {fund}"]
+        if is_open and str(status).lower() == "inactive":
+            return [f"expense class {class_label} is inactive for fund {fund}"]
+        return []
+
+    def _location_restriction_problems(self, info: dict, fund, line_locations: set) -> list:
+        if not (
+            info["restrict_by_locations"]
+            and info["locations"]
+            and not info["locations"] & line_locations
+        ):
+            return []
+        allowed = ", ".join(self._location_label(i) for i in sorted(info["locations"]))
+        return [
+            f"fund {fund} is restricted to locations that are not among the line's "
+            f"locations ({allowed})"
+        ]
+
+    @staticmethod
+    def _whole_number(value) -> int:
+        """Convert a mapped quantity (a string, int or float) to an int, dropping decimals.
+
+        The value goes through str() so that a float such as 2.0 is read exactly.
+        """
+        return int(Decimal(str(value)))
+
+    @staticmethod
+    def _is_true(value) -> bool:
+        return value is True or str(value).strip().lower() == "true"
+
+    @staticmethod
+    def _prepayment_term_problems(pol: dict) -> list[str]:
+        """A multi-year line needs one fiscal year distribution per year of its prepayment term."""
+        terms = pol.get("paymentTerms")
+        if not CompositeOrderMapper._is_true(pol.get("multiYearPayment")) or not isinstance(
+            terms, dict
+        ):
+            return []
+        try:
+            term = int(terms.get("prepaymentTerm") or 0)
+        except (TypeError, ValueError):
+            return []
+        distributions = [d for d in terms.get("fiscalYearDistributions") or [] if d is not None]
+        if term > 0 and len(distributions) != term:
+            return [
+                f"prepayment term {term} does not match the number of fiscal year "
+                f"distributions ({len(distributions)})"
+            ]
+        return []
+
+    @staticmethod
+    def _format_quantity_problems(order_format, cost_physical: int, cost_electronic: int):
+        """Cost quantity rules by order format."""
+        problems: list[str] = []
+        if order_format in (FORMAT_PHYSICAL, "Other"):
+            if cost_physical == 0:
+                problems.append("physical cost quantity must be above 0")
+            if cost_electronic > 0:
+                problems.append("electronic cost quantity must be 0")
+        elif order_format == FORMAT_ELECTRONIC:
+            if cost_electronic == 0:
+                problems.append("electronic cost quantity must be above 0")
+            if cost_physical > 0:
+                problems.append("physical cost quantity must be 0")
+        elif order_format == FORMAT_MIX:
+            if cost_physical == 0:
+                problems.append("physical cost quantity must be above 0")
+            if cost_electronic == 0:
+                problems.append("electronic cost quantity must be above 0")
+        return problems
+
+    def _material_type_problems(self, pol: dict, order_format) -> list[str]:
+        """Material type is required when the inventory interaction creates items."""
+        problems: list[str] = []
+        for kind, wanted in (
+            ("physical", order_format != FORMAT_ELECTRONIC),
+            ("eresource", order_format in (FORMAT_ELECTRONIC, FORMAT_MIX)),
+        ):
+            if (
+                wanted
+                and self._effective_create_inventory(pol, kind) == "Instance, Holding, Item"
+                and not (pol.get(kind) or {}).get("materialType")
+            ):
+                problems.append(f"{kind} material type is required to create items")
+        return problems
+
+    def _location_problems(
+        self, index_or_id: str, pol: dict, locations: list, cost: dict
+    ) -> list[str]:
+        problems: list[str] = []
+        order_format = pol.get("orderFormat")
+        totals = {}
+        for field in ("quantityPhysical", "quantityElectronic"):
+            totals[field] = sum(
+                self._as_int(loc.get(field), index_or_id, f"location {field}") for loc in locations
+            )
+        for field, kind, holds in (
+            ("quantityPhysical", "physical", order_format != FORMAT_ELECTRONIC),
+            (
+                "quantityElectronic",
+                "eresource",
+                order_format in (FORMAT_ELECTRONIC, FORMAT_MIX),
+            ),
+        ):
+            expected = self._as_int(cost.get(field), index_or_id, f"cost {field}")
+            requires = self._effective_create_inventory(pol, kind) != "None" and holds
+            if locations and (totals[field] > 0 or requires) and totals[field] != expected:
+                problems.append(
+                    f"location {field} total {totals[field]} does not match the cost ({expected})"
+                )
+        for loc in locations:
+            if sum(
+                self._as_int(loc.get(f), index_or_id, f"location {f}")
+                for f in ("quantityPhysical", "quantityElectronic")
+            ) == 0 and any(f in loc for f in ("quantityPhysical", "quantityElectronic")):
+                problems.append("a location has no physical or electronic quantity")
+            if bool(loc.get("locationId")) == bool(loc.get("holdingId")):
+                problems.append("a location needs exactly one of locationId or holdingId")
+        return problems
+
+    @staticmethod
+    def _cost_price_problems(order_format: str | None, cost: dict) -> list[str]:
+        def number(key):
+            try:
+                return float(cost[key])
+            except (KeyError, TypeError, ValueError):
+                return None
+
+        problems = []
+        unit, electronic = number("listUnitPrice"), number("listUnitPriceElectronic")
+        if unit is not None and (unit > 0 if order_format == FORMAT_ELECTRONIC else unit < 0):
+            problems.append("list unit price is not valid for the order format")
+        if electronic is not None and (
+            electronic < 0 if order_format in (FORMAT_ELECTRONIC, FORMAT_MIX) else electronic > 0
+        ):
+            problems.append("electronic list unit price is not valid for the order format")
+        if (number("additionalCost") or 0) < 0:
+            problems.append("additional cost cannot be negative")
+        problems.extend(CompositeOrderMapper._discount_problems(cost, number("discount") or 0))
+        return problems
+
+    @staticmethod
+    def _discount_problems(cost: dict, discount: float) -> list[str]:
+        is_percentage = cost.get("discountType") == "percentage"
+        if discount < 0 or (is_percentage and discount > 100):
+            return ["discount is not valid"]
+        if discount > 0 and not is_percentage:
+            price = CompositeOrderMapper._estimated_price(cost)
+            if price is not None and price < 0:
+                return ["discount makes the estimated price negative"]
+        return []
+
+    @staticmethod
+    def _estimated_price(cost: dict) -> Decimal | None:
+        """The PO line estimated price as mod-orders computes it, or None if a value is invalid.
+
+        List prices times quantities, less the discount (an amount, or a percentage of the
+        total, which is the default), plus additional cost and the FYRO adjustment.
+        """
+
+        def amount(key: str) -> Decimal:
+            value = cost.get(key)
+            return Decimal(str(value).strip()) if str(value or "").strip() else Decimal(0)
+
+        try:
+            total = amount("listUnitPrice") * amount("quantityPhysical") + amount(
+                "listUnitPriceElectronic"
+            ) * amount("quantityElectronic")
+            discount = amount("discount")
+            total -= (
+                discount if cost.get("discountType") != "percentage" else total * discount / 100
+            )
+            total += amount("additionalCost") + amount("fyroAdjustmentAmount")
+        except InvalidOperation:
+            return None
+        return total.quantize(Decimal("0.01"), rounding="ROUND_HALF_EVEN")
+
+    @staticmethod
+    def _fund_distribution_problems(pol: dict) -> list[str]:
+        """Fund distributions must add up to the PO line's estimated price (checked on open)."""
+        distributions = [d for d in pol.get("fundDistribution") or [] if isinstance(d, dict)]
+        cost = pol.get("cost")
+        if not isinstance(cost, dict):
+            cost = {}
+        price = CompositeOrderMapper._estimated_price(cost)
+        if not distributions or price is None:
+            return []
+        try:
+            values = [Decimal(str(d.get("value") or 0)) for d in distributions]
+        except InvalidOperation:
+            return []
+        is_percentage = [
+            str(d.get("distributionType")).lower() == "percentage" for d in distributions
+        ]
+        message = "fund distributions do not add up to the estimated price"
+        if price == 0:
+            return CompositeOrderMapper._zero_price_distribution_problems(
+                values, is_percentage, message
+            )
+        remaining = Decimal(100)
+        for value, percentage in zip(values, is_percentage, strict=True):
+            remaining -= value if percentage else value / price * 100
+        return [message] if abs(remaining) > Decimal("1e-10") else []
+
+    @staticmethod
+    def _zero_price_distribution_problems(values: list, is_percentage: list, message: str) -> list:
+        if len(set(is_percentage)) > 1:
+            return ["fund distribution types cannot be mixed when the estimated price is 0"]
+        if is_percentage[0]:
+            return [] if sum(values) == 100 else [message]
+        return [] if all(v == 0 for v in values) else [message]
+
+    def _drop_incomplete_product_ids(self, index_or_id: str, composite_order: dict) -> None:
+        """Drop product ids missing a productId or a usable productIdType.
+
+        Each dropped object that had some content is reported as a field mapping error.
+        The remaining product ids, and the record itself, are kept.
+        """
+        for pol in composite_order.get(self.po_lines_key, []):
+            details = pol.get("details")
+            if not isinstance(details, dict) or not details.get("productIds"):
+                continue
+            kept = []
+            for product_id in details["productIds"]:
+                if not isinstance(product_id, dict) or (
+                    product_id.get("productId") and product_id.get("productIdType")
+                ):
+                    kept.append(product_id)
+                elif any(product_id.values()):
+                    missing = [k for k in ("productId", "productIdType") if not product_id.get(k)]
+                    self.handle_transformation_field_mapping_error(
+                        index_or_id,
+                        TransformationFieldMappingError(
+                            index_or_id,
+                            "Product ID removed: missing productId or productIdType "
+                            "(not a FOLIO identifier type)",
+                            json.dumps({"missing": missing, **product_id}),
+                        ),
+                    )
+            if kept:
+                details["productIds"] = kept
+            else:
+                details.pop("productIds")
 
     def _resolve_order_address_id(self, value: str, folio_prop_name: str, index_or_id: str) -> str:
         if not value:
@@ -484,18 +1783,38 @@ class CompositeOrderMapper(MappingFileMapperBase):
         Returns:
             tuple: (composite order, legacy id)
         """
-        folio_rec, legacy_id = self.do_map(legacy_order, index_or_id, FOLIONamespaces.orders, True)
-        self.perform_additional_mapping(legacy_id, folio_rec)
-        self.report_folio_mapping(folio_rec, self.composite_order_schema)
-        self.notes_mapper.map_notes(
-            legacy_order,
-            legacy_id,
-            folio_rec[self.po_lines_key][0]["id"],
-            FOLIONamespaces.orders,
-        )
+        # Several rows can be merged into one order, so the order's legacy id alone does not
+        # say which row an issue came from. Issues are logged with both.
+        self._current_row = index_or_id
+        try:
+            folio_rec, legacy_id = self.do_map(
+                legacy_order, index_or_id, FOLIONamespaces.orders, True
+            )
+            self.perform_additional_mapping(legacy_id, folio_rec, legacy_order)
+            self.report_folio_mapping(folio_rec, self.composite_order_schema)
+            self.notes_mapper.map_notes(
+                legacy_order,
+                legacy_id,
+                folio_rec[self.po_lines_key][0]["id"],
+                FOLIONamespaces.orders,
+            )
+        except TransformationRecordFailedError as error:
+            error.index_or_id = self._with_row(error.index_or_id)
+            raise
         return folio_rec, legacy_id
 
-    def perform_additional_mapping(self, index_or_id, composite_order):
+    def _with_row(self, identifier):
+        """Return the legacy identifier followed by the row it came from, as 'id (row n)'."""
+        row = getattr(self, "_current_row", "")
+        if not row or str(row) in str(identifier):
+            return identifier
+        return f"{identifier} ({row})"
+
+    def handle_transformation_field_mapping_error(self, index_or_id, error):
+        error.index_or_id = self._with_row(error.index_or_id or index_or_id)
+        super().handle_transformation_field_mapping_error(self._with_row(index_or_id), error)
+
+    def perform_additional_mapping(self, index_or_id, composite_order, legacy_object=None):
         self.validate_po_number(index_or_id, composite_order.get("poNumber"))
 
         # Get organization UUID from FOLIO
@@ -512,6 +1831,14 @@ class CompositeOrderMapper(MappingFileMapperBase):
         bib_id = composite_order.get(self.po_lines_key, [{}])[0].pop("instanceId", "")
         if matching_instance := self.get_folio_instance_uuid(index_or_id, bib_id):
             composite_order[self.po_lines_key][0]["instanceId"] = matching_instance
+
+        self._drop_incomplete_product_ids(index_or_id, composite_order)
+        self._merge_duplicate_locations(
+            composite_order, self._delimited_location_quantity_fields(legacy_object), index_or_id
+        )
+        self._copy_quantity_to_format_field(composite_order)
+        self._ensure_ongoing_info(composite_order)
+        self._validate_composite_order(index_or_id, composite_order)
 
         return composite_order
 
@@ -536,68 +1863,105 @@ class CompositeOrderMapper(MappingFileMapperBase):
         valid_po_number_characters = r"[A-Za-z0-9]"
         return re.sub(valid_po_number_characters, "", po_number) == ""
 
-    def get_matching_record_from_folio(
-        self,
-        index_or_id,
-        cache: dict,
-        path: str,
-        match_property: str,
-        match_value: str,
-        result_type: str,
-    ):
-        if match_value in cache:
-            return cache[match_value]
-        else:
-            query = f'?query=({match_property}=="{match_value}")'
-            if matching_record := next(
-                self.folio_client.folio_get_all(path, result_type, query), None
-            ):
-                cache[match_value] = matching_record
-                return matching_record
+    def _load_folio_organizations_by_code(self) -> dict:
+        """Build normalized FOLIO organization code -> (id, code) from FOLIO, in one pass."""
+        organizations = self.folio_client.folio_get_all(
+            "/organizations-storage/organizations", "organizations", "", 1000
+        )
+        by_code = {
+            normalize_for_compare(org["code"]): (org["id"], org["code"])
+            for org in organizations
+            if org.get("code")
+        }
+        self.folio_organizations_by_id = {
+            org["id"]: {
+                "status": org.get("status"),
+                "isVendor": org.get("isVendor"),
+                "name": org.get("name") or org.get("code"),
+            }
+            for org in organizations
+            if org.get("id")
+        }
+        logger.info("Loaded %s organizations from FOLIO", len(by_code))
+        return by_code
 
-    def get_folio_organization_uuid(self, index_or_id, org_code):
-        if self.organizations_id_map:
-            logger.debug(f"Looking up organization code {org_code} in organizations_id_map")
-            matching_org = self.organizations_id_map.get(org_code, None)
-            logger.debug(f"Mapped value for organization code {org_code}: {matching_org}")
-            if matching_org:
+    @staticmethod
+    def _build_organizations_code_map(rows: list | None, folio_orgs_by_code: dict) -> dict | None:
+        """Turn the optional organizations code map into normalized legacy -> FOLIO code.
+
+        The map needs a folio_code column and exactly one legacy column. A * row is allowed
+        in the file (so it can be shared with a future RefDataMapping-based version) but is
+        ignored: a default vendor would silently misattribute orders, so unmapped values
+        fail the record. Every folio_code, including the * row's, must exist in FOLIO.
+        """
+        if not rows:
+            return None
+        legacy_columns = [k for k in rows[0].keys() if k and k.strip() != "folio_code"]
+        if "folio_code" not in rows[0] or len(legacy_columns) != 1:
+            raise TransformationProcessError(
+                "",
+                "The organizations code map needs a folio_code column and exactly one "
+                f"legacy column. Found columns: {', '.join(rows[0].keys())}",
+            )
+        legacy_column = legacy_columns[0]
+        code_map = {}
+        missing = set()
+        for row in rows:
+            folio_code = row["folio_code"]
+            if normalize_for_compare(folio_code) not in folio_orgs_by_code:
+                missing.add(folio_code)
+            if normalize_for_compare(row[legacy_column]) == "*":
+                logger.info("Ignoring the * row in the organizations code map")
+                continue
+            code_map[normalize_for_compare(row[legacy_column])] = folio_code
+        if missing:
+            raise TransformationProcessError(
+                "",
+                "Codes (folio_code) from the organizations code map are not in FOLIO",
+                ", ".join(sorted(missing)),
+            )
+        logger.info("Loaded %s rows from the organizations code map", len(code_map))
+        return code_map
+
+    def get_folio_organization_uuid(self, index_or_id, legacy_value):
+        """Resolve the vendor to a FOLIO organization id.
+
+        With an organizations code map, the legacy value is mapped to a FOLIO code first
+        (the map is then authoritative). Without one, the value is used as the FOLIO code.
+        """
+        folio_code = legacy_value
+        if self.organizations_code_map is not None:
+            folio_code = self.organizations_code_map.get(normalize_for_compare(legacy_value))
+            if folio_code:
                 self.migration_report.add(
                     "PurchaseOrderVendorLinking",
-                    i18n.t("Organizations linked using organizations_id_map"),
+                    i18n.t("Organizations linked using organizations code map"),
                 )
-                return matching_org[1]
-
-        logger.debug(
-            f"Organization code {org_code} not found in organizations_id_map, looking up in FOLIO"
+        if folio_code and (
+            matching_org := self.folio_organizations_by_code.get(normalize_for_compare(folio_code))
+        ):
+            if self.organizations_code_map is None:
+                self.migration_report.add(
+                    "PurchaseOrderVendorLinking",
+                    i18n.t("Organizations linked using FOLIO organization code"),
+                )
+            self.migration_report.add(
+                "OrganizationsMapping", f"{legacy_value} -> {matching_org[1]}"
+            )
+            return matching_org[0]
+        self.migration_report.add(
+            "PurchaseOrderVendorLinking",
+            i18n.t("RECORD FAILED Organization identifier not in code map/FOLIO"),
         )
-        matching_org = self.get_matching_record_from_folio(
+        self.migration_report.add(
+            "OrganizationsMapping",
+            i18n.t("Unmapped (Record failed)") + f" -- {legacy_value} -> {folio_code or ''}",
+        )
+        raise TransformationRecordFailedError(
             index_or_id,
-            self.folio_organization_cache,
-            "/organizations-storage/organizations",
-            "code",
-            org_code,
-            "organizations",
+            "No matching Organization for organization identifier",
+            legacy_value,
         )
-        logger.debug(
-            f"FOLIO lookup result for organization code {org_code}:"
-            f" {json.dumps(matching_org, indent=2)}"
-        )
-        if matching_org:
-            self.migration_report.add(
-                "PurchaseOrderVendorLinking",
-                i18n.t("Organizations not in ID map, linked using FOLIO lookup"),
-            )
-            return matching_org["id"]
-        else:
-            self.migration_report.add(
-                "PurchaseOrderVendorLinking",
-                i18n.t("RECORD FAILED Organization identifier not in ID map/FOLIO"),
-            )
-            raise TransformationRecordFailedError(
-                index_or_id,
-                "No matching Organization for organization identifier",
-                org_code,
-            )
 
     def get_folio_instance_uuid(self, index_or_id, bib_id):
         if matching_instance := self.instance_id_map.get(bib_id):

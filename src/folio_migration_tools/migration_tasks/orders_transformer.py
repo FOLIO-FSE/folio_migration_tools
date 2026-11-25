@@ -10,7 +10,7 @@ import json
 import logging
 import sys
 import time
-from typing import Annotated, List
+from typing import Annotated, List, Literal
 
 import i18n
 from deepdiff import DeepDiff
@@ -80,9 +80,13 @@ class OrdersTransformer(MigrationTaskBase):
             str,
             Field(
                 title="Organizations Code Map File Name",
-                description="File name for organizations code mapping.",
+                description=(
+                    "Optional file name for mapping legacy vendor values to FOLIO organization "
+                    "codes (one legacy column plus folio_code). If empty or missing, the vendor "
+                    "value is looked up as a FOLIO organization code. By default is empty string."
+                ),
             ),
-        ]
+        ] = ""
         acquisition_method_map_file_name: Annotated[
             str,
             Field(
@@ -134,6 +138,42 @@ class OrdersTransformer(MigrationTaskBase):
                 ),
             ),
         ] = ""
+        material_type_map_file_name: Annotated[
+            str,
+            Field(
+                title="Material Type Map File Name",
+                description=(
+                    "Optional file name for mapping legacy values to FOLIO material types "
+                    "(by name) for physical and e-resource order line material types. "
+                    "By default is empty string."
+                ),
+            ),
+        ] = ""
+
+        acquisition_unit_map_file_name: Annotated[
+            str,
+            Field(
+                title="Acquisition Unit Map File Name",
+                description=(
+                    "Optional file name for mapping legacy values to FOLIO acquisition unit "
+                    "names for the order's acqUnitIds. Without it, mapped values are unit "
+                    "names or UUIDs. By default is empty string."
+                ),
+            ),
+        ] = ""
+
+        expense_class_check: Annotated[
+            Literal["fail", "warn", "off"],
+            Field(
+                title="Expense Class Check",
+                description=(
+                    "What to do when a fund distribution's expense class is not in an Active "
+                    "budget of the fund (or is inactive there, for Open orders). 'fail' fails "
+                    "the record, 'warn' logs it and counts it in the report but keeps the "
+                    "record, and 'off' does not check expense classes. By default is 'fail'."
+                ),
+            ),
+        ] = "fail"
 
     @staticmethod
     def get_object_type() -> FOLIONamespaces:
@@ -180,7 +220,13 @@ class OrdersTransformer(MigrationTaskBase):
             self.library_configuration,
             self.task_configuration,
             self.orders_map,
-            self.load_id_map(self.folder_structure.organizations_id_map_path, True),
+            self.load_ref_data_mapping_file(  # Optional
+                "organizationsMap",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.organizations_code_map_file_name,
+                self.folio_keys,
+                False,
+            ),
             self.load_instance_id_map(True),
             self.load_ref_data_mapping_file(
                 "acquisitionMethod",
@@ -229,7 +275,58 @@ class OrdersTransformer(MigrationTaskBase):
                 self.folio_keys,
                 False,
             ),
+            self.load_ref_data_mapping_file(  # Optional
+                "materialTypeMap",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.material_type_map_file_name,
+                self.folio_keys,
+                False,
+            ),
+            self._load_create_inventory_defaults(),
+            self._load_po_lines_limit(),
+            self.load_ref_data_mapping_file(  # Optional
+                "acquisitionUnitMap",
+                self.folder_structure.mapping_files_folder
+                / self.task_config.acquisition_unit_map_file_name,
+                self.folio_keys,
+                False,
+            ),
         )
+
+    def _load_create_inventory_defaults(self) -> dict:
+        """Read the tenant's default inventory interaction for POLs that leave it empty.
+
+        Best effort: if the setting cannot be read, "None" is assumed for every kind.
+        """
+        try:
+            settings = self.folio_client.folio_get(
+                "/orders-storage/settings", "settings", query="key==createInventory"
+            )
+            return json.loads(settings[0]["value"]) if settings else {}
+        except Exception as exception:
+            logging.warning(
+                "Could not read the tenant createInventory defaults (%s). "
+                "Assuming no inventory is created for POLs that leave it empty.",
+                exception,
+            )
+            return {}
+
+    def _load_po_lines_limit(self) -> int | None:
+        """Read the tenant's limit on PO lines per order (setting poLines-limit).
+
+        Best effort: None, meaning the limit is not checked, if the setting is missing or
+        cannot be read.
+        """
+        try:
+            settings = self.folio_client.folio_get(
+                "/orders-storage/settings", "settings", query="key==poLines-limit"
+            )
+            return int(settings[0]["value"]) if settings else None
+        except Exception as exception:
+            logging.warning(
+                "Could not read the tenant PO line limit (%s). It is not checked.", exception
+            )
+            return None
 
     def list_source_files(self):
         files = []

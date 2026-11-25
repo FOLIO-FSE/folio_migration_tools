@@ -34,6 +34,7 @@ from folio_migration_tools.custom_exceptions import (
 )
 from folio_migration_tools.extradata_writer import ExtradataWriter
 from folio_migration_tools.folder_structure import FolderStructure
+from folio_migration_tools import __version__
 from folio_migration_tools.logging_config import setup_logging
 from folio_migration_tools.marc_rules_transformation.marc_file_processor import (
     MarcFileProcessor,
@@ -282,6 +283,7 @@ class MigrationTaskBase:
                 break
 
         logger.info("Logging set up")
+        logger.info("FOLIO Migration Tools version: %s", __version__)
 
     def setup_records_map(self, mapping_file_path) -> Dict:
         with open(mapping_file_path) as mapping_file:
@@ -418,6 +420,9 @@ class MigrationTaskBase:
             or folio_property_name.startswith("statisticalCodeIds")
             or folio_property_name.startswith("locationMap")
             or folio_property_name.startswith("fundsMap")
+            or folio_property_name.startswith("fundsExpenseClassMap")
+            or folio_property_name.startswith("organizationsMap")
+            or folio_property_name.startswith("materialTypeMap")
             or folio_property_name.endswith(".holdingsNoteTypeId")
             or folio_property_name.endswith(".itemNoteTypeId")
             or folio_property_name.endswith(".instanceNoteTypeId")

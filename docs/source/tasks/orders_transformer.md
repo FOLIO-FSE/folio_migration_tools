@@ -38,14 +38,17 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 | `name` | string | Yes | The name of this task. |
 | `migrationTaskType` | string | Yes | Must be `"OrdersTransformer"` |
 | `ordersMappingFileName` | string | Yes | JSON mapping file for order and POL fields |
-| `organizationsCodeMapFileName` | string | Yes | TSV file mapping legacy vendor codes to FOLIO organization codes |
+| `organizationsCodeMapFileName` | string | No | TSV file mapping legacy vendor values to FOLIO organization codes. If omitted, the vendor value is looked up as a FOLIO organization code. See [Vendor Linking](#vendor-linking) |
 | `acquisitionMethodMapFileName` | string | Yes | TSV file mapping acquisition methods |
 | `paymentStatusMapFileName` | string | No | TSV file mapping payment statuses |
 | `receiptStatusMapFileName` | string | No | TSV file mapping receipt statuses |
 | `workflowStatusMapFileName` | string | No | TSV file mapping workflow statuses |
 | `locationMapFileName` | string | No | TSV file mapping locations |
 | `fundsMapFileName` | string | No | TSV file mapping funds (required if POLs have fund distributions) |
-| `fundsExpenseClassMapFileName` | string | No | TSV file mapping expense classes |
+| `fundsExpenseClassMapFileName` | string | No | TSV file mapping legacy values to expense class codes, used for `expenseClassId`. Values with no explicit match are left empty rather than defaulted |
+| `acquisitionUnitMapFileName` | string | No | TSV file mapping legacy values to FOLIO acquisition unit names, applied to the order's `acqUnitIds`. Without it, the value must be a unit UUID or name (see Acquisition Units) |
+| `expenseClassCheck` | string | No | What to do when a fund distribution's expense class is not in an Active budget of the fund: `fail` (default) fails the record, `warn` logs it and counts it under "Order validation warnings" but keeps the record, `off` skips the check |
+| `materialTypeMapFileName` | string | No | TSV file mapping legacy values to FOLIO material type names, applied to `physical.materialType` and `eresource.materialType` on order lines. Works like the items transformer material type map, including the required `*` default row. Without it, the value must be a material type UUID or name (see Material Types) |
 | `files` | array | Yes | List of source data files to process |
 
 ## Source Data Requirements
@@ -54,7 +57,7 @@ Transform delimited (CSV/TSV) data into FOLIO Purchase Orders and Purchase Order
 - **Format**: Tab-separated (TSV) or comma-separated (CSV) with header row
 - **Prerequisites**:
   - Run [BibsTransformer](bibs_transformer) if linking to instances
-  - Run [OrganizationTransformer](organization_transformer) and post organizations if linking to vendors
+  - Post organizations to FOLIO if linking to vendors. Vendors are resolved against the organizations that exist in FOLIO when the task starts, not against an ID map file
 
 ### Order Mapping File
 
@@ -76,7 +79,7 @@ Orders in FOLIO consist of a Purchase Order (header) with embedded Purchase Orde
         {
             "folio_field": "vendor",
             "legacy_field": "VENDOR_CODE",
-            "description": "Mapped to organization UUID via organizationsCodeMapFileName"
+            "description": "Resolved to an organization UUID (see Vendor Linking)"
         },
         {
             "folio_field": "orderType",
@@ -208,10 +211,78 @@ Reference data mapping files connect values from your legacy data to FOLIO refer
 
 | Mapping File | FOLIO Column | Maps To |
 |--------------|--------------|---------|
-| `organizationsCodeMapFileName` | `folio_code` | Organization code |
+| `organizationsCodeMapFileName` | `folio_code` | Organization code (optional, one legacy column only, see [Vendor Linking](#vendor-linking)) |
 | `acquisitionMethodMapFileName` | `folio_value` | Acquisition method value |
 | `fundsMapFileName` | `folio_code` | Fund code |
 | `locationMapFileName` | `folio_code` | Location code |
+| `fundsExpenseClassMapFileName` | `folio_code` | Expense class code. A `*` row is required in the file but never applied: a value with no explicit match is left empty (reported as "Not to be mapped. (No default)") |
+| `acquisitionUnitMapFileName` | `folio_name` | Acquisition unit name. A `*` row is required in the file but never applied: a value with no explicit match is left empty |
+| `materialTypeMapFileName` | `folio_name` | Material type name. A `*` row is required and is used as the default for unmatched values |
+
+## Acquisition Units
+
+`acqUnitIds` on the order can be mapped with `acquisitionUnitMapFileName`. A value with several units, joined with the multi-field delimiter (for example `A^-^B`), is mapped piece by piece into several units.
+
+Without a map file, and for hardcoded values, a unit UUID is used as-is and any other value is looked up as a FOLIO acquisition unit name (case- and whitespace-insensitive). A name that is not a FOLIO unit is skipped. It is reported under "Mapped Acquisition Units" and logged as a field mapping error, and the rest of the order is kept. Hardcoded values are checked against FOLIO at startup, and the task stops if one is not valid.
+
+Before an order is written, the task checks that the units exist and are active. The user that runs the task is the user that posts the orders, so the task also checks that user against the units, as mod-orders does. An order with units needs both of these:
+
+1. **Permission to assign units.** The user needs `orders.acquisitions-units-assignments.create.execute`. Nothing replaces it: without it, no order with units can be posted.
+2. **Membership, or a way around it.** The user must be a member of at least one of the order's units, unless one of these applies:
+   * The user has the permission `orders.acquisition-units.bypass.execute`. It lets the user post into any unit without being a member.
+   * At least one of the order's units does not protect create (`protectCreate` is false). Membership is then not required.
+
+Permissions are read from `/permissions/users/{id}` on Eureka tenants (which resolves capabilities, capability sets and roles), and from mod-permissions on others. If the user's memberships or permissions cannot be read, these checks are skipped and a warning is logged.
+
+## Material Types
+
+`physical.materialType` and `eresource.materialType` on order lines can be mapped with `materialTypeMapFileName`, as in the items transformer.
+
+A value from a legacy field is mapped with the map file when one is configured. Otherwise, and for hardcoded values, it is used as follows:
+
+* A material type UUID is used as-is.
+* Any other value is looked up as a FOLIO material type name (case- and whitespace-insensitive).
+* A name that is not a FOLIO material type fails the record. It is written to the data issues log and reported under "Mapped Material Types".
+* A hardcoded `value` or `fallback_value` for these fields is a FOLIO material type name or UUID. It is checked against FOLIO at startup, and the task stops if it is not valid. It is never run through the map file, even when one is configured.
+
+## Product ID Types
+
+`productIdType` (on `details.productIds`) can be mapped as either an identifier type UUID or an identifier type name, such as `ISBN`. Names are matched against the FOLIO identifier types, ignoring case and whitespace, and each resolved name is listed under "Product ID type mappings" in the migration report. A hardcoded `value` is checked when the task starts, and the task halts if it is not a FOLIO identifier type name or UUID. A name from the legacy data that does not match does not fail the record: that product id is dropped and logged as a field mapping error, and the rest of the order line is kept. Product id objects with no `productId` are dropped in the same way.
+
+## Vendor Linking
+
+The order's `vendor` is resolved to a FOLIO organization UUID. At startup the task loads every organization from FOLIO (code to UUID), so no `organizations_id_map` file is read and no per-order queries are made. How the legacy value is matched depends on whether you provide `organizationsCodeMapFileName`:
+
+- **No code map:** the mapped `vendor` value is matched directly against FOLIO organization codes. Matching ignores case and whitespace.
+- **With a code map:** the legacy value is first mapped to a FOLIO organization code, then to its UUID. The map is authoritative. A value that is not in the map fails the record, even if it happens to be a valid FOLIO organization code.
+
+The code map is a TSV with exactly one legacy column and a `folio_code` column:
+
+```
+legacy_vendor	folio_code
+GB1	GOBI
+EBS	EBSCO
+```
+
+```{note}
+The code map does not support hybrid mappings. Unlike the other reference data maps, it can have only one legacy column, so a vendor cannot be mapped from a combination of legacy fields. A `*` row is accepted in the file but ignored, because a default vendor would silently attach unmapped orders to the wrong organization. Any order whose vendor is not explicitly mapped fails. Every `folio_code` in the map, including the `*` row's, must exist in FOLIO, or the task halts at startup.
+```
+
+Records whose vendor cannot be resolved fail and are counted under `PurchaseOrderVendorLinking` in the migration report. Each vendor value is also reported individually under the "Organization mappings" (`OrganizationsMapping`) section as `legacy value -> FOLIO organization code`, with failed values shown as `Unmapped (Record failed)`.
+
+## Validation Before Posting
+
+The transformer checks each composite order against the rules that FOLIO's `mod-orders` enforces when the order is posted, and fails a record that would be rejected. This catches problems in the data issues log instead of during `BatchPoster`. The failure message names the rules that were broken, using names as well as UUIDs where it can, and the log line carries the legacy identifier and the row.
+
+- Order line locations with the same location or holding are merged, and the location quantities must match the cost quantities.
+- Cost quantities and prices, claiming, receiving workflow, binder active and prepayment term are checked.
+- An Ongoing order with no `ongoing` object mapped gets a minimal one. A One-Time order loses any `ongoing` object the field mapping created.
+- Checks that read FOLIO data: the expense class against the fund's Active budgets (set `expenseClassCheck` to `warn` or `off` to relax this, for example when validating legacy data against budgets that don't have the expense classes assigned), fund location restrictions, the vendor and access provider organizations, and the tenant's PO line limit. If the data cannot be read, the check is skipped and a warning is logged.
+- Pending orders get the rules that apply to every order. Open orders also get the Open-only rules, such as material types and fund distributions that add up to the estimated price.
+
+The migration report lists the rules that failed records broke under "Order validation failures". A record that breaks several rules is counted once for each, so the total can exceed the number of failed records.
+
+See [mod-orders validation rules](../appendix_mod_orders_validation) for the full list of what is and is not checked.
 
 ## Mapping Notes
 
@@ -406,3 +477,4 @@ Orders are posted one at a time (`batchSize: 1`) because FOLIO's orders API proc
 - [Mapping File Based Mapping](../mapping_file_based_mapping) - Mapping file syntax
 - [OrganizationTransformer](organization_transformer) - Creating vendor organizations
 - [BatchPoster](batch_poster) - Posting orders
+- [mod-orders validation rules](../appendix_mod_orders_validation) - What FOLIO checks when orders are posted

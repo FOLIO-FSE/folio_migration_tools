@@ -188,7 +188,7 @@ Transforms vendor/organization data for acquisitions.
 #### OrdersTransformer
 Transforms purchase order data.
 
-For Orders-specific address mapping behavior and validation/error handling for `billTo`/`shipTo`, see [OrdersTransformer](tasks/orders_transformer#validation-and-error-reporting-for-billtoshipto).
+For Orders-specific address mapping behavior and validation/error handling for `billTo`/`shipTo`, see [OrdersTransformer](tasks/orders_transformer.md#validation-and-error-reporting-for-billtoshipto).
 
 | Report Section | Description |
 |----------------|-------------|
@@ -196,6 +196,7 @@ For Orders-specific address mapping behavior and validation/error handling for `
 | OrderTypeMapping | Order type assignments |
 | AcquisitionMethodMapping | Acquisition method mappings |
 | OrderAddressMapping | `billTo`/`shipTo` names resolved to address IDs |
+| OrderValidationFailures | Count of failed records per `mod-orders` validation rule. A record is counted once for each rule it breaks |
 
 #### ManualFeeFinesTransformer
 Transforms fee/fine data.
